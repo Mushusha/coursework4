@@ -4,39 +4,26 @@
 
 #include "Eigen/Core"
 
-#include "global.h"
+#include "Element.h"
 
-//dim = 2;
-//numNodes = 4;
 
 class quadElement : public Element {
 public:
-	quadElement() {};
-	quadElement(std::vector <int> _nodes, std::vector <float> _x, std::vector <float> _y);
+	quadElement() : Element() {}
+	quadElement(int id, int type, std::vector <int> nodes)
+		: Element(id, type, nodes) {}
 	virtual ~quadElement() = default;
+
+	std::vector<double> FF(double ksi, double eta, double zeta = 0) override;
+	std::vector <std::vector <double>> gradFF(double ksi, double eta, double zeta = 0) override;
+	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;
+	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
+	Eigen::MatrixXd locK() override;
 };
 
-class quadInfElement : public quadElement {
-public:
-	quadInfElement() {};
-	quadInfElement(std::vector <int> _nodes, std::vector <float> _x, std::vector <float> _y);
-	virtual ~quadInfElement() = default;
-};
-
-float quadN1(float ksi, float eta);
-float quadN2(float ksi, float eta);
-float quadN3(float ksi, float eta);
-float quadN4(float ksi, float eta);
-
-float quadInfN(float ksi, float eta, std::vector <float> a);
-float quadMapN(float ksi, float eta, std::vector <float> a);
-//float shapeN(float ksi, float eta)
-
-Eigen::Matrix2f quadMatrixJ(float ksi, float eta, std::vector <float> x, std::vector <float> y, float (*N)(float, float, std::vector <float>));
-float quadDksiN(float ksi, float eta, float (*N)(float, float));
-float quadDetaN(float ksi, float eta, float (*N)(float, float));
-
-typedef float (*arrFunc) (float ksi, float eta);
-
-Eigen::MatrixXf  quadMatrixB(float ksi, float eta, std::vector <float> x, std::vector <float> y, float (*funcN)(float, float, std::vector <float>));
-Eigen::MatrixXf quadLocK(std::vector <float> x, std::vector <float> y, float (*N)(float, float, std::vector <float>));
+//class quadInfElement : public quadElement {
+//public:
+//	quadInfElement() {};
+//	quadInfElement(std::vector <int> _nodes, std::vector <double> _x, std::vector <double> _y);
+//	virtual ~quadInfElement() = default;
+//};

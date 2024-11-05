@@ -4,18 +4,24 @@
 
 #include "Eigen/Core"
 
-#include "global.h"
+#include "Element.h"
 
-//dim = 2;
-//numNodes = 3;
 
-class triangleElement : public Element {
+class triElement : public Element {
 public:
-	triangleElement() {};
-	triangleElement(std::vector <int> _nodes, std::vector <float> _x, std::vector <float> _y);
-	virtual ~triangleElement() = default;
+	triElement() {};
+	triElement(int id, int type, std::vector <int> nodes)
+		: Element (id, type, nodes) {};
+	virtual ~triElement() = default;
+	
+	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
+	Eigen::MatrixXd locK() override;
+
+	std::vector <double> FF(double ksi, double eta, double zeta = 0) override;
+	std::vector <std::vector <double>> gradFF(double ksi, double eta, double zeta = 0) override;
+	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;
+
+private:
+	Eigen::MatrixXd C();
 };
 
-Eigen::Matrix3f triangleMatrixC(std::vector <float> x, std::vector <float> y);
-Eigen::MatrixXf triangleMatrixB(std::vector <float> x, std::vector <float> y);
-Eigen::MatrixXf triangleLocK(std::vector <float> x, std::vector <float> y);

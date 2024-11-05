@@ -1,29 +1,20 @@
 #include "Parser.h"
-#include "global.h"
-#include "QuadElements.h"
+#include "Data.h"
 
 int main(int argc, char* argv[])
 {
-	string file = "C:/Users/mushu/Desktop/cw/forFC/cw.fc";
-	std::shared_ptr<Parser> P = std::make_shared<Parser>();
-	P->read(file);
-	//for (int i = 0; i < P->nodesets.size(); i++)
-	//	for (int j = 0; j < P->nodesets[i].apply_to.size(); j++)
-	//		std::cout << P->nodesets[i].apply_to[j] << endl;
-	////std::cout << P->mesh.elems_count;
-	std::vector <std::shared_ptr <Element>> elem;
-	elem = createElements(P, 4);
+	// time
+	string file = "C:/Users/mushu/Desktop/cw/forFC/k.fc";
+	std::shared_ptr<Parser> p = std::make_shared<Parser>();
+	p->read(file);
+	Data data(p);
+	std::cout << 1;
+	//Eigen::SparseMatrix <double> K(p->mesh.elems_count * 2, p->mesh.elems_count * 2);
+	//K = globalK(p, 4, 2);
+	//for (int k = 0; k < K.outerSize() - 1000; ++k)
+	//	for (Eigen::SparseMatrix<double>::InnerIterator it(K, k); it; ++it)
+	//	{
+	//		std::cout << it.value() << "\t---" << it.row() << "\t--" << it.col() << endl;
+	//	}
 	return 0;
 }
-
-
-//int main() {
-//
-//	vector <float> x = { -1, 0, 1, 2, 1, 3, 7, -8 };
-//	vector <float> y = { 2, 1, -2, 0, 0, -5, 6, 10 };
-//	vector <float> z = { 0, -1, 1, 0, 6, 5, 3, -2 };
-//
-//	cout << hexaLocK(x, y, z, hexaInfN);
-//
-//	return 0;
-//}

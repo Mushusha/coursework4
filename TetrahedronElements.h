@@ -4,30 +4,35 @@
 
 #include "Eigen/Core"
 
-#include "global.h"
+#include "Element.h"
+
 
 class tetraElement : public Element {
 public:
 	tetraElement() {};
+	tetraElement(int id, int type, std::vector <int> nodes)
+		: Element (id, type, nodes) {};
+
 	virtual ~tetraElement() = default;
-	/*
-	dim = 3;
-	numNodes = 4;
-	tetraLocK();
-	*/
+
+	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
+	Eigen::MatrixXd locK() override;
+
+	std::vector <double> FF(double ksi, double eta, double zeta) override;
+	std::vector <std::vector <double>> gradFF(double ksi, double eta, double zeta) override;
+	Eigen::MatrixXd J(double ksi, double eta, double zeta) override;
+
+private:
+	Eigen::MatrixXd C();
 };
 
-class tetraInfElement : public tetraElement {
-public:
-	tetraInfElement() {};
-	virtual ~tetraInfElement() = default;
-	/*
-	dim = 3;
-	numNodes = 4;
-	tetraLocK();
-	*/
-};
-
-Eigen::Matrix4f tetraMatrixC(std::vector <float> x, std::vector <float> y, std:: vector <float> z);
-Eigen::MatrixXf tetraMatrixB(std::vector <float> x, std::vector <float> y, std::vector <float> z);
-Eigen::MatrixXf tetraLocK(std::vector <float> x, std::vector <float> y, std::vector <float> z);
+//class tetraInfElement : public tetraElement {
+//public:
+//	tetraInfElement() {};
+//	virtual ~tetraInfElement() = default;
+//	/*
+//	dim = 3;
+//	numNodes = 4;
+//	tetraLocK();
+//	*/
+//};

@@ -160,7 +160,7 @@ void mesh::read(json mesh) {
 			this->elem_blocks[i] = static_cast<int>(ReadInt(s_elem_blocks, i));
 			this->elem_orders[i] = static_cast<uint8_t>(ReadInt(s_elem_orders, i));
 			this->elem_parent_ids[i] = static_cast<int>(ReadInt(s_elem_parent_ids, i));
-			//this->elem_types[i] = static_cast<uint8_t>(ReadInt(s_elem_types, i));
+			this->elem_types[i] = static_cast<uint8_t>(ReadInt(s_elem_types, i));
 			this->elem_id[i] = ReadInt(s_elemids, i);
 			count += count_nodes(s_elem_types[i]);
 		}
@@ -265,5 +265,5 @@ void Parser::read(string name) {
 		this->restraints[i].read(_root["restraints"][i]);
 	}
 
-	this->settings.read(_root["settings"]);
+	//this->settings.read(_root["settings"]);
 }

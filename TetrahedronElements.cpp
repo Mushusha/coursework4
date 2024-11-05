@@ -1,8 +1,9 @@
 #include "TetrahedronElements.h"
 
-Eigen::Matrix4f tetraMatrixC(std::vector <float> x, std::vector <float> y, std::vector <float> z) {
 
-	Eigen::Matrix4f C;
+Eigen::MatrixXd tetraElement::C() {
+
+	Eigen::Matrix4d C;
 	for (int i = 0; i < 4; i++) {
 		C(i, 0) = 1;
 		C(i, 1) = x[i];
@@ -13,25 +14,24 @@ Eigen::Matrix4f tetraMatrixC(std::vector <float> x, std::vector <float> y, std::
 	return C;
 }
 
-Eigen::MatrixXf tetraMatrixB(std::vector <float> x, std::vector <float> y, std::vector <float> z) {
-
-	Eigen::MatrixXf B = Eigen::MatrixXf::Zero(6, 12);
-	Eigen::Matrix4f coef;
-	Eigen::Matrix3f a, b, c, d;
+Eigen::MatrixXd tetraElement::B(double ksi, double eta, double zeta) {
+	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6, 12);
+	Eigen::Matrix4d coef;
+	Eigen::Matrix3d a, b, c, d;
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 3; j++) {
 			a(j, 0) = x[(i + j + 1) % 4];
 			a(j, 1) = y[(i + j + 1) % 4];
 			a(j, 2) = z[(i + j + 1) % 4];
-
+	
 			b(j, 0) = 1;
 			b(j, 1) = y[(i + j + 1) % 4];
 			b(j, 2) = z[(i + j + 1) % 4];
-
+	
 			c(j, 0) = x[(i + j + 1) % 4];
 			c(j, 1) = 1;
 			c(j, 2) = z[(i + j + 1) % 4];
-
+	
 			d(j, 0) = x[(i + j + 1) % 4];
 			d(j, 1) = y[(i + j + 1) % 4];
 			d(j, 2) = 1;
@@ -54,11 +54,21 @@ Eigen::MatrixXf tetraMatrixB(std::vector <float> x, std::vector <float> y, std::
 		B(5, i * 3 + 2) = coef(i, 1);
 	}
 
-	return B / (6 * tetraMatrixC(x, y, z).determinant());
+	return B / (6 * C().determinant());
 }
 
-Eigen::MatrixXf tetraLocK(std::vector <float> x, std::vector <float> y, std::vector <float> z) {
+Eigen::MatrixXd tetraElement::locK() {
+	return B().transpose() * threeMatrixD() * B() * C().determinant() / 6;
+}
 
-	return tetraMatrixB(x, y, z).transpose() * threeMatrixD() * tetraMatrixB(x, y, z) * tetraMatrixC(x, y, z).determinant() / 6;
+std::vector<double> tetraElement::FF(double ksi, double eta, double zeta) {
+	return std::vector<double>();
+}
 
+std::vector<std::vector<double>> tetraElement::gradFF(double ksi, double eta, double zeta) {
+	return std::vector<std::vector<double>>();
+}
+
+Eigen::MatrixXd tetraElement::J(double ksi, double eta, double zeta) {
+	return Eigen::MatrixXd();
 }
