@@ -30,14 +30,16 @@ private:
 	std::shared_ptr<Parser> parser;
 	int dim;
 
+	void create_nodes();
+	void create_elements();
+	void create_constrains();
+
 	void fillGlobalK();
 	void fillGlobalLoad();
 
-	void addConstrains();
+	void fillConstrains();
 	void addToGlobalK(int first_index, int second_index, double value);
 	void addToGlobalR();
-
-
 };
 
 

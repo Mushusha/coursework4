@@ -2,7 +2,7 @@
 
 
 double Young = 2e+11;
-double Poisson = 0.3;
+double Poisson = 0.3; // need read from fc
 
 void Element::set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z) {
 	for (int i = 0; i < x.size(); i++) {

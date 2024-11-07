@@ -2,68 +2,84 @@
 
 Data::Data(std::shared_ptr <Parser> p) : parser(p) {
 	this->dim = 2; // need read from fc
-	// create nodes
-	for (int i = 0; i < p->mesh.nodes_count; i++) {
+	create_nodes();
+	create_elements();
+	create_constrains();
+}
+
+void Data::create_nodes() {
+	for (int i = 0; i < parser->mesh.nodes_count; i++) {
 		std::array <double, 3> coords;
 		for (int j = 0; j < 3; j++)
-			coords[j] = p->mesh.nodes_coord[3 * i + j];
-		this->nodes.push_back(Node(p->mesh.node_id[i], coords));
+			coords[j] = parser->mesh.nodes_coord[3 * i + j];
+		this->nodes.push_back(Node(parser->mesh.node_id[i], coords));
 	}
-	// create elements
+}
+
+void Data::create_elements() {
 	int node_tmp = 0;
-	for (int i = 0; i < p->mesh.elems_count; i++) {
+	for (int i = 0; i < parser->mesh.elems_count; i++) {
 		std::vector<int> elem_nodes;
 		std::shared_ptr<Element> elem;
-		switch (p->mesh.elem_types[i]) {
+		switch (parser->mesh.elem_types[i]) {
 		case ElemType::TRI:
 			elem_nodes.resize(3);
 			for (int j = 0; j < 3; j++)
-				elem_nodes[j] = p->mesh.elem_nodes[node_tmp + j];
+				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 3;
-			elem = std::make_shared<triElement>(triElement(p->mesh.elem_id[i], ElemType::TRI, elem_nodes));
+			elem = std::make_shared<triElement>(triElement(parser->mesh.elem_id[i], ElemType::TRI, elem_nodes));
 			break;
 		case ElemType::QUAD:
 			elem_nodes.resize(4);
 			for (int j = 0; j < 4; j++)
-				elem_nodes[j] = p->mesh.elem_nodes[node_tmp + j];
+				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 4;
-			elem = std::make_shared<quadElement>(quadElement(p->mesh.elem_id[i], ElemType::QUAD, elem_nodes));
+			elem = std::make_shared<quadElement>(quadElement(parser->mesh.elem_id[i], ElemType::QUAD, elem_nodes));
 			break;
 		case ElemType::TETRA:
 			elem_nodes.resize(4);
 			for (int j = 0; j < 4; j++)
-				elem_nodes[j] = p->mesh.elem_nodes[node_tmp + j];
+				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 4;
-			elem = std::make_shared<tetraElement>(tetraElement(p->mesh.elem_id[i], ElemType::TETRA, elem_nodes));
+			elem = std::make_shared<tetraElement>(tetraElement(parser->mesh.elem_id[i], ElemType::TETRA, elem_nodes));
 			break;
 		case ElemType::HEX:
 			elem_nodes.resize(8);
 			for (int j = 0; j < 8; j++)
-				elem_nodes[j] = p->mesh.elem_nodes[node_tmp + j];
+				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 8;
-			elem = std::make_shared<hexElement>(hexElement(p->mesh.elem_id[i], ElemType::HEX, elem_nodes));
+			elem = std::make_shared<hexElement>(hexElement(parser->mesh.elem_id[i], ElemType::HEX, elem_nodes));
 			break;
 		default:
-			std::cout << "Error: incorrect element type";  //need throw
+			std::cout << "Error: incorrect element " + to_string(i) +
+				" type: " + to_string(parser->mesh.elem_types[i]) << std::endl;  //need throw
 			break;
 		}
 		std::vector<double> x, y, z;
-		for (int i = 0; i < elem_nodes.size(); i++) {
-			x.push_back(p->mesh.nodes_coord[3 * elem_nodes[i]]);
-			y.push_back(p->mesh.nodes_coord[3 * elem_nodes[i] + 1]);
-			z.push_back(p->mesh.nodes_coord[3 * elem_nodes[i] + 2]); // may be Nodes 
+		for (int j = 0; j < elem_nodes.size(); j++) {
+			x.push_back(parser->mesh.nodes_coord[3 * (elem_nodes[j] - 1)]);
+			y.push_back(parser->mesh.nodes_coord[3 * (elem_nodes[j] - 1) + 1]);
+			z.push_back(parser->mesh.nodes_coord[3 * (elem_nodes[j] - 1) + 2]); // may be Nodes 
 		}
 		elem->set_coords(x, y, z);
 		this->elements.push_back(elem);
 	}
 }
 
+void Data::create_constrains() {
+	for (int id = 0; id < parser->restraints.size(); id++)
+		for (int node = 0; node < parser->restraints[id].size; node++)
+			for (int i = 0; i < 6; i++)
+				if (parser->restraints[id].flag[i])
+					nodes[node].set_constrains(i, parser->restraints[id].data[i]);
+}
+
 void Data::fillGlobalK() {
-	int infCount = 0; //
+	int inf_count = 0; // ??
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
 
-	Eigen::SparseMatrix <double> K(dim * (nodes_count + infCount), dim * (nodes_count + infCount));
+	Eigen::SparseMatrix <double> K(dim * (nodes_count + inf_count), dim * (nodes_count + inf_count));
 	std::vector <Eigen::Triplet <double>> tripl_vec;
 	for (int i = 0; i < elems_count; i++)
 		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
@@ -73,21 +89,23 @@ void Data::fillGlobalK() {
 				tripl_vec.push_back(trpl);
 			}
 
-	K.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
-
-	//for (int i = 0; i < K.outerSize(); ++i)
-	//	for (Eigen::SparseMatrix<double>::InnerIterator it(K, i); it; ++it)
-	//		for (int j = 0; j < p->restraints.size(); j++)
-	//			for (int k = 0; k < p->restraints[j].apply_to.size(); k++) 
-	//				if (it.row() == indexRestrain(p, j, k, dim) || it.col() == indexRestrain(p, j, k, dim)) 
-	//					it.valueRef() = (it.row() == it.col()) ? 1.0 : 0.0;
-						
- }
+	K.setFromTriplets(tripl_vec.begin(), tripl_vec.end());	
+} 
 
 void Data::fillGlobalLoad() {
+
 }
 
-void Data::addConstrains() {
+void Data::fillConstrains() {
+	for (int node = 0; node < nodes.size(); node++)
+		for (auto const& c: nodes[node].constrains)
+			for (int i = 0; i < K.outerSize(); i++) {
+				for (Eigen::SparseMatrix<double>::InnerIterator it(K, i); it; ++it)
+					if ((it.row() == (node - 1) * dim + c.first) ||
+						(it.col() == (node - 1) * dim + c.first) && (it.row() != it.col()))
+						it.valueRef() = 0.0;
+				R.coeffRef(i) *= c.second;
+			}
 }
 
 void Data::addToGlobalK(int first_index, int second_index, double value) {
