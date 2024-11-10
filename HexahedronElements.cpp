@@ -72,6 +72,10 @@ Eigen::MatrixXd hexElement::locK() {
 	return k;
 }
 
+std::vector<double> hexElement::locR() {
+	return std::vector<double>();
+}
+
 //double hexInfN(double ksi, double eta, double zeta, std::vector <double> a) {
 //	return ((-ksi / (1 - ksi)) * ((1 - eta) * (1 - zeta) * a[0] + (1 + eta) * (1 - zeta) * a[1] +
 //		(1 + eta) * (1 + zeta) * a[2] + (1 - eta) * (1 + zeta) * a[3])

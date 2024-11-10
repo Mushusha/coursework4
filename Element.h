@@ -36,9 +36,12 @@ public:
 	virtual Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
 	virtual Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) = 0; // <DIM, DIM>
 	virtual Eigen::MatrixXd locK() = 0; // <NODES * DIM, NODES * DIM>
+	virtual std::vector <double> locR() = 0;
+
 
 	void set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z);
-	//void setLoad();
+	void set_load(int edge, int comp, double value);
+
 	int get_nodes(int i) { return nodes[i]; }
 	int nodes_count() { return nodes.size(); }
 protected:
@@ -47,7 +50,7 @@ protected:
 	std::vector <double> x, y, z;
 	std::vector <int> nodes; // find in Node
 
-	std::map <int, double> load; // pair ??
+	std::map <std::pair<int, int>, double> load; // pair <loc edge, comp>, value
 
 
 	Eigen::MatrixXd twoMatrixD(); //plane_stress, plane_strain ??  

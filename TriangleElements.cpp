@@ -1,6 +1,7 @@
 #include "TriangleElements.h"
 #include "Data.h"
 
+#include <math.h>
 
 Eigen::MatrixXd triElement::C() {
 	Eigen::Matrix3d C;
@@ -10,6 +11,20 @@ Eigen::MatrixXd triElement::C() {
 		C(i, 2) = y[i];
 	}
 	return C;
+}
+
+std::pair<int, int> triElement::edge_to_node(int edge) {
+	if (edge != 2)
+		return std::pair<int, int>(edge, edge + 1);
+	else if (edge == 2)
+		return std::pair<int, int>(edge, 0);
+	else
+		std::cout << "Error: wrong edge" << endl;
+}
+
+double triElement::len_edge(int edge) {
+	std::pair<int, int> coords = edge_to_node(edge);
+	return std::sqrt(std::pow((x[coords.first] - x[coords.second]), 2) + std::pow((y[coords.first] - y[coords.second]), 2));
 }
 
 Eigen::MatrixXd triElement::B(double ksi, double eta, double zeta) {
@@ -28,6 +43,18 @@ Eigen::MatrixXd triElement::B(double ksi, double eta, double zeta) {
 
 Eigen::MatrixXd triElement::locK() {
 	return B().transpose() * twoMatrixD() * B() * C().determinant() / 2;
+}
+
+std::vector<double> triElement::locR() {
+	std::vector<double> R;
+	R.resize(6);
+	// l.first.first - edge, l.first.second - comp, l.second - value
+	for (auto const& l: load) {
+		std::pair<int, int> nodes = edge_to_node(l.first.first);
+		R[nodes.first + l.first.second] = l.second * len_edge(l.first.first) / 2;
+		R[nodes.second + l.first.second] = l.second * len_edge(l.first.first) / 2;
+	}
+	return R;
 }
 
 std::vector<double> triElement::FF(double ksi, double eta, double zeta) {

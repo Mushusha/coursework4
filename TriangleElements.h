@@ -16,6 +16,7 @@ public:
 	
 	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
 	Eigen::MatrixXd locK() override;
+	std::vector <double> locR() override;
 
 	std::vector <double> FF(double ksi, double eta, double zeta = 0) override;
 	std::vector <std::vector <double>> gradFF(double ksi, double eta, double zeta = 0) override;
@@ -23,5 +24,7 @@ public:
 
 private:
 	Eigen::MatrixXd C();
+	double len_edge(int edge);
+	std::pair<int, int> edge_to_node(int edge);
 };
 

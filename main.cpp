@@ -12,6 +12,8 @@ int main(int argc, char* argv[])
 	std::shared_ptr<Parser> p = std::make_shared<Parser>();
 	p->read(file);
 	Data data(p);
+	data.solve();
+	std::cout << data.U << std::endl;
 	std::cout << "done";
 
 	return 0;

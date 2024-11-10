@@ -19,6 +19,7 @@ public:
 	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;
 	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
 	Eigen::MatrixXd locK() override;
+	std::vector <double> locR() override;
 };
 
 //class quadInfElement : public quadElement {

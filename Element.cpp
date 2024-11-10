@@ -4,12 +4,18 @@
 double Young = 2e+11;
 double Poisson = 0.3; // need read from fc
 
+
 void Element::set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z) {
 	for (int i = 0; i < x.size(); i++) {
 		this->x.push_back(x[i]);
 		this->y.push_back(y[i]);
 		this->z.push_back(z[i]);
 	}
+}
+
+void Element::set_load(int edge, int comp, double value) {
+	std::pair <int, int> pair(edge, comp);
+	load.insert({ pair, value });
 }
 
 Eigen::MatrixXd Element::twoMatrixD() {

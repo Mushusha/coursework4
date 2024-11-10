@@ -5,6 +5,7 @@ Data::Data(std::shared_ptr <Parser> p) : parser(p) {
 	create_nodes();
 	create_elements();
 	create_constrains();
+	create_load();
 }
 
 void Data::create_nodes() {
@@ -67,11 +68,23 @@ void Data::create_elements() {
 }
 
 void Data::create_constrains() {
-	for (int id = 0; id < parser->restraints.size(); id++)
-		for (int node = 0; node < parser->restraints[id].size; node++)
+	for (int id = 0; id < parser->restraints.size(); id++) {
+		auto& restraints = parser->restraints[id];
+		for (int node = 0; node < restraints.size; node++)
 			for (int i = 0; i < 6; i++)
-				if (parser->restraints[id].flag[i])
-					nodes[node].set_constrains(i, parser->restraints[id].data[i]);
+				if (restraints.flag[i])
+					nodes[restraints.apply_to[node] - 1].set_constrains(i, restraints.data[i]); // if exist --> throw
+	}
+}
+
+void Data::create_load() { // type - pressure
+	for (int id = 0; id < parser->load.size(); id++) {
+		auto& load = parser->load[id].apply_to;
+		for (int elem = 0; elem < load.size() / 2; elem++)
+			for (int i = 0; i < 3; i++)
+				if (parser->load[id].data[i] != 0.0)
+					elements[load[2 * elem] - 1]->set_load(load[2 * elem + 1], i, parser->load[id].data[i]);
+	}
 }
 
 void Data::fillGlobalK() {
@@ -79,21 +92,31 @@ void Data::fillGlobalK() {
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
 
-	Eigen::SparseMatrix <double> K(dim * (nodes_count + inf_count), dim * (nodes_count + inf_count));
+	K.resize(dim * (nodes_count + inf_count), dim * (nodes_count + inf_count));
 	std::vector <Eigen::Triplet <double>> tripl_vec;
-	for (int i = 0; i < elems_count; i++)
+	for (int i = 0; i < elems_count; i++) {
+		Eigen::MatrixXd loc_k = elements[i]->locK();
 		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
 			for (int k = 0; k < elements[i]->nodes_count() * dim; k++) {
-				Eigen::MatrixXd loc_k = elements[i]->locK();
 				Eigen::Triplet <double> trpl(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim, dim * (elements[i]->get_nodes(k / dim) - 1) + k % dim, loc_k(j, k));
 				tripl_vec.push_back(trpl);
 			}
+	}
 
 	K.setFromTriplets(tripl_vec.begin(), tripl_vec.end());	
 } 
 
-void Data::fillGlobalLoad() {
+void Data::fillGlobalR() {
+	int inf_count = 0; // ??
+	int nodes_count = parser->mesh.nodes_count;
+	int elems_count = parser->mesh.elems_count;
 
+	R.resize(dim * (nodes_count + inf_count));
+	for (int i = 0; i < elems_count; i++) {
+		std::vector loc_r = elements[i]->locR();
+		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
+				R.insert(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim) = loc_r[j];
+	}
 }
 
 void Data::fillConstrains() {
@@ -113,5 +136,20 @@ void Data::addToGlobalK(int first_index, int second_index, double value) {
 	K.setFromTriplets(&tripl, &tripl + 1);
 }
 
-void Data::addToGlobalR() {
+void Data::addToGlobalR(int index, double value) {
+	R.insert(index) = value;
+}
+
+void Data::solve() {
+	fillGlobalK();
+	fillGlobalR();
+	fillConstrains();
+
+	Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> solver;
+	solver.compute(K);
+
+	if (solver.info() != Eigen::Success)
+		std::cerr << "Error in matrix K" << std::endl;
+
+	U = solver.solve(R);
 }

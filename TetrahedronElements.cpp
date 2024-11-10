@@ -61,6 +61,10 @@ Eigen::MatrixXd tetraElement::locK() {
 	return B().transpose() * threeMatrixD() * B() * C().determinant() / 6;
 }
 
+std::vector<double> tetraElement::locR() {
+	return std::vector<double>();
+}
+
 std::vector<double> tetraElement::FF(double ksi, double eta, double zeta) {
 	return std::vector<double>();
 }

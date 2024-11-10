@@ -19,6 +19,8 @@ public:
 	Eigen::MatrixXd J(double ksi, double eta, double zeta) override;
 	Eigen::MatrixXd B(double ksi, double eta, double zeta) override;
 	Eigen::MatrixXd locK() override;
+	std::vector <double> locR() override;
+
 };
 
 //class hexaInfElement : public hexElement {

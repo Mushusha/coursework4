@@ -56,6 +56,10 @@ Eigen::MatrixXd quadElement::locK() {
 	return k;
 }
 
+std::vector<double> quadElement::locR() {
+	return std::vector<double>();
+}
+
 //double quadInfN(double ksi, double eta, std::vector <double> a) {
 //	return ((1 + eta) * (-ksi / (1 - ksi) * a[0] + (1 + ksi / (1 - ksi)) * a[1]) + (1 - eta) * (-ksi / (1 - ksi) * a[2] + (1 + ksi / (1 - ksi)) * a[3])) / 2;
 //}

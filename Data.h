@@ -9,7 +9,6 @@
 #include "TetrahedronElements.h"
 #include "HexahedronElements.h"
 
-
 class Data {
 public:
 	Data() {}
@@ -23,6 +22,8 @@ public:
 	Eigen::SparseVector <double> R;
 	Eigen::VectorX <double> U; // displacement
 
+	void solve();
+
 private:
 	std::vector <shared_ptr<Element>> elements;
 	std::vector <Node> nodes;
@@ -33,13 +34,14 @@ private:
 	void create_nodes();
 	void create_elements();
 	void create_constrains();
+	void create_load();
 
 	void fillGlobalK();
-	void fillGlobalLoad();
+	void fillGlobalR();
 
 	void fillConstrains();
 	void addToGlobalK(int first_index, int second_index, double value);
-	void addToGlobalR();
+	void addToGlobalR(int index, double value);
 };
 
 
