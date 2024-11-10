@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Parser.h"
+#include "log.h"
 #include "Enums.h"
 #include "Node.h"
 #include "Element.h"

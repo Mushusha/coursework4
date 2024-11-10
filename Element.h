@@ -16,7 +16,7 @@
 #include "Parser.h"
 #include "Enums.h"
 #include "Node.h"
-
+#include "log.h"
 
 class Element {
 public:

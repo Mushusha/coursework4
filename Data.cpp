@@ -15,6 +15,8 @@ void Data::create_nodes() {
 			coords[j] = parser->mesh.nodes_coord[3 * i + j];
 		this->nodes.push_back(Node(parser->mesh.node_id[i], coords));
 	}
+	logger& log = logger::log();
+	log.print("Create nodes");
 }
 
 void Data::create_elements() {
