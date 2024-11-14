@@ -45,18 +45,21 @@ Eigen::MatrixXd  quadElement::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
-Eigen::MatrixXd quadElement::locK() {
+void quadElement::set_pressure(int edge, double value) {
+}
+
+Eigen::MatrixXd quadElement::localK() {
 
 	Eigen::MatrixXd k = Eigen::MatrixXd::Zero(8, 8);
 	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
 
 	for (int i = 0; i < 4; i++)
-		k += B(ksi[i], eta[i]).transpose() * twoMatrixD() * B(ksi[i], eta[i]) * std::abs(J(eta[i], ksi[i]).determinant());
+		k += B(ksi[i], eta[i]).transpose() * planeStressD() * B(ksi[i], eta[i]) * std::abs(J(eta[i], ksi[i]).determinant());
 	return k;
 }
 
-std::vector<double> quadElement::locR() {
+std::vector<double> quadElement::localR() {
 	return std::vector<double>();
 }
 

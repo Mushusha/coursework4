@@ -90,7 +90,7 @@ void load::read(json load) {
 	this->type = load["type"];
 	this->size = load["apply_to_size"];
 
-	this->apply_to.resize(this->size);
+	this->apply_to.resize(2 * this->size);
 	std::string apply_to_s = load["apply_to"];
 	base64_decode(apply_to_s);
 	for (size_t i = 0; i < this->apply_to.size(); i++)

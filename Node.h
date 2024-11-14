@@ -20,8 +20,8 @@ public:
 	};
 	virtual ~Node() = default;
 
-	std::map <int, double> constrains; // first - component, second - value
-	void set_constrains(int comp, double value); // need ??
+	std::map <int, double> constraints; // first - component, second - value
+	void set_constraints(int comp, double value); // need ??
 
 	int getID() { return id; }
 	double getX() { return x; }

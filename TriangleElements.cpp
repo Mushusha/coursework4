@@ -37,22 +37,22 @@ Eigen::MatrixXd triElement::B(double ksi, double eta, double zeta) {
 		B(2, 2 * i) = x[(2 + i) % 3] - x[(1 + i) % 3];
 		B(2, 2 * i + 1) = y[(1 + i) % 3] - y[(2 + i) % 3];
 	}
-	B = B / C().determinant() / 2;
+	B = B / std::abs(C().determinant());
 	return B;
 }
 
-Eigen::MatrixXd triElement::locK() {
-	return B().transpose() * twoMatrixD() * B() * C().determinant() / 2;
+Eigen::MatrixXd triElement::localK() {
+	return B().transpose() * planeStressD() * B() * std::abs(C().determinant() / 2);
 }
 
-std::vector<double> triElement::locR() {
+std::vector<double> triElement::localR() {
 	std::vector<double> R;
 	R.resize(6);
 	// l.first.first - edge, l.first.second - comp, l.second - value
 	for (auto const& l: load) {
-		std::pair<int, int> nodes = edge_to_node(l.first.first);
-		R[nodes.first + l.first.second] = l.second * len_edge(l.first.first) / 2;
-		R[nodes.second + l.first.second] = l.second * len_edge(l.first.first) / 2;
+		std::pair<int, int> node = edge_to_node(l.first.first);
+		R[2 * node.first + l.first.second] += l.second * len_edge(l.first.first) / 2;
+		R[2 * node.second + l.first.second] += l.second * len_edge(l.first.first) / 2;
 	}
 	return R;
 }
@@ -67,4 +67,21 @@ std::vector<std::vector<double>> triElement::gradFF(double ksi, double eta, doub
 
 Eigen::MatrixXd triElement::J(double ksi, double eta, double zeta) {
 	return Eigen::MatrixXd();
+}
+
+void triElement::set_pressure(int edge, double value) {
+	std::pair<int, int> node = edge_to_node(edge);
+	std::array<double, 2> comp;
+	comp[0] = -y[node.first] + y[node.second];
+	comp[1] = x[node.first] - x[node.second];
+
+	if ((x[node.first] - x[node.second]) * (y[node.first] - y[3 - node.first - node.second]) -
+		(y[node.first] - y[node.second]) * (x[node.first] - x[3 - node.first - node.second]) < 0)
+		for (auto& i : comp)
+			i *= -1;
+	
+	for (int i = 0; i < 2; i++) {
+		std::pair <int, int> pair(edge, i);
+		load.insert({ pair, value * comp[i] / len_edge(edge)});
+	}
 }

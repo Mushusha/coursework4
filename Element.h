@@ -11,7 +11,9 @@
 
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
+#include "Eigen/SparseCholesky"
 #include "Eigen/Core"
+#include "unsupported/Eigen/IterativeSolvers"
 
 #include "Parser.h"
 #include "Enums.h"
@@ -30,17 +32,13 @@ public:
 	};
 	virtual ~Element() = default;
 
-
-	virtual std::vector <double> FF(double ksi, double eta, double zeta = 0) = 0;
-	virtual std::vector <std::vector <double>> gradFF(double ksi, double eta, double zeta = 0) = 0;
-	virtual Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
-	virtual Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) = 0; // <DIM, DIM>
-	virtual Eigen::MatrixXd locK() = 0; // <NODES * DIM, NODES * DIM>
-	virtual std::vector <double> locR() = 0;
+	virtual Eigen::MatrixXd localK() = 0; // <NODES * DIM, NODES * DIM>
+	virtual std::vector <double> localR() = 0;
 
 
 	void set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z);
-	void set_load(int edge, int comp, double value);
+	void set_load(int type, int edge, std::array<double, 6> value); // nodes
+	void set_constants(double E, double nu);
 
 	int get_nodes(int i) { return nodes[i]; }
 	int nodes_count() { return nodes.size(); }
@@ -50,10 +48,20 @@ protected:
 	std::vector <double> x, y, z;
 	std::vector <int> nodes; // find in Node
 
-	std::map <std::pair<int, int>, double> load; // pair <loc edge, comp>, value
+	double Young;
+	double Poisson;
 
+	// refactoring: may be <edge, vector>
+	std::map <std::pair<int, int>, double> load; // pair <edge, comp>, value
 
-	Eigen::MatrixXd twoMatrixD(); //plane_stress, plane_strain ??  
+	virtual std::vector <double> FF(double ksi, double eta, double zeta = 0) = 0;
+	virtual std::vector <std::vector <double>> gradFF(double ksi, double eta, double zeta = 0) = 0;
+	virtual Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
+	virtual Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) = 0; // <DIM, DIM>
+	
+	virtual void set_pressure(int edge, double value) = 0;
+
+	Eigen::MatrixXd planeStressD(); //plane_stress, plane_strain ??  
 	Eigen::MatrixXd threeMatrixD();
 };
 

@@ -61,7 +61,10 @@ Eigen::MatrixXd hexElement::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
-Eigen::MatrixXd hexElement::locK() {
+void hexElement::set_pressure(int edge, double value) {
+}
+
+Eigen::MatrixXd hexElement::localK() {
 	Eigen::MatrixXd k = Eigen::MatrixXd::Zero(24, 24);
 	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774, 0.5774 };
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774 };
@@ -72,7 +75,7 @@ Eigen::MatrixXd hexElement::locK() {
 	return k;
 }
 
-std::vector<double> hexElement::locR() {
+std::vector<double> hexElement::localR() {
 	return std::vector<double>();
 }
 

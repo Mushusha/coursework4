@@ -23,7 +23,14 @@ public:
 	Eigen::SparseVector <double> R;
 	Eigen::VectorX <double> U; // displacement
 
+	void fillGlobalK();
+	void fillGlobalR();
+	void fillconstraints();
+
 	void solve();
+
+	static void writeMatrix(Eigen::SparseMatrix<double> A);
+	static void writeVector(Eigen::SparseVector<double> B);
 
 private:
 	std::vector <shared_ptr<Element>> elements;
@@ -34,15 +41,14 @@ private:
 
 	void create_nodes();
 	void create_elements();
-	void create_constrains();
+	void create_constants();
+	void create_constraints();
 	void create_load();
 
-	void fillGlobalK();
-	void fillGlobalR();
-
-	void fillConstrains();
 	void addToGlobalK(int first_index, int second_index, double value);
 	void addToGlobalR(int index, double value);
+
+	void zeroDiagonalCheck();
 };
 
 

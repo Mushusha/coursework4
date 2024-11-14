@@ -1,12 +1,13 @@
 #include "Parser.h"
 #include "Data.h"
 
+#include "Tests.h"
 #include "log.h"
 
 int main(int argc, char* argv[]) {
 
 	// errors
-	// tests
+
 	logger &log = logger::log();
 	log.print("Start program");
 	string file = "C:/Users/mushu/Desktop/cwgit/coursework4/k.fc";
@@ -14,7 +15,8 @@ int main(int argc, char* argv[]) {
 	p->read(file);
 	Data data(p);
 	data.solve();
-	std::cout << data.U << std::endl;
+	//std::cout << data.U << std::endl;
 	log.print("Done");
+	tests();
 	return 0;
 }

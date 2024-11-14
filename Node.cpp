@@ -1,5 +1,5 @@
 #include "Node.h"
 
-void Node::set_constrains(int comp, double value) {
-	constrains.insert({ comp, value });
+void Node::set_constraints(int comp, double value) {
+	constraints.insert({ comp, value });
 }

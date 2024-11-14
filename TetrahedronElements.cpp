@@ -57,11 +57,11 @@ Eigen::MatrixXd tetraElement::B(double ksi, double eta, double zeta) {
 	return B / (6 * C().determinant());
 }
 
-Eigen::MatrixXd tetraElement::locK() {
+Eigen::MatrixXd tetraElement::localK() {
 	return B().transpose() * threeMatrixD() * B() * C().determinant() / 6;
 }
 
-std::vector<double> tetraElement::locR() {
+std::vector<double> tetraElement::localR() {
 	return std::vector<double>();
 }
 
@@ -75,4 +75,7 @@ std::vector<std::vector<double>> tetraElement::gradFF(double ksi, double eta, do
 
 Eigen::MatrixXd tetraElement::J(double ksi, double eta, double zeta) {
 	return Eigen::MatrixXd();
+}
+
+void tetraElement::set_pressure(int edge, double value) {
 }
