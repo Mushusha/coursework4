@@ -18,24 +18,24 @@ void tests() {
 // TRIANGLE TESTS
 
 void test_triElement_B() {
-//    triElement elem;
-//    std::vector<double> x = { 1, 4, 9 };
-//    std::vector<double> y = { 1, 6, 1 };
-//    std::vector<double> z = { 0, 0, 0 };
-//
-//    elem.set_coords(x, y, z);
-//
-//    Eigen::MatrixXd expectedB(3, 6);
-//    expectedB <<
-//        0.125, 0, 0, 0, -0.125, 0,
-//        0, 0.125, 0, -0.2, 0, 0.075,
-//        0.125, 0.125, -0.2, 0, 0.075, -0.125;
-//    Eigen::MatrixXd resultB = elem.B();
-//
-//    for (int i = 0; i < 3; ++i)
-//        for (int j = 0; j < 6; ++j)
-//            assert(resultB(i, j) == expectedB(i, j));
-//
+    triElement elem;
+    std::vector<double> x = { 1, 4, 9 };
+    std::vector<double> y = { 1, 6, 1 };
+    std::vector<double> z = { 0, 0, 0 };
+
+    elem.set_coords(x, y, z);
+
+    Eigen::MatrixXd expectedB(3, 6);
+    expectedB <<
+        0.125, 0, 0, 0, -0.125, 0,
+        0, 0.125, 0, -0.2, 0, 0.075,
+        0.125, 0.125, -0.2, 0, 0.075, -0.125;
+    Eigen::MatrixXd resultB = elem.B();
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 6; ++j)
+            assert(resultB(i, j) == expectedB(i, j));
+
     std::cout << "triElement_B: Test passed!" << std::endl;
 }
 

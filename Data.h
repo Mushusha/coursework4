@@ -23,15 +23,21 @@ public:
 	Eigen::SparseMatrix <double> K;
 	Eigen::SparseVector <double> F;
 	Eigen::VectorX <double> U; // displacement
-	Eigen::VectorX <double> epsilon; // strain
-	Eigen::VectorX <double> sigma; // stress
+
+	Eigen::SparseMatrix <double> C; // agreed resultants
+	Eigen::SparseVector <double> R;
+
 
 	void fillGlobalK();
 	void fillGlobalF();
 	void fillconstraints();
 
+	void fillGlobalC();
+	void fillGlobalR(std::string field);
+
 	void solve();
 	void fillFields();
+	void smoothing(std::string field);
 
 private:
 	std::vector <shared_ptr<Element>> elements;
@@ -50,8 +56,11 @@ private:
 	void addToGlobalF(int index, double value);
 
 	void displacementToElements();
+	void displacementToNodes();
 	void calcStrain();
 	void calcStress();
 
 	void zeroDiagonalCheck();
+
+	void outputValues(std::string field);
 };

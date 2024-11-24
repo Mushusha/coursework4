@@ -36,6 +36,9 @@ public:
 	virtual std::vector <double> localF() = 0;
 	virtual Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
 
+	virtual Eigen::MatrixXd localC() = 0; // agreed resultants
+	virtual std::vector <double> localR(double value) = 0;
+
 	Eigen::MatrixXd planeStressD(); //plane_stress, plane_strain ??  
 	Eigen::MatrixXd planeStrainD();
 	Eigen::MatrixXd threeMatrixD();

@@ -20,7 +20,7 @@ public:
 	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
 
 	Eigen::MatrixXd localC() override;
-	std::vector <double> localR() override;
+	std::vector <double> localR(double value) override;
 
 protected:
 	std::vector <double> FF(double ksi, double eta, double zeta) override;

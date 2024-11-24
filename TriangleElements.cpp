@@ -41,14 +41,6 @@ Eigen::MatrixXd triElement::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
-Eigen::MatrixXd triElement::localC() {
-	return Eigen::MatrixXd();
-}
-
-std::vector<double> triElement::localR() {
-	return std::vector<double>();
-}
-
 Eigen::MatrixXd triElement::localK() {
 	return B().transpose() * planeStrainD() * B() * std::abs(C().determinant() / 2);
 }
@@ -63,6 +55,22 @@ std::vector<double> triElement::localF() {
 		F[2 * node.second + l.first.second] += l.second * len_edge(l.first.first) / 2;
 	}
 	return F;
+}
+
+Eigen::MatrixXd triElement::localC() {
+	Eigen::MatrixXd c(3, 3);
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			c(i, j) = (i == j) ? (C().determinant() / 12) : (C().determinant() / 24);
+	return c;
+}
+
+std::vector<double> triElement::localR(double value) {
+	std::vector<double> R;
+	R.resize(3);
+	for (int i = 0; i < 3; i++)
+		R[i] = value * C().determinant() / 6;
+	return R;
 }
 
 std::vector<double> triElement::FF(double ksi, double eta, double zeta) {

@@ -124,7 +124,6 @@ void Data::fillGlobalK() {
 	zeroDiagonalCheck();
 	logger& log = logger::log();
 	log.print("Fill stiffness matrix");
-
 } 
 
 void Data::fillGlobalF() {
@@ -134,9 +133,9 @@ void Data::fillGlobalF() {
 
 	F.resize(dim * (nodes_count + inf_count));
 	for (int i = 0; i < elems_count; i++) {
-		std::vector loc_r = elements[i]->localF();
+		std::vector loc_f = elements[i]->localF();
 		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
-			F.coeffRef(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim) += loc_r[j];
+			F.coeffRef(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim) += loc_f[j];
 	}
 	logger& log = logger::log();
 	log.print("Fill right vector");
@@ -160,6 +159,50 @@ void Data::fillconstraints() {
 	log.print("Fill canctriants");
 }
 
+void Data::fillGlobalC() {
+	int inf_count = 0; // ??
+	int nodes_count = parser->mesh.nodes_count;
+	int elems_count = parser->mesh.elems_count;
+
+	C.resize(nodes_count + inf_count, nodes_count + inf_count);
+	std::vector <Eigen::Triplet <double>> tripl_vec;
+	for (int i = 0; i < elems_count; i++) {
+		Eigen::MatrixXd loc_c = elements[i]->localC();
+		for (int j = 0; j < elements[i]->nodes_count(); j++)
+			for (int k = 0; k < elements[i]->nodes_count(); k++) {
+				Eigen::Triplet <double> trpl(elements[i]->get_nodes(j) - 1, elements[i]->get_nodes(k) - 1, loc_c(j, k));
+				tripl_vec.push_back(trpl);
+			}
+	}
+
+	C.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
+	zeroDiagonalCheck();
+}
+
+void Data::fillGlobalR(std::string field) {
+	int inf_count = 0; // ??
+	int nodes_count = parser->mesh.nodes_count;
+	int elems_count = parser->mesh.elems_count;
+
+	R.resize(nodes_count + inf_count);
+	for (int i = 0; i < elems_count; i++) {
+		double value;
+		if (field == "stress_xx")
+			value = elements[i]->stress[Comp::XX];
+		else if (field == "stress_yy")
+			value = elements[i]->stress[Comp::YY];
+		else if (field == "stress_xy")
+			if (dim == 2)
+				value = elements[i]->stress[2];
+			else
+				value = elements[i]->stress[Comp::XY];
+
+		std::vector loc_r = elements[i]->localR(value);
+		for (int j = 0; j < elements[i]->nodes_count(); j++)
+			R.coeffRef(elements[i]->get_nodes(j) - 1) += loc_r[j];
+	}
+}
+
 void Data::addToGlobalK(int first_index, int second_index, double value) {
 	Eigen::Triplet <double> tripl (first_index, second_index, value);
 	K.setFromTriplets(&tripl, &tripl + 1);
@@ -180,6 +223,12 @@ void Data::displacementToElements() {
 				elements[elem]->displacement[dim * node + 2] = U(dim * (elements[elem]->get_nodes(node) - 1) + 2);
 		}
 	}
+}
+
+void Data::displacementToNodes() {
+	for (int i = 0; i < nodes.size(); i++)
+		for (int j = 0; j < dim; j++)
+			nodes[i].set_displacement(U.coeffRef(dim * i + j), j);
 }
 
 void Data::calcStrain() {
@@ -212,6 +261,28 @@ void Data::zeroDiagonalCheck() {
 		}
 }
 
+void Data::outputValues(std::string field) {
+	ofstream file;
+	file.open(field + ".txt");
+
+	for (int node = 0; node < nodes.size(); node++)
+		if (nodes[node].getY() == 0) {
+			double value;
+			if (field == "stress_xx")
+				value = nodes[node].get_stress(Comp::XX);
+			else if (field == "stress_yy")
+				value = nodes[node].get_stress(Comp::YY);
+			else if (field == "stress_xy")
+				value = nodes[node].get_stress(Comp::XY);
+			//file << nodes[node].getX() << std::endl;
+			file << std::fixed << std::setprecision(12) << value << std::endl;
+
+			//file << "(" << nodes[node].getX() << ", " << std::fixed << std::setprecision(12) << value << ")" << std::endl;
+		}
+	file.close();
+
+}
+
 void Data::solve() {
 	fillGlobalK();
 	fillGlobalF();
@@ -238,20 +309,35 @@ void Data::solve() {
 	log.print("Solve done");
 
 	fillFields();
-
-	ofstream file;
-	file.open("stressxx.txt");
-
-	for (int elem = 0; elem < elements.size(); elem++)
-		for (int node = 0; node < elements[elem]->nodes_count(); node++)
-			if (elements[elem]->get_coord(node, GlobVar::Y) == 0)
-				file << "(" << elements[elem]->get_coord(node, GlobVar::X) << ", " << std::fixed << std::setprecision(12) << elements[elem]->stress[2] << ")" << std::endl;
-	file.close();
 }
 
 void Data::fillFields() {
 	displacementToElements();
 	calcStrain();
 	calcStress();
+}
+
+void Data::smoothing(std::string field) {
+	fillGlobalC();
+	fillGlobalR(field);
+
+	Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
+	solver.compute(C);
+	if (solver.info() != Eigen::Success)
+		std::cerr << "Error in C" << std::endl;
+
+	Eigen::MatrixXd Result;
+
+	Result = solver.solve(R);
+
+	for (int i = 0; i < nodes.size(); i++) // refactoring
+		if (field == "stress_xx")
+			nodes[i].set_stress(Result(i), Comp::XX);
+		else if (field == "stress_yy")
+			nodes[i].set_stress(Result(i), Comp::YY);
+		else if (field == "stress_xy")
+			nodes[i].set_stress(Result(i), Comp::XY);
+
+	outputValues(field);
 }
 

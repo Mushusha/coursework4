@@ -57,19 +57,19 @@ Eigen::MatrixXd tetraElement::B(double ksi, double eta, double zeta) {
 	return B / (6 * C().determinant());
 }
 
-Eigen::MatrixXd tetraElement::localC() {
-	return Eigen::MatrixXd();
-}
-
-std::vector<double> tetraElement::localR() {
-	return std::vector<double>();
-}
-
 Eigen::MatrixXd tetraElement::localK() {
 	return B().transpose() * threeMatrixD() * B() * C().determinant() / 6;
 }
 
 std::vector<double> tetraElement::localF() {
+	return std::vector<double>();
+}
+
+Eigen::MatrixXd tetraElement::localC() {
+	return Eigen::MatrixXd();
+}
+
+std::vector<double> tetraElement::localR(double value) {
 	return std::vector<double>();
 }
 
