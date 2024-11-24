@@ -15,13 +15,16 @@ public:
 	virtual ~hexElement() = default;
 
 	Eigen::MatrixXd localK() override;
+	std::vector <double> localF() override;
+	Eigen::MatrixXd B(double ksi, double eta, double zeta) override;
+
+	Eigen::MatrixXd localC() override;
 	std::vector <double> localR() override;
 
 protected:
 	std::vector<double> FF(double ksi, double eta, double zeta) override;
 	std::vector<std::vector<double>> gradFF(double ksi, double eta, double zeta) override;
 	Eigen::MatrixXd J(double ksi, double eta, double zeta) override;
-	Eigen::MatrixXd B(double ksi, double eta, double zeta) override;
 
 	void set_pressure(int edge, double value);
 

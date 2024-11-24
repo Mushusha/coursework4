@@ -3,7 +3,7 @@
 #include "Data.h"
 #include "Element.h"
 #include "TriangleElements.h"
-
+#include "MathMV.h"
 
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
@@ -13,10 +13,13 @@
 void test_triElement_B();
 void test_triElement_locK();
 void test_triElement_globK();
-void test_triElement_locR();
-void test_triElement_globR();
+void test_triElement_locF();
+void test_triElement_globF();
 void test_triElement_constraintsK();
-void test_triElement_constraintsR();
+void test_triElement_constraintsF();
+void test_triElement_dispToElem();
+void test_triElement_calcStrain();
+void test_triElement_calcStress();
 
 
 void tests();

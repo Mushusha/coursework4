@@ -15,13 +15,13 @@ public:
 	virtual ~quadElement() = default;
 
 	Eigen::MatrixXd localK() override;
-	std::vector <double> localR() override;
+	std::vector <double> localF() override;
+	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
 
 protected:
 	std::vector<double> FF(double ksi, double eta, double zeta = 0) override;
 	std::vector <std::vector <double>> gradFF(double ksi, double eta, double zeta = 0) override;
 	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;
-	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
 
 	void set_pressure(int edge, double value);
 

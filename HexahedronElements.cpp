@@ -61,6 +61,14 @@ Eigen::MatrixXd hexElement::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
+Eigen::MatrixXd hexElement::localC() {
+	return Eigen::MatrixXd();
+}
+
+std::vector<double> hexElement::localR() {
+	return std::vector<double>();
+}
+
 void hexElement::set_pressure(int edge, double value) {
 }
 
@@ -75,7 +83,7 @@ Eigen::MatrixXd hexElement::localK() {
 	return k;
 }
 
-std::vector<double> hexElement::localR() {
+std::vector<double> hexElement::localF() {
 	return std::vector<double>();
 }
 

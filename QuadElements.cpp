@@ -45,6 +45,14 @@ Eigen::MatrixXd  quadElement::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
+Eigen::MatrixXd quadElement::localC() {
+	return Eigen::MatrixXd();
+}
+
+std::vector<double> quadElement::localR() {
+	return std::vector<double>();
+}
+
 void quadElement::set_pressure(int edge, double value) {
 }
 
@@ -59,7 +67,7 @@ Eigen::MatrixXd quadElement::localK() {
 	return k;
 }
 
-std::vector<double> quadElement::localR() {
+std::vector<double> quadElement::localF() {
 	return std::vector<double>();
 }
 

@@ -95,7 +95,7 @@ void Data::create_constraints() {
 void Data::create_load() { // type - pressure
 	for (int id = 0; id < parser->load.size(); id++) {
 		auto& load = parser->load[id];
-		if (load.type == LoadType::PRESSURE) 		// else add to R
+		if (load.type == LoadType::PRESSURE) 		// else add to F
 			for (int elem = 0; elem < load.apply_to.size() / 2; elem++)
 				elements[load.apply_to[2 * elem] - 1]->set_load(load.type, load.apply_to[2 * elem + 1], load.data);
 			
@@ -127,16 +127,16 @@ void Data::fillGlobalK() {
 
 } 
 
-void Data::fillGlobalR() {
+void Data::fillGlobalF() {
 	int inf_count = 0; // ??
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
 
-	R.resize(dim * (nodes_count + inf_count));
+	F.resize(dim * (nodes_count + inf_count));
 	for (int i = 0; i < elems_count; i++) {
-		std::vector loc_r = elements[i]->localR();
+		std::vector loc_r = elements[i]->localF();
 		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
-			R.insert(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim) = loc_r[j];
+			F.coeffRef(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim) += loc_r[j];
 	}
 	logger& log = logger::log();
 	log.print("Fill right vector");
@@ -154,7 +154,7 @@ void Data::fillconstraints() {
 					}
 					else if (((it.row() == node * dim + c.first) ||
 						(it.col() == node * dim + c.first)) && (it.row() == it.col()))
-						R.coeffRef(it.row()) = c.second * it.value(); 
+						F.coeffRef(it.row()) = c.second * it.value(); 
 			}
 	logger& log = logger::log();
 	log.print("Fill canctriants");
@@ -165,8 +165,43 @@ void Data::addToGlobalK(int first_index, int second_index, double value) {
 	K.setFromTriplets(&tripl, &tripl + 1);
 }
 
-void Data::addToGlobalR(int index, double value) {
-	R.insert(index) = value;
+void Data::addToGlobalF(int index, double value) {
+	F.coeffRef(index) = value;
+}
+
+void Data::displacementToElements() {
+	std::vector <double> disp;
+	for (int elem = 0; elem < elements.size(); elem++) {
+		elements[elem]->displacement.resize(dim * elements[elem]->nodes_count());
+		for (int node = 0; node < elements[elem]->nodes_count(); node++) {
+			elements[elem]->displacement[dim * node] = U(dim * (elements[elem]->get_nodes(node) - 1));
+			elements[elem]->displacement[dim * node + 1] = U(dim * (elements[elem]->get_nodes(node) - 1) + 1);
+			if (dim == 3)
+				elements[elem]->displacement[dim * node + 2] = U(dim * (elements[elem]->get_nodes(node) - 1) + 2);
+		}
+	}
+}
+
+void Data::calcStrain() {
+	for (int elem = 0; elem < elements.size(); elem++) {
+		//std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774, 0.5774 };
+		//std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774 };
+		//std::vector <double> zeta = { 0.5774, 0.5774, 0.5774, 0.5774, -0.5774, -0.5774, -0.5774, -0.5774 };
+		double ksi = 0, eta = 0, zeta = 0;
+		elements[elem]->strain.resize(dim * elements[elem]->nodes_count());
+		productMV(elements[elem]->B(ksi, eta, zeta), elements[elem]->displacement, elements[elem]->strain);
+	}
+}
+
+void Data::calcStress() {
+	for (int elem = 0; elem < elements.size(); elem++) {
+		//std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774, 0.5774 };
+		//std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774 };
+		//std::vector <double> zeta = { 0.5774, 0.5774, 0.5774, 0.5774, -0.5774, -0.5774, -0.5774, -0.5774 };
+		double ksi = 0, eta = 0, zeta = 0;
+		elements[elem]->stress.resize(dim * elements[elem]->nodes_count());
+		productMV(elements[elem]->planeStrainD(), elements[elem]->strain, elements[elem]->stress);
+	}
 }
 
 void Data::zeroDiagonalCheck() {
@@ -179,11 +214,12 @@ void Data::zeroDiagonalCheck() {
 
 void Data::solve() {
 	fillGlobalK();
-	fillGlobalR();
+	fillGlobalF();
 	fillconstraints();
 
 	zeroDiagonalCheck();
-	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+	//Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+	Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
 	solver.compute(K);
 
 	//Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
@@ -196,22 +232,26 @@ void Data::solve() {
 	if (solver.info() != Eigen::Success)
 		std::cerr << "Error in K" << std::endl;
 
-	U = solver.solve(R);
+	U = solver.solve(F);
 
 	logger& log = logger::log();
 	log.print("Solve done");
 
+	fillFields();
+
+	ofstream file;
+	file.open("stressxx.txt");
+
+	for (int elem = 0; elem < elements.size(); elem++)
+		for (int node = 0; node < elements[elem]->nodes_count(); node++)
+			if (elements[elem]->get_coord(node, GlobVar::Y) == 0)
+				file << "(" << elements[elem]->get_coord(node, GlobVar::X) << ", " << std::fixed << std::setprecision(12) << elements[elem]->stress[2] << ")" << std::endl;
+	file.close();
 }
 
-void Data::writeMatrix(Eigen::SparseMatrix<double> A) {
-	for (int i = 0; i < A.innerSize(); i++) {
-		for (int j = 0; j < A.outerSize(); j++)
-			std::cout << A.coeffRef(i, j) << " ";
-		std::cout << std::endl;
-	}
+void Data::fillFields() {
+	displacementToElements();
+	calcStrain();
+	calcStress();
 }
 
-void Data::writeVector(Eigen::SparseVector<double> B) {
-	for (int i = 0; i < B.size(); i++)
-		std::cout << B.coeffRef(i) << std::endl;
-}

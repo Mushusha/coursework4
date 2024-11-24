@@ -41,20 +41,28 @@ Eigen::MatrixXd triElement::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
-Eigen::MatrixXd triElement::localK() {
-	return B().transpose() * planeStressD() * B() * std::abs(C().determinant() / 2);
+Eigen::MatrixXd triElement::localC() {
+	return Eigen::MatrixXd();
 }
 
 std::vector<double> triElement::localR() {
-	std::vector<double> R;
-	R.resize(6);
+	return std::vector<double>();
+}
+
+Eigen::MatrixXd triElement::localK() {
+	return B().transpose() * planeStrainD() * B() * std::abs(C().determinant() / 2);
+}
+
+std::vector<double> triElement::localF() {
+	std::vector<double> F;
+	F.resize(6);
 	// l.first.first - edge, l.first.second - comp, l.second - value
 	for (auto const& l: load) {
 		std::pair<int, int> node = edge_to_node(l.first.first);
-		R[2 * node.first + l.first.second] += l.second * len_edge(l.first.first) / 2;
-		R[2 * node.second + l.first.second] += l.second * len_edge(l.first.first) / 2;
+		F[2 * node.first + l.first.second] += l.second * len_edge(l.first.first) / 2;
+		F[2 * node.second + l.first.second] += l.second * len_edge(l.first.first) / 2;
 	}
-	return R;
+	return F;
 }
 
 std::vector<double> triElement::FF(double ksi, double eta, double zeta) {
@@ -82,6 +90,6 @@ void triElement::set_pressure(int edge, double value) {
 	
 	for (int i = 0; i < 2; i++) {
 		std::pair <int, int> pair(edge, i);
-		load.insert({ pair, value * comp[i] / len_edge(edge)});
+		load.insert({ pair, -value * comp[i] / len_edge(edge)});
 	}
 }

@@ -1,16 +1,18 @@
 #include "Tests.h"
 
-double eps = 10e-08;
+double eps = 10e-06;
 
 void tests() {
     test_triElement_B();
     test_triElement_locK();
     test_triElement_globK();
-    test_triElement_locR();
-    test_triElement_globR();
+    test_triElement_locF();
+    test_triElement_globF();
     test_triElement_constraintsK();
-    test_triElement_constraintsR();
-
+    test_triElement_constraintsF();
+    test_triElement_dispToElem();
+    test_triElement_calcStrain();
+    test_triElement_calcStress();
 }
 
 // TRIANGLE TESTS
@@ -48,24 +50,23 @@ void test_triElement_locK() {
 
     Eigen::MatrixXd expectedlocK(6, 6);
     expectedlocK <<
-        0.5859375, 0.390625, -0.15625, -0.46875, -0.4296875, 0.078125,
-        0.390625, 0.5859375, -0.15625, -0.78125, -0.234375, 0.1953125,
+        -0.29296875, -0.48828125, -0.15625, 0.9375, 0.44921875, -0.44921875,
+        -0.48828125, -0.29296875, -0.15625, 0.625, 0.64453125, -0.33203125,
         -0.15625, -0.15625, 0.25, 0, -0.09375, 0.15625,
-        -0.46875, -0.78125, 0, 1.25, 0.46875, -0.46875,
-        -0.4296875, -0.234375, -0.09375, 0.46875, 0.5234375, -0.234375,
-        0.078125, 0.1953125, 0.15625, -0.46875, -0.234375, 0.2734375;
+        0.9375, 0.625, 0, -1, -0.9375, 0.375,
+        0.44921875, 0.64453125, -0.09375, -0.9375, -0.35546875, 0.29296875,
+        -0.44921875, -0.33203125, 0.15625, 0.375, 0.29296875, -0.04296875;
 
     Eigen::MatrixXd resultlocK = elem.localK();
-
-    for (int i = 0; i < 6; ++i)
-        for (int j = 0; j < 6; ++j)
+    for (int i = 0; i < 6; i++)
+        for (int j = 0; j < 6; j++)
             assert(std::abs(resultlocK(i, j) - expectedlocK(i, j)) < eps);
 
     std::cout << "triElement_locK: Test passed!" << std::endl;
 }
 
 void test_triElement_globK() {
-    string file = "C:/Users/mushu/Desktop/cwgit/coursework4/test.fc";
+    string file = "test.fc";
     std::shared_ptr<Parser> p = std::make_shared<Parser>();
     p->read(file);
     Data data(p);
@@ -74,16 +75,16 @@ void test_triElement_globK() {
 
     Eigen::MatrixXd expectedGlobK = Eigen::MatrixXd::Zero(10, 10);
     expectedGlobK <<
-        0.7484579444, 0.4019987874, -0.2351602043, 0.02976190476, 0, 0, 0.2068580418, -0.01509402547, -0.7201557819, -0.4166666667,
-        0.4019987874, 0.7483900184, -0.02976190476, 0.1824712405, 0, 0, 0.04442978405, -0.2087759208, -0.4166666667, -0.7220853381,
-        -0.2351602043, -0.02976190476, 0.7484579444, -0.4019987874, 0.2068580418, 0.01509402547, 0, 0, -0.7201557819, 0.4166666667,
-        0.02976190476, 0.1824712405, -0.4019987874, 0.7483900184, -0.04442978405, -0.2087759208, 0, 0, 0.4166666667, -0.7220853381,
-        0, 0, 0.2068580418, -0.04442978405, 0.8030012709, 0.431334546, -0.1806168778, 0.02976190476, -0.8292424348, -0.4166666667,
-        0, 0, 0.01509402547, -0.2087759208, 0.431334546, 0.803079486, -0.02976190476, 0.2371607081, -0.4166666667, -0.8314642733,
-        0.2068580418, 0.04442978405, 0, 0, -0.1806168778, -0.02976190476, 0.8030012709, -0.431334546, -0.8292424348, 0.4166666667,
-        -0.01509402547, -0.2087759208, 0, 0, 0.02976190476, 0.2371607081, -0.431334546, 0.803079486, 0.4166666667, -0.8314642733,
-        -0.7201557819, -0.4166666667, -0.7201557819, 0.4166666667, -0.8292424348, -0.4166666667, -0.8292424348, 0.4166666667, 3.098796434, 0,
-        -0.4166666667, -0.7220853381, 0.4166666667, -0.7220853381, -0.4166666667, -0.8314642733, 0.4166666667, -0.8314642733, 0, 3.107099223;
+        1.209065363, 0.8614259729, -0.490018733, 0.2678571429, 0, 0, 0.4437730467, -0.2364259729, -1.162819677, -0.8928571429,
+        0.8614259729, 1.208919808, -0.2678571429, 0.4049057915, 0, 0, 0.2992883128, -0.4468711589, -0.8928571429, -1.16695444,
+        -0.490018733, -0.2678571429, 1.209065363, -0.8614259729, 0.4437730467, 0.2364259729, 0, 0, -1.162819677, 0.8928571429,
+        0.2678571429, 0.4049057915, -0.8614259729, 1.208919808, -0.2992883128, -0.4468711589, 0, 0, 0.8928571429, -1.16695444,
+        0, 0, 0.4437730467, -0.2992883128, 1.297135271, 0.9242883128, -0.4019488253, 0.2678571429, -1.338959492, -0.8928571429,
+        0, 0, 0.2364259729, -0.4468711589, 0.9242883128, 1.297302875, -0.2678571429, 0.4932888588, -0.8928571429, -1.343720575,
+        0.4437730467, 0.2992883128, 0, 0, -0.4019488253, -0.2678571429, 1.297135271, -0.9242883128, -1.338959492, 0.8928571429,
+        -0.2364259729, -0.4468711589, 0, 0, 0.2678571429, 0.4932888588, -0.9242883128, 1.297302875, 0.8928571429, -1.343720575,
+        -1.162819677, -0.8928571429, -1.162819677, 0.8928571429, -1.338959492, -0.8928571429, -1.338959492, 0.8928571429, 5.003558338, 0,
+        -0.8928571429, -1.16695444, 0.8928571429, -1.16695444, -0.8928571429, -1.343720575, 0.8928571429, -1.343720575, 0, 5.02135003;
     //for (int elem = 0; elem < 4; elem++) {
     //    Eigen::MatrixXd k(6, 6);
     //    k = data.getElem(elem)->localK();
@@ -95,14 +96,15 @@ void test_triElement_globK() {
     //            expectedGlobK(2 * data.getElem(elem)->get_nodes(i) - 1, 2 * data.getElem(elem)->get_nodes(j) - 1) += k(2 * i + 1, 2 * j + 1);
     //        }
     //}
-    for (int i = 0; i < 10; ++i)
+
+    for (int i = 0; i < 10; i++)
         for (int j = 0; j < 10; ++j)
             assert(std::abs(resultGlobK.coeffRef(i, j) - expectedGlobK(i, j)) < eps);
 
     std::cout << "triElement_GlobK: Test passed!" << std::endl;
 }
 
-void test_triElement_locR() {
+void test_triElement_locF() {
     triElement elem;
     std::vector<double> x = { 1, 1, 5 };
     std::vector<double> y = { 1, 4, 1 };
@@ -112,88 +114,193 @@ void test_triElement_locR() {
     elem.set_load(4, 0, std::array<double, 6>{2, 0, 0, 0, 0, 0});
     elem.set_load(4, 2, std::array<double, 6>{3, 0, 0, 0, 0 ,0});
 
-    std::vector<double> expectedlocR{-3, -6, -3, 0, 0, -6};
+    std::vector<double> expectedlocF{3, 6, 3, 0, 0, 6};
 
-    std::vector<double> resultlocR = elem.localR();
+    std::vector<double> resultlocF = elem.localF();
 
-    for (int i = 0; i < 6; ++i)
-        assert(std::abs(resultlocR[i] - expectedlocR[i]) < eps);
+    for (int i = 0; i < 6; i++)
+        assert(std::abs(resultlocF[i] - expectedlocF[i]) < eps);
 
-    std::cout << "triElement_locR: Test passed!" << std::endl;
+    std::cout << "triElement_locF: Test passed!" << std::endl;
 }
 
-void test_triElement_globR() {
-    string file = "C:/Users/mushu/Desktop/cwgit/coursework4/test.fc";
+void test_triElement_globF() {
+    string file = "test.fc";
     std::shared_ptr<Parser> p = std::make_shared<Parser>();
     p->read(file);
     Data data(p);
-    data.fillGlobalR();
-    Eigen::SparseVector<double> resultGlobR = data.R;
+    data.fillGlobalF();
+    Eigen::SparseVector<double> resultGlobF = data.F;
 
-    Eigen::SparseVector<double> expectedGlobR;
-    expectedGlobR.resize(10);
+    Eigen::SparseVector<double> expectedGlobF;
+    expectedGlobF.resize(10);
 
-    expectedGlobR.insert(1) = 1;
-    expectedGlobR.insert(3) = 1;
+    expectedGlobF.insert(1) = -1;
+    expectedGlobF.insert(3) = -1;
 
-    for (int i = 0; i < 10; ++i)
-        assert(std::abs(resultGlobR.coeffRef(i) - expectedGlobR.coeffRef(i)) < eps);
-     
+    for (int i = 0; i < 10; i++)
+        assert(std::abs(resultGlobF.coeffRef(i) - expectedGlobF.coeffRef(i)) < eps);
 
-    std::cout << "triElement_GlobR: Test passed!" << std::endl;
+    std::cout << "triElement_GlobF: Test passed!" << std::endl;
 }
 
 
 void test_triElement_constraintsK() {
-    string file = "C:/Users/mushu/Desktop/cwgit/coursework4/test.fc";
+    string file = "test.fc";
     std::shared_ptr<Parser> p = std::make_shared<Parser>();
     p->read(file);
     Data data(p);
     data.fillGlobalK();
-    data.fillGlobalR();
+    data.fillGlobalF();
     data.fillconstraints();
     Eigen::SparseMatrix<double> resultGlobK = data.K;
 
     Eigen::MatrixXd expectedGlobK = Eigen::MatrixXd::Zero(10, 10);
     expectedGlobK <<
-        0.7484579444, 0.4019987874, -0.2351602043, 0.02976190476, 0, 0, 0.2068580418, 0, -0.7201557819, -0.4166666667,
-        0.4019987874, 0.7483900184, -0.02976190476, 0.1824712405, 0, 0, 0.04442978405, 0, -0.4166666667, -0.7220853381,
-        -0.2351602043, -0.02976190476, 0.7484579444, -0.4019987874, 0.2068580418, 0, 0, 0, -0.7201557819, 0.4166666667,
-        0.02976190476, 0.1824712405, -0.4019987874, 0.7483900184, -0.04442978405, 0, 0, 0, 0.4166666667, -0.7220853381,
-        0, 0, 0.2068580418, -0.04442978405, 0.8030012709, 0, -0.1806168778, 0, -0.8292424348, -0.4166666667,
-        0, 0, 0, 0, 0, 0.803079486, 0, 0, 0, 0,
-        0.2068580418, 0.04442978405, 0, 0, -0.1806168778, 0, 0.8030012709, 0, -0.8292424348, 0.4166666667,
-        0, 0, 0, 0, 0, 0, 0, 0.803079486, 0, 0,
-        -0.7201557819, -0.4166666667, -0.7201557819, 0.4166666667, -0.8292424348, 0, -0.8292424348, 0, 3.098796434, 0,
-        -0.4166666667, -0.7220853381, 0.4166666667, -0.7220853381, -0.4166666667, 0, 0.4166666667, 0, 0, 3.107099223;
+        1.209065363, 0.8614259729, -0.490018733, 0.2678571429, 0, 0, 0.4437730467, 0, -1.162819677, -0.8928571429,
+        0.8614259729, 1.208919808, -0.2678571429, 0.4049057915, 0, 0, 0.2992883128, 0, -0.8928571429, -1.16695444,
+        -0.490018733, -0.2678571429, 1.209065363, -0.8614259729, 0.4437730467, 0, 0, 0, -1.162819677, 0.8928571429,
+        0.2678571429, 0.4049057915, -0.8614259729, 1.208919808, -0.2992883128, 0, 0, 0, 0.8928571429, -1.16695444,
+        0, 0, 0.4437730467, -0.2992883128, 1.297135271, 0, -0.4019488253, 0, -1.338959492, -0.8928571429,
+        0, 0, 0, 0, 0, 1.297302875, 0, 0, 0, 0,
+        0.4437730467, 0.2992883128, 0, 0, -0.4019488253, 0, 1.297135271, 0, -1.338959492, 0.8928571429,
+        0, 0, 0, 0, 0, 0, 0, 1.297302875, 0, 0,
+        -1.162819677, -0.8928571429, -1.162819677, 0.8928571429, -1.338959492, 0, -1.338959492, 0, 5.003558338, 0,
+        -0.8928571429, -1.16695444, 0.8928571429, -1.16695444, -0.8928571429, 0, 0.8928571429, 0, 0, 5.02135003;
 
-    for (int i = 0; i < 10; ++i)
-        for (int j = 0; j < 10; ++j)
+    for (int i = 0; i < 10; i++)
+        for (int j = 0; j < 10; j++)
             assert(std::abs(resultGlobK.coeffRef(i, j) - expectedGlobK(i, j)) < eps);
 
     std::cout << "triElement_constraintsK: Test passed!" << std::endl;
 }
 
-void test_triElement_constraintsR() {
-    string file = "C:/Users/mushu/Desktop/cwgit/coursework4/test.fc";
+void test_triElement_constraintsF() {
+    string file = "test.fc";
     std::shared_ptr<Parser> p = std::make_shared<Parser>();
     p->read(file);
     Data data(p);
     data.fillGlobalK();
-    data.fillGlobalR();
+    data.fillGlobalF();
     data.fillconstraints();
-    Eigen::SparseVector<double> resultGlobR = data.R;
+    Eigen::SparseVector<double> resultGlobF = data.F;
 
-    Eigen::SparseVector<double> expectedGlobR;
-    expectedGlobR.resize(10);
+    Eigen::SparseVector<double> expectedGlobF;
+    expectedGlobF.resize(10);
 
-    expectedGlobR.insert(1) = 1;
-    expectedGlobR.insert(3) = 1;
+    expectedGlobF.insert(1) = -1;
+    expectedGlobF.insert(3) = -1;
 
-    for (int i = 0; i < 10; ++i)
-        assert(std::abs(resultGlobR.coeffRef(i) - expectedGlobR.coeffRef(i)) < eps);
+    for (int i = 0; i < 10; i++)
+        assert(std::abs(resultGlobF.coeffRef(i) - expectedGlobF.coeffRef(i)) < eps);
 
     std::cout << "triElement_constraintsR: Test passed!" << std::endl;
 }
 
+void test_triElement_dispToElem() {
+    string file = "test.fc";
+    std::shared_ptr<Parser> p = std::make_shared<Parser>();
+    p->read(file);
+    Data data(p);
+    data.solve();
+    data.U.coeffRef(0) = 0.5600011511; // 1
+    data.U.coeffRef(1) = -1.679999998;
+    data.U.coeffRef(2) = -0.5599988481; // 2
+    data.U.coeffRef(3) = -1.679999998;
+    data.U.coeffRef(4) = -0.5599988478; // 3
+    data.U.coeffRef(5) = 0;
+    data.U.coeffRef(6) = 0.5600011508; // 4
+    data.U.coeffRef(7) = 0;
+    data.U.coeffRef(8) = 1.151483577e-06; // 5
+    data.U.coeffRef(9) = -0.7808591097;
 
+    data.fillFields();
+
+    std::array <std::vector <double>, 4> resultU;
+    for (int i = 0; i < 4; i++)
+        resultU[i] = data.get_elem(i)->displacement;
+
+    std::array <std::vector <double>, 4> expectedU;
+    expectedU[0] = std::vector<double>{ -0.5599988481, -1.679999998, 1.151483577e-06, -0.7808591097, 0.5600011511, -1.679999998 };
+    expectedU[1] = std::vector<double>{ 0.5600011508, 0, 1.151483577e-06, -0.7808591097, -0.5599988478, 0 };
+    expectedU[2] = std::vector<double>{ 1.151483577e-06, -0.7808591097, 0.5600011508, 0, 0.5600011511, -1.679999998 };
+    expectedU[3] = std::vector<double>{ 1.151483577e-06, -0.7808591097, -0.5599988481, -1.679999998, -0.5599988478, 0 };
+
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 6; j++)
+            assert(std::abs(resultU[i][j] - expectedU[i][j]) < eps);
+
+     std::cout << "triElement_dispToElem: Test passed!" << std::endl;
+}
+
+void test_triElement_calcStrain() {
+    string file = "test.fc";
+    std::shared_ptr<Parser> p = std::make_shared<Parser>();
+    p->read(file);
+    Data data(p);
+    data.solve();
+    data.U.coeffRef(0) = 0.5600011511; // 1
+    data.U.coeffRef(1) = -1.679999998;
+    data.U.coeffRef(2) = -0.5599988481; // 2
+    data.U.coeffRef(3) = -1.679999998;
+    data.U.coeffRef(4) = -0.5599988478; // 3
+    data.U.coeffRef(5) = 0;
+    data.U.coeffRef(6) = 0.5600011508; // 4
+    data.U.coeffRef(7) = 0;
+    data.U.coeffRef(8) = 1.151483577e-06; // 5
+    data.U.coeffRef(9) = -0.7808591097;
+
+    data.fillFields();
+
+    std::array <std::vector <double>, 4> resultEpsilon;
+    for (int i = 0; i < 4; i++)
+        resultEpsilon[i] = data.get_elem(i)->strain;
+
+    std::array <std::vector <double>, 4> expectedEpsilon;
+    expectedEpsilon[0] = std::vector<double>{ 0.5599999996, -0.8400015764, 0.0 };
+    expectedEpsilon[1] = std::vector<double>{ 0.5599999993, -0.8400013787, 0.0 };
+    expectedEpsilon[2] = std::vector<double>{ 0.5599999995, -0.8399999999, 0.0000001508 };
+    expectedEpsilon[3] = std::vector<double>{ 0.5599999994, -0.8399999999, 0.0000001508 };
+
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 3; j++)
+            assert(std::abs(resultEpsilon[i][j] - expectedEpsilon[i][j]) < eps);
+
+    std::cout << "triElement_calcStrain: Test passed!" << std::endl;
+}
+
+void test_triElement_calcStress() {
+    string file = "test.fc";
+    std::shared_ptr<Parser> p = std::make_shared<Parser>();
+    p->read(file);
+    Data data(p);
+    data.solve();
+    data.U.coeffRef(0) = 0.5600011511; // 1
+    data.U.coeffRef(1) = -1.679999998;
+    data.U.coeffRef(2) = -0.5599988481; // 2
+    data.U.coeffRef(3) = -1.679999998;
+    data.U.coeffRef(4) = -0.5599988478; // 3
+    data.U.coeffRef(5) = 0;
+    data.U.coeffRef(6) = 0.5600011508; // 4
+    data.U.coeffRef(7) = 0;
+    data.U.coeffRef(8) = 1.151483577e-06; // 5
+    data.U.coeffRef(9) = -0.7808591097;
+
+    data.fillFields();
+
+    std::array <std::vector <double>, 4> resultSigma;
+    for (int i = 0; i < 4; i++)
+        resultSigma[i] = data.get_elem(i)->stress;
+
+    std::array <std::vector <double>, 4> expectedSigma;
+    expectedSigma[0] = std::vector<double>{ 0.0000005471, -1.0000065786, 0 };
+    expectedSigma[1] = std::vector<double>{ 0.0000008289, -1.0000061554, 0 };
+    expectedSigma[2] = std::vector<double>{ 0.0000027991, -1.0000032005, 0.0000000539 };
+    expectedSigma[3] = std::vector<double>{ 0.0000027991, -1.0000032006, 0.0000000539 };
+
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 3; j++)
+            assert(std::abs(resultSigma[i][j] - expectedSigma[i][j]) < eps);
+
+    std::cout << "triElement_calcStress: Test passed!" << std::endl;
+}

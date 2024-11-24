@@ -14,6 +14,16 @@ void Element::set_constants(double E, double nu) {
 	Poisson = nu;
 }
 
+double Element::get_coord(int loc_node, int comp) {
+	if (comp == 0) return x[loc_node];
+	else if (comp == 1) return y[loc_node];
+	else if (comp == 2) return z[loc_node];
+	else {
+		std::cout << "error: incorrect comp" << std::endl;
+		return -1;
+	}
+}
+
 void Element::set_load(int type, int apply_to, std::array<double, 6> value) {
 	if (type == LoadType::PRESSURE)
 		set_pressure(apply_to, value[0]);
@@ -24,7 +34,7 @@ void Element::set_load(int type, int apply_to, std::array<double, 6> value) {
 			//load.insert({ pair, value[i] });
 		}
 }
-
+// need in elems
 Eigen::MatrixXd Element::planeStressD() {
 
 	Eigen::MatrixXd D = Eigen::MatrixXd::Zero(3, 3);
@@ -34,7 +44,21 @@ Eigen::MatrixXd Element::planeStressD() {
 	D(1, 1) = 1;
 	D(2, 2) = (1 - Poisson) / 2;
 
-	D *= Young / (1 - pow(Poisson, 2)); 
+	D *= Young / (1 - pow(Poisson, 2));
+	std::cout << D;
+	return D;
+}
+
+Eigen::MatrixXd Element::planeStrainD() {
+
+	Eigen::MatrixXd D = Eigen::MatrixXd::Zero(3, 3);
+	D(0, 0) = 1;
+	D(0, 1) = Poisson / (1 - Poisson);
+	D(1, 0) = Poisson / (1 - Poisson);
+	D(1, 1) = 1;
+	D(2, 2) = (1 - 2 * Poisson) / (2 * (1 - Poisson)) ;
+
+	D *= Young * (1 - Poisson) / ((1 + Poisson) * (1 - 2 * Poisson));
 	return D;
 }
 

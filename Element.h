@@ -33,15 +33,25 @@ public:
 	virtual ~Element() = default;
 
 	virtual Eigen::MatrixXd localK() = 0; // <NODES * DIM, NODES * DIM>
-	virtual std::vector <double> localR() = 0;
+	virtual std::vector <double> localF() = 0;
+	virtual Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
 
+	Eigen::MatrixXd planeStressD(); //plane_stress, plane_strain ??  
+	Eigen::MatrixXd planeStrainD();
+	Eigen::MatrixXd threeMatrixD();
 
 	void set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z);
 	void set_load(int type, int edge, std::array<double, 6> value); // nodes
 	void set_constants(double E, double nu);
 
+	int get_type() { return type; }
 	int get_nodes(int i) { return nodes[i]; }
 	int nodes_count() { return nodes.size(); }
+	double get_coord(int loc_node, int comp);
+
+	std::vector <double> displacement;
+	std::vector <double> strain;
+	std::vector <double> stress;
 protected:
 	int type;
 	int id;
@@ -56,13 +66,9 @@ protected:
 
 	virtual std::vector <double> FF(double ksi, double eta, double zeta = 0) = 0;
 	virtual std::vector <std::vector <double>> gradFF(double ksi, double eta, double zeta = 0) = 0;
-	virtual Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
 	virtual Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) = 0; // <DIM, DIM>
 	
 	virtual void set_pressure(int edge, double value) = 0;
-
-	Eigen::MatrixXd planeStressD(); //plane_stress, plane_strain ??  
-	Eigen::MatrixXd threeMatrixD();
 };
 
 //Eigen::SparseMatrix <double> globalK(std::shared_ptr <Parser> p, int numNodes, int dim);
