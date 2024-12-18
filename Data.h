@@ -19,25 +19,26 @@ public:
 
 	const std::shared_ptr<Parser>& get_parser() const { return parser; }
 	const std::shared_ptr<Element> get_elem(int i) const { return elements[i]; }
+	void set_output_param(std::vector<double> start, std::vector<double> end, int count);
 
 	Eigen::SparseMatrix <double> K;
 	Eigen::SparseVector <double> F;
 	Eigen::VectorX <double> U; // displacement
 
-	Eigen::SparseMatrix <double> C; // agreed resultants
-	Eigen::SparseVector <double> R;
+	std::vector<double> line_start;
+	std::vector<double> line_end;
+	int points_count;
 
+	std::vector<std::vector<double>> out_stress;
 
 	void fillGlobalK();
 	void fillGlobalF();
 	void fillconstraints();
 
 	void fillGlobalC();
-	void fillGlobalR(std::string field);
+	void fillGlobalR(int type, int comp);
 
 	void solve();
-	void fillFields();
-	void smoothing(std::string field);
 
 private:
 	std::vector <shared_ptr<Element>> elements;
@@ -45,6 +46,9 @@ private:
 
 	std::shared_ptr<Parser> parser;
 	int dim;
+
+	Eigen::SparseMatrix <double> C; // agreed resultants
+	Eigen::SparseVector <double> R;
 
 	void create_nodes();
 	void create_elements();
@@ -60,7 +64,13 @@ private:
 	void calcStrain();
 	void calcStress();
 
+	void fillFields();
+	void smoothing();
+
 	void zeroDiagonalCheck();
 
-	void outputValues(std::string field);
+	void outputValues(int type, int comp);
+
+	void interpolation(std::vector<std::vector<double>>& points, std::vector<double>& values, int type, int comp);
+	
 };

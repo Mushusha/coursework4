@@ -35,9 +35,12 @@ public:
 	virtual Eigen::MatrixXd localK() = 0; // <NODES * DIM, NODES * DIM>
 	virtual std::vector <double> localF() = 0;
 	virtual Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
+	virtual std::vector <double> FF(double ksi, double eta, double zeta = 0) = 0;
+
+	virtual bool pointInElem(std::vector<double> point) = 0;
 
 	virtual Eigen::MatrixXd localC() = 0; // agreed resultants
-	virtual std::vector <double> localR(double value) = 0;
+	virtual std::vector <double> localR(std::vector<double> value) = 0;
 
 	Eigen::MatrixXd planeStressD(); //plane_stress, plane_strain ??  
 	Eigen::MatrixXd planeStrainD();
@@ -52,9 +55,8 @@ public:
 	int nodes_count() { return nodes.size(); }
 	double get_coord(int loc_node, int comp);
 
-	std::vector <double> displacement;
-	std::vector <double> strain;
-	std::vector <double> stress;
+	std::vector<std::vector <Eigen::VectorXd>> results; // [i] - node; [j] - field; [k] - comp
+	Eigen::VectorXd displacements;
 protected:
 	int type;
 	int id;
@@ -67,13 +69,8 @@ protected:
 	// refactoring: may be <edge, vector>
 	std::map <std::pair<int, int>, double> load; // pair <edge, comp>, value
 
-	virtual std::vector <double> FF(double ksi, double eta, double zeta = 0) = 0;
-	virtual std::vector <std::vector <double>> gradFF(double ksi, double eta, double zeta = 0) = 0;
+	virtual Eigen::MatrixXd gradFF(double ksi, double eta, double zeta = 0) = 0;
 	virtual Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) = 0; // <DIM, DIM>
 	
 	virtual void set_pressure(int edge, double value) = 0;
 };
-
-//Eigen::SparseMatrix <double> globalK(std::shared_ptr <Parser> p, int numNodes, int dim);
-//Eigen::SparseVector <double> globalLoad(std::shared_ptr <Parser> p, int numNodes, int dim);
-//int indexConstrain(std::shared_ptr <Parser> p, int count, int apply, int dim);

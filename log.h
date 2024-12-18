@@ -9,7 +9,7 @@ class logger {
 	std::string file_name;
 	std::ofstream file;
 
-	logger() : file_name("C:/Users/mushu/Desktop/cwgit/coursework4/log.txt"), file(file_name) {} // error open file
+	logger() : file_name("log.txt"), file(file_name) {} // error open file
 	~logger() { file.close(); }
 
 	logger(const logger&) = delete;

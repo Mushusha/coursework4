@@ -17,13 +17,15 @@ public:
 	Eigen::MatrixXd localK() override;
 	std::vector <double> localF() override;
 	Eigen::MatrixXd B(double ksi, double eta, double zeta) override;
+	std::vector<double> FF(double ksi, double eta, double zeta) override;
+
+	bool pointInElem(std::vector<double> point) override;
 
 	Eigen::MatrixXd localC() override;
-	std::vector <double> localR(double value) override;
+	std::vector <double> localR(std::vector<double> value) override;
 
 protected:
-	std::vector<double> FF(double ksi, double eta, double zeta) override;
-	std::vector<std::vector<double>> gradFF(double ksi, double eta, double zeta) override;
+	Eigen::MatrixXd gradFF(double ksi, double eta, double zeta) override;
 	Eigen::MatrixXd J(double ksi, double eta, double zeta) override;
 
 	void set_pressure(int edge, double value);

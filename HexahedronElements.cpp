@@ -14,14 +14,13 @@ std::vector<double> hexElement::FF(double ksi, double eta, double zeta) {
 	return FF;
 }
 
-std::vector <std::vector <double>> hexElement::gradFF(double ksi, double eta, double zeta) {
-	std::vector <std::vector <double>> gradFF;
-	double h = 0.01;
-	for (int i = 0; i < 8; i++) {
-		gradFF[LocVar::KSI][i] = (FF(ksi + h, eta, zeta)[i] - FF(ksi - h, eta, zeta)[i]) / (2 * h);
-		gradFF[LocVar::ETA][i] = (FF(ksi, eta + h, zeta)[i] - FF(ksi, eta - h, zeta)[i]) / (2 * h);
-		gradFF[LocVar::ZETA][i] = (FF(ksi, eta, zeta + h)[i] - FF(ksi, eta, zeta - h)[i]) / (2 * h);
-	}
+Eigen::MatrixXd hexElement::gradFF(double ksi, double eta, double zeta) {
+	Eigen::MatrixXd gradFF;
+	//for (int i = 0; i < 8; i++) {
+	//	gradFF[KSI][i] = (FF(ksi + h, eta, zeta)[i] - FF(ksi - h, eta, zeta)[i]) / (2 * h);
+	//	gradFF[ETA][i] = (FF(ksi, eta + h, zeta)[i] - FF(ksi, eta - h, zeta)[i]) / (2 * h);
+	//	gradFF[ZETA][i] = (FF(ksi, eta, zeta + h)[i] - FF(ksi, eta, zeta - h)[i]) / (2 * h);
+	//}
 	return gradFF;
 }
 
@@ -29,15 +28,15 @@ Eigen::MatrixXd hexElement::J(double ksi, double eta, double zeta) {
 	Eigen::Matrix3d J;
 	double h = 0.01;
 	for (int i = 0; i < 8; i++) {
-		J(0, 0) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * x[i];
-		J(0, 1) = gradFF(ksi, eta, zeta)[LocVar::ETA][i] * x[i];
-		J(0, 2) = gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * x[i];
-		J(1, 0) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * y[i];
-		J(1, 1) = gradFF(ksi, eta, zeta)[LocVar::ETA][i] * y[i];
-		J(1, 2) = gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * y[i];
-		J(2, 0) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * z[i];
-		J(2, 1) = gradFF(ksi, eta, zeta)[LocVar::ETA][i] * z[i];
-		J(2, 2) = gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * z[i];
+		//J(0, 0) = gradFF(ksi, eta, zeta)[KSI][i] * x[i];
+		//J(0, 1) = gradFF(ksi, eta, zeta)[ETA][i] * x[i];
+		//J(0, 2) = gradFF(ksi, eta, zeta)[ZETA][i] * x[i];
+		//J(1, 0) = gradFF(ksi, eta, zeta)[KSI][i] * y[i];
+		//J(1, 1) = gradFF(ksi, eta, zeta)[ETA][i] * y[i];
+		//J(1, 2) = gradFF(ksi, eta, zeta)[ZETA][i] * y[i];
+		//J(2, 0) = gradFF(ksi, eta, zeta)[KSI][i] * z[i];
+		//J(2, 1) = gradFF(ksi, eta, zeta)[ETA][i] * z[i];
+		//J(2, 2) = gradFF(ksi, eta, zeta)[ZETA][i] * z[i];
 	}
 	return J;
 }
@@ -48,17 +47,21 @@ Eigen::MatrixXd hexElement::B(double ksi, double eta, double zeta) {
 	invJ = J(ksi, eta, zeta).inverse();
 	double h = 0.01;
 	for (int i = 0; i < 8; i++) {
-		B(0, 3 * i) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * invJ(0, 0) + gradFF(ksi, eta, zeta)[LocVar::ETA][i] * invJ(0, 1) + gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * invJ(0, 2);
-		B(1, 3 * i + 1) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * invJ(1, 0) + gradFF(ksi, eta, zeta)[LocVar::ETA][i] * invJ(1, 1) + gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * invJ(1, 2);
-		B(2, 3 * i + 2) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * invJ(2, 0) + gradFF(ksi, eta, zeta)[LocVar::ETA][i] * invJ(2, 1) + gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * invJ(2, 2);
-		B(3, 3 * i) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * invJ(1, 0) + gradFF(ksi, eta, zeta)[LocVar::ETA][i] * invJ(1, 1) + gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * invJ(1, 2);
-		B(3, 3 * i + 1) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * invJ(0, 0) + gradFF(ksi, eta, zeta)[LocVar::ETA][i] * invJ(0, 1) + gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * invJ(0, 2);
-		B(4, 3 * i + 1) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * invJ(2, 0) + gradFF(ksi, eta, zeta)[LocVar::ETA][i] * invJ(2, 1) + gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * invJ(2, 2);
-		B(4, 3 * i + 2) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * invJ(1, 0) + gradFF(ksi, eta, zeta)[LocVar::ETA][i] * invJ(1, 1) + gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * invJ(1, 2);
-		B(5, 3 * i) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * invJ(2, 0) + gradFF(ksi, eta, zeta)[LocVar::ETA][i] * invJ(2, 1) + gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * invJ(2, 2);
-		B(5, 3 * i + 2) = gradFF(ksi, eta, zeta)[LocVar::KSI][i] * invJ(0, 0) + gradFF(ksi, eta, zeta)[LocVar::ETA][i] * invJ(0, 1) + gradFF(ksi, eta, zeta)[LocVar::ZETA][i] * invJ(0, 2);
+		//B(0, 3 * i) = gradFF(ksi, eta, zeta)[KSI][i] * invJ(0, 0) + gradFF(ksi, eta, zeta)[ETA][i] * invJ(0, 1) + gradFF(ksi, eta, zeta)[ZETA][i] * invJ(0, 2);
+		//B(1, 3 * i + 1) = gradFF(ksi, eta, zeta)[KSI][i] * invJ(1, 0) + gradFF(ksi, eta, zeta)[ETA][i] * invJ(1, 1) + gradFF(ksi, eta, zeta)[ZETA][i] * invJ(1, 2);
+		//B(2, 3 * i + 2) = gradFF(ksi, eta, zeta)[KSI][i] * invJ(2, 0) + gradFF(ksi, eta, zeta)[ETA][i] * invJ(2, 1) + gradFF(ksi, eta, zeta)[ZETA][i] * invJ(2, 2);
+		//B(3, 3 * i) = gradFF(ksi, eta, zeta)[KSI][i] * invJ(1, 0) + gradFF(ksi, eta, zeta)[ETA][i] * invJ(1, 1) + gradFF(ksi, eta, zeta)[ZETA][i] * invJ(1, 2);
+		//B(3, 3 * i + 1) = gradFF(ksi, eta, zeta)[KSI][i] * invJ(0, 0) + gradFF(ksi, eta, zeta)[ETA][i] * invJ(0, 1) + gradFF(ksi, eta, zeta)[ZETA][i] * invJ(0, 2);
+		//B(4, 3 * i + 1) = gradFF(ksi, eta, zeta)[KSI][i] * invJ(2, 0) + gradFF(ksi, eta, zeta)[ETA][i] * invJ(2, 1) + gradFF(ksi, eta, zeta)[ZETA][i] * invJ(2, 2);
+		//B(4, 3 * i + 2) = gradFF(ksi, eta, zeta)[KSI][i] * invJ(1, 0) + gradFF(ksi, eta, zeta)[ETA][i] * invJ(1, 1) + gradFF(ksi, eta, zeta)[ZETA][i] * invJ(1, 2);
+		//B(5, 3 * i) = gradFF(ksi, eta, zeta)[KSI][i] * invJ(2, 0) + gradFF(ksi, eta, zeta)[ETA][i] * invJ(2, 1) + gradFF(ksi, eta, zeta)[ZETA][i] * invJ(2, 2);
+		//B(5, 3 * i + 2) = gradFF(ksi, eta, zeta)[KSI][i] * invJ(0, 0) + gradFF(ksi, eta, zeta)[ETA][i] * invJ(0, 1) + gradFF(ksi, eta, zeta)[ZETA][i] * invJ(0, 2);
 	}
 	return B;
+}
+
+bool hexElement::pointInElem(std::vector<double> point) {
+	return false;
 }
 
 void hexElement::set_pressure(int edge, double value) {
@@ -70,7 +73,7 @@ Eigen::MatrixXd hexElement::localK() {
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774 };
 	std::vector <double> zeta = { 0.5774, 0.5774, 0.5774, 0.5774, -0.5774, -0.5774, -0.5774, -0.5774 };
 
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++) // fix
 		k += B(ksi[i], eta[i], zeta[i]).transpose() * threeMatrixD() * B(ksi[i], eta[i], zeta[i]) * std::abs(J(ksi[i], eta[i], zeta[i]).determinant());
 	return k;
 }
@@ -83,7 +86,7 @@ Eigen::MatrixXd hexElement::localC() {
 	return Eigen::MatrixXd();
 }
 
-std::vector<double> hexElement::localR(double value) {
+std::vector<double> hexElement::localR(std::vector<double> value) {
 	return std::vector<double>();
 }
 

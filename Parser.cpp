@@ -48,6 +48,9 @@ void base64_decode(std::string& encoded_string)
 lint ReadInt(string data, size_t i) {
 	return *reinterpret_cast<const int*>(data.c_str() + (i) * sizeof(int));
 }
+int ReadUInt8_t(string data, size_t i) {
+	return *reinterpret_cast<const int*>(data.c_str() + (i) * sizeof(uint8_t));
+}
 double ReadDouble(string data, size_t i) {
 	return *reinterpret_cast<const double*>(data.c_str() + (i) * sizeof(double));
 }
@@ -158,9 +161,9 @@ void mesh::read(json mesh) {
 
 		for (lint i = 0; i < this->elems_count; i++) {
 			this->elem_blocks[i] = static_cast<int>(ReadInt(s_elem_blocks, i));
-			this->elem_orders[i] = static_cast<uint8_t>(ReadInt(s_elem_orders, i));
+			this->elem_orders[i] = static_cast<uint8_t>(ReadUInt8_t(s_elem_orders, i));
 			this->elem_parent_ids[i] = static_cast<int>(ReadInt(s_elem_parent_ids, i));
-			this->elem_types[i] = static_cast<uint8_t>(ReadInt(s_elem_types, i));
+			this->elem_types[i] = static_cast<uint8_t>(ReadUInt8_t(s_elem_types, i));
 			this->elem_id[i] = ReadInt(s_elemids, i);
 			count += count_nodes(s_elem_types[i]);
 		}

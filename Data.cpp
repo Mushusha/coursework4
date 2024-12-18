@@ -2,11 +2,22 @@
 
 Data::Data(std::shared_ptr <Parser> p) : parser(p) {
 	this->dim = 2; // need read from fc
+	logger& log = logger::log();
+	log.print("Start parsing");
+
 	create_nodes();
 	create_elements();
 	create_constants();
 	create_constraints();
 	create_load();
+
+	log.print("End parsing");
+}
+
+void Data::set_output_param(std::vector<double> start, std::vector<double> end, int count) {
+	this->line_end = end;
+	this->line_start = start;
+	this->points_count = count;
 }
 
 void Data::create_nodes() {
@@ -16,8 +27,6 @@ void Data::create_nodes() {
 			coords[j] = parser->mesh.nodes_coord[3 * i + j];
 		this->nodes.push_back(Node(parser->mesh.node_id[i], coords));
 	}
-	logger& log = logger::log();
-	log.print("Create nodes");
 }
 
 void Data::create_elements() {
@@ -26,37 +35,37 @@ void Data::create_elements() {
 		std::vector<int> elem_nodes;
 		std::shared_ptr<Element> elem;
 		switch (parser->mesh.elem_types[i]) {
-		case ElemType::TRI:
+		case TRI:
 			elem_nodes.resize(3);
 			for (int j = 0; j < 3; j++)
 				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 3;
-			elem = std::make_shared<triElement>(triElement(parser->mesh.elem_id[i], ElemType::TRI, elem_nodes));
+			elem = std::make_shared<triElement>(triElement(parser->mesh.elem_id[i], TRI, elem_nodes));
 			break;
-		case ElemType::QUAD:
+		case QUAD:
 			elem_nodes.resize(4);
 			for (int j = 0; j < 4; j++)
 				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 4;
-			elem = std::make_shared<quadElement>(quadElement(parser->mesh.elem_id[i], ElemType::QUAD, elem_nodes));
+			elem = std::make_shared<quadElement>(quadElement(parser->mesh.elem_id[i], QUAD, elem_nodes));
 			break;
-		case ElemType::TETRA:
+		case TETRA:
 			elem_nodes.resize(4);
 			for (int j = 0; j < 4; j++)
 				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 4;
-			elem = std::make_shared<tetraElement>(tetraElement(parser->mesh.elem_id[i], ElemType::TETRA, elem_nodes));
+			elem = std::make_shared<tetraElement>(tetraElement(parser->mesh.elem_id[i], TETRA, elem_nodes));
 			break;
-		case ElemType::HEX:
+		case HEX:
 			elem_nodes.resize(8);
 			for (int j = 0; j < 8; j++)
 				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 8;
-			elem = std::make_shared<hexElement>(hexElement(parser->mesh.elem_id[i], ElemType::HEX, elem_nodes));
+			elem = std::make_shared<hexElement>(hexElement(parser->mesh.elem_id[i], HEX, elem_nodes));
 			break;
 		default:
-			std::cout << "Error: incorrect element " + to_string(i) +
-				" type: " + to_string(parser->mesh.elem_types[i]) << std::endl;  //need throw
+			throw runtime_error("Error: incorrect element " + to_string(i) +
+				" type: " + to_string(parser->mesh.elem_types[i]));
 			break;
 		}
 		std::vector<double> x, y, z;
@@ -68,16 +77,12 @@ void Data::create_elements() {
 		elem->set_coords(x, y, z);
 		this->elements.push_back(elem);
 	}
-	logger& log = logger::log();
-	log.print("Create elements");
 }
 
 void Data::create_constants() {
 	// need block
 	for (int i = 0; i < parser->mesh.elems_count; i++)
 		elements[i]->set_constants(parser->material[0].constants[0], parser->material[0].constants[1]);
-	logger& log = logger::log();
-	log.print("Create constants");
 }
 
 void Data::create_constraints() {
@@ -88,23 +93,21 @@ void Data::create_constraints() {
 				if (restraints.flag[i])
 					nodes[restraints.apply_to[node] - 1].set_constraints(i, restraints.data[i]); // if exist --> throw
 	}
-	logger& log = logger::log();
-	log.print("Create constraints");
 }
 
 void Data::create_load() { // type - pressure
 	for (int id = 0; id < parser->load.size(); id++) {
 		auto& load = parser->load[id];
-		if (load.type == LoadType::PRESSURE) 		// else add to F
+		if (load.type == PRESSURE) 		// else add to F
 			for (int elem = 0; elem < load.apply_to.size() / 2; elem++)
 				elements[load.apply_to[2 * elem] - 1]->set_load(load.type, load.apply_to[2 * elem + 1], load.data);
 			
 	}
-	logger& log = logger::log();
-	log.print("Create loads");
 }
 
 void Data::fillGlobalK() {
+	logger& log = logger::log();
+	log.print("Start filling stiffness matrix");
 	int inf_count = 0; // ??
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
@@ -122,26 +125,29 @@ void Data::fillGlobalK() {
 
 	K.setFromTriplets(tripl_vec.begin(), tripl_vec.end());	
 	zeroDiagonalCheck();
-	logger& log = logger::log();
-	log.print("Fill stiffness matrix");
+	log.print("End filling stiffness matrix");
 } 
 
 void Data::fillGlobalF() {
+	logger& log = logger::log();
+	log.print("Start filling right vector");
+
 	int inf_count = 0; // ??
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
 
 	F.resize(dim * (nodes_count + inf_count));
 	for (int i = 0; i < elems_count; i++) {
-		std::vector loc_f = elements[i]->localF();
+		std::vector<double> loc_f = elements[i]->localF();
 		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
 			F.coeffRef(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim) += loc_f[j];
 	}
-	logger& log = logger::log();
-	log.print("Fill right vector");
+	log.print("End filling right vector");
 }
 
 void Data::fillconstraints() {
+	logger& log = logger::log();
+	log.print("Start filling constraints");
 	// c.first - comp, c.second - value 
 	for (int node = 0; node < nodes.size(); node++)
 		for (auto const& c: nodes[node].constraints)
@@ -155,8 +161,7 @@ void Data::fillconstraints() {
 						(it.col() == node * dim + c.first)) && (it.row() == it.col()))
 						F.coeffRef(it.row()) = c.second * it.value(); 
 			}
-	logger& log = logger::log();
-	log.print("Fill canctriants");
+	log.print("End filling constraints");
 }
 
 void Data::fillGlobalC() {
@@ -179,25 +184,17 @@ void Data::fillGlobalC() {
 	zeroDiagonalCheck();
 }
 
-void Data::fillGlobalR(std::string field) {
+void Data::fillGlobalR(int type, int comp) {
 	int inf_count = 0; // ??
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
 
 	R.resize(nodes_count + inf_count);
 	for (int i = 0; i < elems_count; i++) {
-		double value;
-		if (field == "stress_xx")
-			value = elements[i]->stress[Comp::XX];
-		else if (field == "stress_yy")
-			value = elements[i]->stress[Comp::YY];
-		else if (field == "stress_xy")
-			if (dim == 2)
-				value = elements[i]->stress[2];
-			else
-				value = elements[i]->stress[Comp::XY];
-
-		std::vector loc_r = elements[i]->localR(value);
+		std::vector<double> value;
+		for (int j = 0; j < elements[i]->nodes_count(); j++)
+			value.push_back(elements[i]->results[j][type](comp));
+		std::vector<double> loc_r = elements[i]->localR(value);
 		for (int j = 0; j < elements[i]->nodes_count(); j++)
 			R.coeffRef(elements[i]->get_nodes(j) - 1) += loc_r[j];
 	}
@@ -215,20 +212,32 @@ void Data::addToGlobalF(int index, double value) {
 void Data::displacementToElements() {
 	std::vector <double> disp;
 	for (int elem = 0; elem < elements.size(); elem++) {
-		elements[elem]->displacement.resize(dim * elements[elem]->nodes_count());
+		elements[elem]->results.resize(elements[elem]->nodes_count());
 		for (int node = 0; node < elements[elem]->nodes_count(); node++) {
-			elements[elem]->displacement[dim * node] = U(dim * (elements[elem]->get_nodes(node) - 1));
-			elements[elem]->displacement[dim * node + 1] = U(dim * (elements[elem]->get_nodes(node) - 1) + 1);
+			elements[elem]->results[node].resize(COUNT);
+			//elements[elem]->results[node][DISPLACEMENT].resize(dim);
+
+			//elements[elem]->results[node][DISPLACEMENT][X] = U(dim * (elements[elem]->get_nodes(node) - 1));
+			//elements[elem]->results[node][DISPLACEMENT][Y] = U(dim * (elements[elem]->get_nodes(node) - 1) + 1);
+			//if (dim == 3)
+			//	elements[elem]->results[node][DISPLACEMENT][Z] = U(dim * (elements[elem]->get_nodes(node) - 1) + 2);
+
+			elements[elem]->displacements.resize(dim * elements[elem]->nodes_count());
+			elements[elem]->displacements[dim * node] = U(dim * (elements[elem]->get_nodes(node) - 1));
+			elements[elem]->displacements[dim * node + 1] = U(dim * (elements[elem]->get_nodes(node) - 1) + 1);
 			if (dim == 3)
-				elements[elem]->displacement[dim * node + 2] = U(dim * (elements[elem]->get_nodes(node) - 1) + 2);
+				elements[elem]->displacements[dim * node + 2] = U(dim * (elements[elem]->get_nodes(node) - 1) + 2);
+
 		}
 	}
 }
 
 void Data::displacementToNodes() {
 	for (int i = 0; i < nodes.size(); i++)
-		for (int j = 0; j < dim; j++)
-			nodes[i].set_displacement(U.coeffRef(dim * i + j), j);
+		for (int j = 0; j < dim; j++) {
+			nodes[i].set_res_size(DISPLACEMENT, dim);
+			nodes[i].set_result(U.coeffRef(dim * i + j), DISPLACEMENT, j);
+		}
 }
 
 void Data::calcStrain() {
@@ -236,21 +245,38 @@ void Data::calcStrain() {
 		//std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774, 0.5774 };
 		//std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774 };
 		//std::vector <double> zeta = { 0.5774, 0.5774, 0.5774, 0.5774, -0.5774, -0.5774, -0.5774, -0.5774 };
-		double ksi = 0, eta = 0, zeta = 0;
-		elements[elem]->strain.resize(dim * elements[elem]->nodes_count());
-		productMV(elements[elem]->B(ksi, eta, zeta), elements[elem]->displacement, elements[elem]->strain);
+		std::vector <double> ksi = { 1, -1, -1, 1, 1, -1, -1, 1 };
+		std::vector <double> eta = { 1, 1, -1, -1, 1, 1, -1, -1 };
+		std::vector <double> zeta = { 1, 1, 1, 1, -1, -1, -1, -1 };
+		//int count;
+		//if (elements[elem]->get_type() == TRI || TETRA)
+		//	count == 1;
+		//else
+		//	count == elements[elem]->nodes_count();
+
+		for (int node = 0; node < elements[elem]->nodes_count(); node++) {
+			//elements[elem]->results[node][STRAIN].resize(output_fields(STRAIN, dim), 0);
+			elements[elem]->results[node][STRAIN] = elements[elem]->B(ksi[node], eta[node], zeta[node]) * elements[elem]->displacements;
+			//productMV(elements[elem]->B(ksi[node], eta[node], zeta[node]), elements[elem]->displacements, elements[elem]->results[node][STRAIN]);
+		}
 	}
+	logger& log = logger::log();
+	log.print("Calculate Strain");
 }
 
 void Data::calcStress() {
 	for (int elem = 0; elem < elements.size(); elem++) {
-		//std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774, 0.5774 };
-		//std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774 };
-		//std::vector <double> zeta = { 0.5774, 0.5774, 0.5774, 0.5774, -0.5774, -0.5774, -0.5774, -0.5774 };
-		double ksi = 0, eta = 0, zeta = 0;
-		elements[elem]->stress.resize(dim * elements[elem]->nodes_count());
-		productMV(elements[elem]->planeStrainD(), elements[elem]->strain, elements[elem]->stress);
+		for (int node = 0; node < elements[elem]->nodes_count(); node++) {
+			//elements[elem]->results[node][STRESS].resize(output_fields(STRESS, dim), 0);
+			elements[elem]->results[node][STRESS] = elements[elem]->planeStrainD() * elements[elem]->results[node][STRAIN];
+			if (dim == 2)
+				elements[elem]->results[node][STRAIN][XY_2D] /= 2;
+
+			//productMV(elements[elem]->planeStrainD(), elements[elem]->results[node][STRAIN], elements[elem]->results[node][STRESS]);
+		}
 	}
+	logger& log = logger::log();
+	log.print("Calculate Stress");
 }
 
 void Data::zeroDiagonalCheck() {
@@ -261,54 +287,74 @@ void Data::zeroDiagonalCheck() {
 		}
 }
 
-void Data::outputValues(std::string field) {
+void Data::outputValues(int type, int comp) {
+	std::vector<double> values;
+	values.resize(points_count, 0);
+	std::vector<std::vector<double>> points;
+	output_points(line_start, line_end, points_count, points);
+	interpolation(points, values, type, comp);
+
 	ofstream file;
-	file.open(field + ".txt");
+	std::string fieldname;
+	field_name(fieldname, type, comp, dim);
+	file.open(fieldname + ".txt");
 
-	for (int node = 0; node < nodes.size(); node++)
-		if (nodes[node].getY() == 0) {
-			double value;
-			if (field == "stress_xx")
-				value = nodes[node].get_stress(Comp::XX);
-			else if (field == "stress_yy")
-				value = nodes[node].get_stress(Comp::YY);
-			else if (field == "stress_xy")
-				value = nodes[node].get_stress(Comp::XY);
-			//file << nodes[node].getX() << std::endl;
-			file << std::fixed << std::setprecision(12) << value << std::endl;
-
-			//file << "(" << nodes[node].getX() << ", " << std::fixed << std::setprecision(12) << value << ")" << std::endl;
-		}
+	double line_len = sqrt(pow((line_end[0] - line_start[0]), 2) + pow((line_end[1] - line_start[1]), 2));
+	for (int i = 0; i < points_count; i++) 
+		//file << "(" << line_len / points_count * i << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
+		//file << points[i][0] << std::endl;
+		file << std::fixed << std::setprecision(12) << values[i] << std::endl;
+		
 	file.close();
 
+	if (type == STRESS)
+		for (int i = 0; i < points_count; i++)
+			out_stress[comp].push_back(values[i]);
+
+	logger& log = logger::log();
+	log.print("Interpolation " + fieldname);
+}
+
+void Data::interpolation(std::vector<std::vector<double>>& points, 
+						std::vector<double>& values, int type, int comp) {
+	for (int p = 0; p < points_count; p++)
+		for (int i = 0; i < elements.size(); i++) {
+			if (elements[i]->pointInElem(points[p])) {
+				//values[p] = elements[i]->results[0][type][comp];
+
+				std::vector<double> N = elements[i]->FF(points[p][0], points[p][1]);
+				for (int node = 0; node < elements[i]->nodes_count(); node++)
+					values[p] += N[node] * nodes[elements[i]->get_nodes(node) - 1].get_result(type, comp);
+					//values[p] += N[node] * elements[i]->results[node][type][comp];
+
+				break;
+			}
+		}
 }
 
 void Data::solve() {
+
 	fillGlobalK();
 	fillGlobalF();
 	fillconstraints();
 
 	zeroDiagonalCheck();
-	//Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
-	Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
-	solver.compute(K);
-
-	//Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
-	//solver.analyzePattern(K);
-	//solver.factorize(K);
-	
-	//Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> solver;
-	//solver.compute(K);
-
-	if (solver.info() != Eigen::Success)
-		std::cerr << "Error in K" << std::endl;
-
-	U = solver.solve(F);
 
 	logger& log = logger::log();
+	log.print("Start solving");
+
+	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+	//Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
+	solver.compute(K);
+
+	if (solver.info() != Eigen::Success)
+		throw runtime_error("Error in K");
+
+	U = solver.solve(F);
 	log.print("Solve done");
 
 	fillFields();
+	smoothing();
 }
 
 void Data::fillFields() {
@@ -317,27 +363,42 @@ void Data::fillFields() {
 	calcStress();
 }
 
-void Data::smoothing(std::string field) {
+void Data::smoothing() {
+	logger& log = logger::log();
+	log.print("Start smoothing");
+
 	fillGlobalC();
-	fillGlobalR(field);
+	displacementToNodes();
 
-	Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
-	solver.compute(C);
-	if (solver.info() != Eigen::Success)
-		std::cerr << "Error in C" << std::endl;
+	out_stress.resize((dim == 2) ? 3 : 6);
 
-	Eigen::MatrixXd Result;
+	for (int type = 1; type < COUNT; type++)
+		for (int comp = 0; comp < output_fields(type, dim); comp++) {
+			fillGlobalR(type, comp);
 
-	Result = solver.solve(R);
+			Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+			//Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
+			solver.compute(C);
+			if (solver.info() != Eigen::Success)
+				throw runtime_error("Error in C");
 
-	for (int i = 0; i < nodes.size(); i++) // refactoring
-		if (field == "stress_xx")
-			nodes[i].set_stress(Result(i), Comp::XX);
-		else if (field == "stress_yy")
-			nodes[i].set_stress(Result(i), Comp::YY);
-		else if (field == "stress_xy")
-			nodes[i].set_stress(Result(i), Comp::XY);
+			Eigen::MatrixXd Result;
+			Result = solver.solve(R);
 
-	outputValues(field);
+			for (int i = 0; i < nodes.size(); i++) {
+				nodes[i].set_res_size(type, dim);
+				nodes[i].set_result(Result(i), type, comp);
+			}
+
+			std::string fieldname;
+			field_name(fieldname, type, comp, dim);
+			log.print("Solve agreed resultant " + fieldname + " done");
+
+			outputValues(type, comp);
+		}
+	for (int i = 0; i < output_fields(DISPLACEMENT, dim); i++)
+		outputValues(DISPLACEMENT, i);
+
+	log.print("End smoothing");
 }
 

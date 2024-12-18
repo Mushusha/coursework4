@@ -19,7 +19,7 @@ std::pair<int, int> triElement::edge_to_node(int edge) {
 	else if (edge == 2)
 		return std::pair<int, int>(edge, 0);
 	else
-		std::cout << "Error: wrong edge" << endl;
+		throw runtime_error("Error: wrong edge");
 }
 
 double triElement::len_edge(int edge) {
@@ -39,6 +39,24 @@ Eigen::MatrixXd triElement::B(double ksi, double eta, double zeta) {
 	}
 	B = B / std::abs(C().determinant());
 	return B;
+}
+
+bool triElement::pointInElem(std::vector<double> point) {
+	bool answer = true;
+	for (int i = 0; i < 3; i++) {
+		std::vector<double> a{ x[i], y[i] };
+		std::vector<double> b{ x[(i + 1) % 3], y[(i + 1) % 3] };
+		std::vector<double> c{ x[(i + 2) % 3], y[(i + 2) % 3] };
+		if (a == point || b == point || c == point)
+			return true;
+		if (line(a, b, c) <= 0 && line(a, b, point) <= 0)
+			answer &= true;
+		else if (line(a, b, c) >= 0 && line(a, b, point) >= 0)
+			answer &= true;
+		else
+			return false;
+	}
+	return answer;
 }
 
 Eigen::MatrixXd triElement::localK() {
@@ -61,24 +79,37 @@ Eigen::MatrixXd triElement::localC() {
 	Eigen::MatrixXd c(3, 3);
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
-			c(i, j) = (i == j) ? (C().determinant() / 12) : (C().determinant() / 24);
+			c(i, j) = (i == j) ? (std::abs(C().determinant() / 12)) : std::abs((C().determinant() / 24));
 	return c;
 }
 
-std::vector<double> triElement::localR(double value) {
+std::vector<double> triElement::localR(std::vector<double> value) {
 	std::vector<double> R;
 	R.resize(3);
 	for (int i = 0; i < 3; i++)
-		R[i] = value * C().determinant() / 6;
+		R[i] = value[i] * std::abs(C().determinant() / 6);
 	return R;
 }
 
 std::vector<double> triElement::FF(double ksi, double eta, double zeta) {
-	return std::vector<double>();
+	std::vector<double> FF;
+	FF.resize(3);
+	Eigen::Vector3d f = { 1, ksi, eta };
+	Eigen::Vector3d ff = f.transpose() * C().inverse();
+	FF = { ff(0), ff(1), ff(2) };
+	//for (int i = 0; i < 3; i++) {
+	//	Eigen::MatrixXd A(3, 3);
+	//	A <<
+	//		1, 1, 1,
+	//		ksi, x[i], x[(i + 1) % 3],
+	//		eta, y[i], y[(i + 1) % 3];
+	//	FF[i] = std::abs(A.determinant() / C().determinant());
+	//}
+	return FF;
 }
 
-std::vector<std::vector<double>> triElement::gradFF(double ksi, double eta, double zeta) {
-	return std::vector<std::vector<double>>();
+Eigen::MatrixXd triElement::gradFF(double ksi, double eta, double zeta) {
+	return Eigen::MatrixXd();
 }
 
 Eigen::MatrixXd triElement::J(double ksi, double eta, double zeta) {

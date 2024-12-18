@@ -13,9 +13,7 @@ private:
 	double x;
 	double y;
 	double z;
-	std::array<double, 3> displacement;
-	std::array<double, 6> strain; // agreed
-	std::array<double, 6> stress; // agreed
+	std::vector <std::vector <double>> results; // agreed
 
 public:
 	Node() {};
@@ -29,15 +27,12 @@ public:
 
 	std::map <int, double> constraints; // first - component, second - value
 	void set_constraints(int comp, double value); // need ??
-	void set_displacement(double u, int i);
-	void set_strain(double epsilon, int i);
-	void set_stress(double sigma, int i);
+	void set_result(double value, int type, int comp);
+	void set_res_size(int type_size, int dim);
 
 	int getID() { return id; }
 	double getX() { return x; }
 	double getY() { return y; }
 	double getZ() { return z; }
-	double get_displacement(int i) { return displacement[i]; }
-	double get_strain(int i) { return strain[i]; }
-	double get_stress(int i) { return stress[i]; }
+	double get_result(int type, int comp) { return results[type][comp]; }
 };

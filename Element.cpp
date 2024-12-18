@@ -19,17 +19,17 @@ double Element::get_coord(int loc_node, int comp) {
 	else if (comp == 1) return y[loc_node];
 	else if (comp == 2) return z[loc_node];
 	else {
-		std::cout << "error: incorrect comp" << std::endl;
+		throw runtime_error("error: incorrect comp");
 		return -1;
 	}
 }
 
 void Element::set_load(int type, int apply_to, std::array<double, 6> value) {
-	if (type == LoadType::PRESSURE)
+	if (type == PRESSURE)
 		set_pressure(apply_to, value[0]);
 	else
 		for (int i = 0; i < value.size(); i++) {
-			std::cout << "Error load type" << std::endl;
+			throw runtime_error("Error load type");
 			//std::pair <int, int> pair(apply_to, i);
 			//load.insert({ pair, value[i] });
 		}
@@ -45,7 +45,6 @@ Eigen::MatrixXd Element::planeStressD() {
 	D(2, 2) = (1 - Poisson) / 2;
 
 	D *= Young / (1 - pow(Poisson, 2));
-	std::cout << D;
 	return D;
 }
 
