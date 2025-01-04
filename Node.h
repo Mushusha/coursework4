@@ -4,6 +4,8 @@
 #include <vector>
 #include <array>
 #include <utility>
+#include <fstream>
+#include <iostream>
 
 #include "Enums.h"
 
@@ -35,4 +37,6 @@ public:
 	double getY() { return y; }
 	double getZ() { return z; }
 	double get_result(int type, int comp) { return results[type][comp]; }
+
+	void printStress();
 };

@@ -70,6 +70,7 @@ private:
 	void zeroDiagonalCheck();
 
 	void outputValues(int type, int comp);
+	void printMeshStress();
 
 	void interpolation(std::vector<std::vector<double>>& points, std::vector<double>& values, int type, int comp);
 	

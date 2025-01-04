@@ -45,13 +45,13 @@ void base64_decode(std::string& encoded_string)
 	swap(encoded_string, decoded_string);
 }
 
-lint ReadInt(string data, size_t i) {
+lint ReadInt(string& data, size_t i) {
 	return *reinterpret_cast<const int*>(data.c_str() + (i) * sizeof(int));
 }
-int ReadUInt8_t(string data, size_t i) {
+int ReadUInt8_t(string& data, size_t i) {
 	return *reinterpret_cast<const int*>(data.c_str() + (i) * sizeof(uint8_t));
 }
-double ReadDouble(string data, size_t i) {
+double ReadDouble(string& data, size_t i) {
 	return *reinterpret_cast<const double*>(data.c_str() + (i) * sizeof(double));
 }
 

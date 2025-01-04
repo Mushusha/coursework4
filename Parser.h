@@ -17,9 +17,9 @@ inline bool is_base64(unsigned char c);
 void base64_decode(std::string& encoded_string);
 
 //Read type data
-inline double ReadDouble(string data, size_t i);
-inline lint ReadInt(string data, size_t i);
-inline int ReadUInt8_t(string data, size_t i);
+inline double ReadDouble(string& data, size_t i);
+inline lint ReadInt(string& data, size_t i);
+inline int ReadUInt8_t(string& data, size_t i);
 
 enum type_cs {
 	Cartesian = 0,
