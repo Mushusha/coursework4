@@ -1,15 +1,20 @@
 #include "Data.h"
 
 Data::Data(std::shared_ptr <Parser> p) : parser(p) {
-	this->dim = 2; // need read from fc
 	logger& log = logger::log();
 	log.print("Start parsing");
+
+	if (parser->settings.dimensions == "2D")
+		this->dim = 2;
+	else
+		this->dim = 3;
 
 	create_nodes();
 	create_elements();
 	create_constants();
 	create_constraints();
 	create_load();
+	create_D();
 
 	log.print("End parsing");
 }
@@ -77,6 +82,55 @@ void Data::create_elements() {
 		elem->set_coords(x, y, z);
 		this->elements.push_back(elem);
 	}
+	create_infelements();
+	parser->mesh.elems_count = this->elements.size();
+	parser->mesh.nodes_count = this->nodes.size();
+}
+
+void Data::create_infelements() {
+	// if 2D
+	for (int i = 0; i < parser->sidesets.size(); i++) {
+		for (int j = 0; j < parser->sidesets[i].size; j++) {
+			auto inf = parser->sidesets[i].apply_to;
+
+			std::pair<double, double> C1(0, 0); // fc nodesets
+			std::pair<double, double> C2(0, 0);
+
+			std::pair<int, int> edge;
+			if (inf[2 * j + 1] != 3)
+				edge = std::make_pair(inf[2 * j + 1], inf[2 * j + 1] + 1);
+			else if (inf[2 * j + 1] == 3)
+				edge = std::make_pair(inf[2 * j + 1], 0);
+
+			edge.first = this->elements[inf[2 * j]]->get_nodes(edge.first);
+			edge.second = this->elements[inf[2 * j]]->get_nodes(edge.second);
+
+			int n = this->nodes.size();
+			std::vector<int> elem_nodes = { n + 1, n + 2, n + 3, n + 4 };
+			std::vector<double> x, y, z = { 0, 0, 0, 0 };
+
+			x.push_back(this->nodes[edge.first - 1].getX() * 2 - C1.first);
+			x.push_back(C1.first);
+			x.push_back(C2.first);
+			x.push_back(this->nodes[edge.second - 1].getX() * 2 - C2.first);
+
+			y.push_back(this->nodes[edge.first - 1].getY() * 2 - C1.second);
+			y.push_back(C1.second);
+			y.push_back(C2.second);
+			y.push_back(this->nodes[edge.second - 1].getY() * 2 - C2.second);
+
+			std::shared_ptr<Element> elem = std::make_shared<infQuadElement>(infQuadElement(this->elements.size(), INFQUAD, elem_nodes));
+			elem->set_coords(x, y, z);
+			this->elements.push_back(elem);
+
+			for (int k = 0; k < 4; k++) {
+				if (k == 1 || k == 2)
+					continue;
+				std::array <double, 3> coords = { x[k], y[k], z[k] };
+				this->nodes.push_back(Node(elem_nodes[k], coords)); // C1, C2 not dublicate
+			}
+		}
+	}
 }
 
 void Data::create_constants() {
@@ -101,8 +155,56 @@ void Data::create_load() { // type - pressure
 		if (load.type == PRESSURE) 		// else add to F
 			for (int elem = 0; elem < load.apply_to.size() / 2; elem++)
 				elements[load.apply_to[2 * elem] - 1]->set_load(load.type, load.apply_to[2 * elem + 1], load.data);
-			
 	}
+}
+
+void Data::create_D() {
+	if (parser->settings.dimensions == "2D")
+		if (parser->settings.plane_state == "p-stress")
+			for (int i = 0; i < parser->mesh.elems_count; i++) {
+				double Poisson = this->elements[i]->get_nu();
+				double Young = this->elements[i]->get_E();
+				this->elements[i]->D = Eigen::MatrixXd::Zero(3, 3);
+				this->elements[i]->D(0, 0) = 1;
+				this->elements[i]->D(0, 1) = Poisson;
+				this->elements[i]->D(1, 0) = Poisson;
+				this->elements[i]->D(1, 1) = 1;
+				this->elements[i]->D(2, 2) = (1 - Poisson) / 2;
+
+				this->elements[i]->D *= Young / (1 - pow(Poisson, 2));
+			}
+		else
+			for (int i = 0; i < parser->mesh.elems_count; i++) {
+				double Poisson = this->elements[i]->get_nu();
+				double Young = this->elements[i]->get_E();
+
+				this->elements[i]->D = Eigen::MatrixXd::Zero(3, 3);
+				this->elements[i]->D(0, 0) = 1;
+				this->elements[i]->D(0, 1) = Poisson / (1 - Poisson);
+				this->elements[i]->D(1, 0) = Poisson / (1 - Poisson);
+				this->elements[i]->D(1, 1) = 1;
+				this->elements[i]->D(2, 2) = (1 - 2 * Poisson) / (2 * (1 - Poisson));
+
+				this->elements[i]->D *= Young * (1 - Poisson) / ((1 + Poisson) * (1 - 2 * Poisson));
+			}
+	else
+		for (int i = 0; i < parser->mesh.elems_count; i++) {
+			double Poisson = this->elements[i]->get_nu();
+			double Young = this->elements[i]->get_E();
+
+			this->elements[i]->D = Eigen::MatrixXd::Zero(6, 6);
+			for (int i = 0; i < 6; i++)
+				for (int j = 0; j < 3; j++) {
+					if (i == j && i < 3)
+						this->elements[i]->D(i, j) = 1;
+					if (i != j && i < 3)
+						this->elements[i]->D(i, j) = Poisson / (1 - Poisson);
+					if (i >= 3)
+						this->elements[i]->D(i, i) = (1 - 2 * Poisson) / (2 * (1 - Poisson));
+				}
+
+			this->elements[i]->D *= Young * (1 - Poisson) / ((1 + Poisson) * (1 - 2 * Poisson));
+		}
 }
 
 void Data::fillGlobalK() {
@@ -242,12 +344,12 @@ void Data::displacementToNodes() {
 
 void Data::calcStrain() {
 	for (int elem = 0; elem < elements.size(); elem++) {
-		//std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774, 0.5774 };
-		//std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774 };
-		//std::vector <double> zeta = { 0.5774, 0.5774, 0.5774, 0.5774, -0.5774, -0.5774, -0.5774, -0.5774 };
-		std::vector <double> ksi = { 1, -1, -1, 1, 1, -1, -1, 1 };
-		std::vector <double> eta = { 1, 1, -1, -1, 1, 1, -1, -1 };
-		std::vector <double> zeta = { 1, 1, 1, 1, -1, -1, -1, -1 };
+		std::vector <double> ksi = { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 };
+		std::vector <double> eta = { -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 };
+		std::vector <double> zeta = { -0.57735026918926, -0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926 };
+		//std::vector <double> ksi = { -1, 1, 1, -1, -1, 1, 1, -1 };
+		//std::vector <double> eta = { -1, -1, 1, 1, -1, -1, 1, 1 };
+		//std::vector <double> zeta = { -1, -1, -1, -1, 1, 1, 1, 1 };
 		//int count;
 		//if (elements[elem]->get_type() == TRI || TETRA)
 		//	count == 1;
@@ -268,7 +370,7 @@ void Data::calcStress() {
 	for (int elem = 0; elem < elements.size(); elem++) {
 		for (int node = 0; node < elements[elem]->nodes_count(); node++) {
 			//elements[elem]->results[node][STRESS].resize(output_fields(STRESS, dim), 0);
-			elements[elem]->results[node][STRESS] = elements[elem]->planeStrainD() * elements[elem]->results[node][STRAIN];
+			elements[elem]->results[node][STRESS] = elements[elem]->D * elements[elem]->results[node][STRAIN];
 			if (dim == 2)
 				elements[elem]->results[node][STRAIN][XY_2D] /= 2;
 
@@ -302,8 +404,9 @@ void Data::outputValues(int type, int comp) {
 	double line_len = sqrt(pow((line_end[0] - line_start[0]), 2) + pow((line_end[1] - line_start[1]), 2));
 	for (int i = 0; i < points_count; i++) 
 		//file << "(" << line_len / points_count * i << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
+		file << "(" << points[i][0] << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
 		//file << points[i][0] << std::endl;
-		file << std::fixed << std::setprecision(12) << values[i] << std::endl;
+		//file << std::fixed << std::setprecision(12) << values[i] << std::endl;
 		
 	file.close();
 
@@ -350,6 +453,18 @@ void Data::printMeshStress() {
 	//file_stress_yz.close();
 	//file_stress_zz.close();
 
+	std::ofstream file_disp_x;
+	file_disp_x.open("all_disp_x.txt");
+	std::ofstream file_disp_y;
+	file_disp_y.open("all_disp_y.txt");
+
+	for (int i = 0; i < nodes.size(); i++) {
+		file_disp_x << U(dim * i) << std::endl;
+		file_disp_y << U(dim * i + 1) << std::endl;
+	}
+
+	file_disp_x.close();
+	file_disp_y.close();
 }
 
 void Data::interpolation(std::vector<std::vector<double>>& points, 
@@ -358,12 +473,15 @@ void Data::interpolation(std::vector<std::vector<double>>& points,
 		for (int i = 0; i < elements.size(); i++) {
 			if (elements[i]->pointInElem(points[p])) {
 				//values[p] = elements[i]->results[0][type][comp];
-
-				std::vector<double> N = elements[i]->FF(points[p][0], points[p][1]);
+				std::vector<double> Coord = elements[i]->coordFF(points[p][0], points[p][1]); // dim == 3
+				std::vector<double> N = elements[i]->FF(Coord[0], Coord[1]);
 				for (int node = 0; node < elements[i]->nodes_count(); node++)
 					values[p] += N[node] * nodes[elements[i]->get_nodes(node) - 1].get_result(type, comp);
-					//values[p] += N[node] * elements[i]->results[node][type][comp];
 
+					//if (type != DISPLACEMENT)
+					//	values[p] += N[node] * elements[i]->results[node][type](comp);
+					//else
+					//	values[p] += N[node] * elements[i]->displacements(node * dim + comp);
 				break;
 			}
 		}
@@ -409,6 +527,9 @@ void Data::smoothing() {
 
 	out_stress.resize((dim == 2) ? 3 : 6);
 
+	for (int i = 0; i < output_fields(DISPLACEMENT, dim); i++)
+		outputValues(DISPLACEMENT, i);
+
 	for (int type = 1; type < COUNT; type++)
 		for (int comp = 0; comp < output_fields(type, dim); comp++) {
 			fillGlobalR(type, comp);
@@ -433,8 +554,6 @@ void Data::smoothing() {
 
 			outputValues(type, comp);
 		}
-	for (int i = 0; i < output_fields(DISPLACEMENT, dim); i++)
-		outputValues(DISPLACEMENT, i);
 
 	printMeshStress();
 

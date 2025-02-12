@@ -22,6 +22,7 @@ Eigen::MatrixXd quadElement::gradFF(double ksi, double eta, double zeta) {
 
 Eigen::MatrixXd quadElement::J(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd J = Eigen::MatrixXd::Zero(2, 2);
+
 	for (int i = 0; i < 4; i++) {
 		J(0, 0) += gradFF(ksi, eta)(KSI, i) * x[i];
 		J(0, 1) += gradFF(ksi, eta)(KSI, i) * y[i];
@@ -69,11 +70,20 @@ bool quadElement::pointInElem(std::vector<double> point) {
 }
 
 void quadElement::set_pressure(int edge, double value) {
-	int comp = 0;
-	if (edge == 0 || edge == 2)
-		comp = 1;
-	std::pair <int, int> pair(edge, comp);
-	load.insert({ pair, -value });
+	std::pair<int, int> node = edge_to_node(edge);
+	std::array<double, 2> comp;
+	comp[0] = -y[node.first] + y[node.second];
+	comp[1] = x[node.first] - x[node.second];
+
+	if ((x[node.first] - x[node.second]) * (y[node.first] - y[(edge + 2) % 4]) -
+		(y[node.first] - y[node.second]) * (x[node.first] - x[(edge + 2) % 4]) < 0)
+		for (auto& i : comp)
+			i *= -1;
+
+	for (int i = 0; i < 2; i++) {
+		std::pair <int, int> pair(edge, i);
+		load.insert({ pair, -value * comp[i] / len_edge(edge) });
+	}
 }
 
 double quadElement::len_edge(int edge) {
@@ -93,33 +103,12 @@ std::pair<int, int> quadElement::edge_to_node(int edge) {
 Eigen::MatrixXd quadElement::localK() {
 
 	Eigen::MatrixXd k = Eigen::MatrixXd::Zero(8, 8);
-	std::vector <double> ksi = { -0.5774, 0.5774, -0.5774, -0.5774 };
-	std::vector <double> eta = { -0.5774, -0.5774, -0.5774, 0.5774 };
+	std::vector <double> ksi = { -0.5774, 0.5774, 0.5774, -0.5774 };
+	std::vector <double> eta = { -0.5774, -0.5774, 0.5774, 0.5774 };
 
 	for (int gp = 0; gp < 4; gp++)
-		for (int i = 0; i < 4; i++) {
-			Eigen::MatrixXd B_i = Eigen::MatrixXd::Zero(3, 2);
-			B_i(0, 0) = B(ksi[gp], eta[gp])(0, 2 * i);
-			B_i(1, 1) = B(ksi[gp], eta[gp])(1, 2 * i + 1);
-			B_i(2, 0) = B(ksi[gp], eta[gp])(2, 2 * i);
-			B_i(2, 1) = B(ksi[gp], eta[gp])(2, 2 * i + 1);
-			for (int j = 0; j < 4; j++) {
-				Eigen::MatrixXd B_j = Eigen::MatrixXd::Zero(3, 2);
-				B_j(0, 0) = B(ksi[gp], eta[gp])(0, 2 * i);
-				B_j(1, 1) = B(ksi[gp], eta[gp])(1, 2 * i + 1);
-				B_j(2, 0) = B(ksi[gp], eta[gp])(2, 2 * i);
-				B_j(2, 1) = B(ksi[gp], eta[gp])(2, 2 * i + 1);
+		k += B(ksi[gp], eta[gp]).transpose() * D * B(ksi[gp], eta[gp]) * std::abs(J(eta[gp], ksi[gp]).determinant());
 
-				Eigen::MatrixXd k_ij = B_i.transpose() * planeStrainD() * B_j * std::abs(J(eta[gp], ksi[gp]).determinant());
-
-				k(2 * i, 2 * j) += k_ij(0, 0);
-				k(2 * i, 2 * j + 1) += k_ij(0, 1);
-				k(2 * i + 1, 2 * j) += k_ij(1, 0);
-				k(2 * i + 1, 2 * j + 1) += k_ij(1, 1);
-
-				//k.coeffRef(i, j) += B(ksi[gp], eta[gp]).transpose() * planeStrainD() * B(ksi[gp], eta[gp])* std::abs(J(eta[gp], ksi[gp]).determinant());
-		}
-	}
 	return k;
 }
 
@@ -128,11 +117,12 @@ std::vector<double> quadElement::localF() {
 	F.resize(8);
 
 	// l.first.first - edge, l.first.second - comp, l.second - value
-	for (auto const& l : load) {
-		std::pair<int, int> node = edge_to_node(l.first.first);
-		F[2 * node.first + l.first.second] += l.second * len_edge(l.first.first) / 2;
-		F[2 * node.second + l.first.second] += l.second * len_edge(l.first.first) / 2;
-	}
+	if (load.size() != 0)
+		for (auto const& l : load) {
+			std::pair<int, int> node = edge_to_node(l.first.first);
+			F[2 * node.first + l.first.second] += l.second * len_edge(l.first.first) / 2;
+			F[2 * node.second + l.first.second] += l.second * len_edge(l.first.first) / 2;
+		}
 	return F;
 }
 
@@ -144,7 +134,6 @@ Eigen::MatrixXd quadElement::localC() {
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
 			for (int gp = 0; gp < 4; gp++)
-//				std::cout << FF(ksi[gp], eta[gp])[i] * FF(ksi[gp], eta[gp])[j] * std::abs(J(eta[gp], ksi[gp]).determinant()) << std::endl;
 				c(i, j) += FF(ksi[gp], eta[gp])[i] * FF(ksi[gp], eta[gp])[j] * std::abs(J(eta[gp], ksi[gp]).determinant());
 	return c;
 }
@@ -157,9 +146,39 @@ std::vector<double> quadElement::localR(std::vector<double> value) {
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
 	for (int i = 0; i < 4; i++)
 		for (int gp = 0; gp < 4; gp++)
-			R[i] += value[i] * FF(ksi[gp], eta[gp])[i] * std::abs(J(eta[gp], ksi[gp]).determinant()); // ??
-
+			R[i] += value[i] * FF(ksi[gp], eta[gp])[i] * std::abs(J(eta[gp], ksi[gp]).determinant());
 	return R;
+}
+
+std::vector<double> quadElement::coordFF(double x0, double y0, double z0) {
+	Eigen::Vector2d F;
+	std::vector x1 = { 1, 0, 3, 4 };
+	std::vector y1 = { 0, 2, 4, 0 };
+
+	double ksi0 = 0, eta0 = 0;
+	for (int i = 0; i < 50; i++) {
+		F(0) = 0;
+		F(1) = 0;
+		for (int j = 0; j < 4; j++) {
+			F(0) += FF(ksi0, eta0)[j] * x[j];
+			F(1) += FF(ksi0, eta0)[j] * y[j];
+		}
+
+		F(0) -= x0;
+		F(1) -= y0;
+
+		Eigen::Vector2d delta;
+		delta = -1 * (J(ksi0, eta0).transpose()).inverse() * F;
+
+		ksi0 += delta(0);
+		eta0 += delta(1);
+
+		if (std::hypot(delta(0), delta(1)) < 1e-8 || std::hypot(F(0), F(1)) < 1e-8)
+			break;
+	}
+
+	std::vector<double> coord = { ksi0, eta0 };
+	return coord;
 }
 
 //double quadInfN(double ksi, double eta, std::vector <double> a) {

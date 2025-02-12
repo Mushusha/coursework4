@@ -45,7 +45,7 @@ void KirshError(std::string filename, double P, double R) {
 	p->read(file);
 	Data data(p);
 
-	data.set_output_param(std::vector<double>{0.8 * R, 0.8 * R}, std::vector<double>{R * 50, R * 50}, 200);
+	data.set_output_param(std::vector<double>{0.8 * R, 0.8 * R}, std::vector<double>{5, 5}, 200);
 	data.solve();
 
 	std::string fieldname;
@@ -230,3 +230,4 @@ int output_fields(int type, int dim) {
 		return 0;
 	}
 }
+

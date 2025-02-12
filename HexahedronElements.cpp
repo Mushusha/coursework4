@@ -74,7 +74,7 @@ Eigen::MatrixXd hexElement::localK() {
 	std::vector <double> zeta = { 0.5774, 0.5774, 0.5774, 0.5774, -0.5774, -0.5774, -0.5774, -0.5774 };
 
 	for (int i = 0; i < 8; i++) // fix
-		k += B(ksi[i], eta[i], zeta[i]).transpose() * threeMatrixD() * B(ksi[i], eta[i], zeta[i]) * std::abs(J(ksi[i], eta[i], zeta[i]).determinant());
+		k += B(ksi[i], eta[i], zeta[i]).transpose() * D * B(ksi[i], eta[i], zeta[i]) * std::abs(J(ksi[i], eta[i], zeta[i]).determinant());
 	return k;
 }
 
@@ -87,6 +87,10 @@ Eigen::MatrixXd hexElement::localC() {
 }
 
 std::vector<double> hexElement::localR(std::vector<double> value) {
+	return std::vector<double>();
+}
+
+std::vector<double> hexElement::coordFF(double x0, double y0, double z0) {
 	return std::vector<double>();
 }
 

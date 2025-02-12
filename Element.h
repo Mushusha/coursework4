@@ -42,9 +42,9 @@ public:
 	virtual Eigen::MatrixXd localC() = 0; // agreed resultants
 	virtual std::vector <double> localR(std::vector<double> value) = 0;
 
-	Eigen::MatrixXd planeStressD(); //plane_stress, plane_strain ??  
-	Eigen::MatrixXd planeStrainD();
-	Eigen::MatrixXd threeMatrixD();
+	virtual std::vector<double> coordFF(double x0, double y0, double z0 = 0) = 0;
+
+	Eigen::MatrixXd D;
 
 	void set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z);
 	void set_load(int type, int edge, std::array<double, 6> value); // nodes
@@ -55,8 +55,14 @@ public:
 	int nodes_count() { return nodes.size(); }
 	double get_coord(int loc_node, int comp);
 
+	double get_E() { return Young; }
+	double get_nu() { return Poisson; }
+	
+	double Jac(double ksi, double eta, double zeta = 0);
+	
 	std::vector<std::vector <Eigen::VectorXd>> results; // [i] - node; [j] - field; [k] - comp
 	Eigen::VectorXd displacements;
+
 protected:
 	int type;
 	int id;
@@ -65,10 +71,10 @@ protected:
 
 	double Young;
 	double Poisson;
-
+	
 	// refactoring: may be <edge, vector>
 	std::map <std::pair<int, int>, double> load; // pair <edge, comp>, value
-
+	
 	virtual Eigen::MatrixXd gradFF(double ksi, double eta, double zeta = 0) = 0;
 	virtual Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) = 0; // <DIM, DIM>
 	

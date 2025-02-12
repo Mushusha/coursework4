@@ -24,6 +24,8 @@ public:
 	Eigen::MatrixXd localC() override;
 	std::vector <double> localR(std::vector<double> value) override;
 
+	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
+
 protected:
 	Eigen::MatrixXd  gradFF(double ksi, double eta, double zeta = 0) override;
 	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;

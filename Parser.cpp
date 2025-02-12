@@ -54,6 +54,10 @@ int ReadUInt8_t(string& data, size_t i) {
 double ReadDouble(string& data, size_t i) {
 	return *reinterpret_cast<const double*>(data.c_str() + (i) * sizeof(double));
 }
+bool ReadBool(string& data, size_t i) {
+	return *reinterpret_cast<const bool*>(data.c_str() + (i) * sizeof(bool));
+}
+
 
 void block::read(json block) {
 	this->id = block["id"];
@@ -92,6 +96,7 @@ void load::read(json load) {
 	//this->cs = load["cs"];
 	this->type = load["type"];
 	this->size = load["apply_to_size"];
+	this->inf = load["inf"];
 
 	this->apply_to.resize(2 * this->size);
 	std::string apply_to_s = load["apply_to"];
@@ -119,7 +124,8 @@ void nodesets::read(json nodesets) {
 void sidesets::read(json sidesets) {
 	this->id = sidesets["id"];
 	this->size = sidesets["apply_to_size"];
-	this->apply_to.resize(this->size);
+	this->apply_to.resize(2 * this->size);
+	this->load = sidesets["load"];
 	std::string apply_to_s = sidesets["apply_to"];
 	base64_decode(apply_to_s);
 	for (size_t i = 0; i < this->apply_to.size(); i++)
@@ -220,7 +226,9 @@ void restraints::read(json restraints) {
 		this->flag[i] = restraints["flag"][i];
 }
 void settings::read(json block) {
-	this->plane_state = block["plane_state"];
+	this->dimensions = block["dimensions"];
+	if (this->dimensions == "2D")
+		this->plane_state = block["plane_state"];
 }
 
 void Parser::read(string name) {
@@ -268,5 +276,5 @@ void Parser::read(string name) {
 		this->restraints[i].read(_root["restraints"][i]);
 	}
 
-	//this->settings.read(_root["settings"]);
+	this->settings.read(_root["settings"]);
 }

@@ -62,7 +62,7 @@ bool tetraElement::pointInElem(std::vector<double> point) {
 }
 
 Eigen::MatrixXd tetraElement::localK() {
-	return B().transpose() * threeMatrixD() * B() * C().determinant() / 6;
+	return B().transpose() * D * B() * C().determinant() / 6;
 }
 
 std::vector<double> tetraElement::localF() {
@@ -74,6 +74,10 @@ Eigen::MatrixXd tetraElement::localC() {
 }
 
 std::vector<double> tetraElement::localR(std::vector<double> value) {
+	return std::vector<double>();
+}
+
+std::vector<double> tetraElement::coordFF(double x0, double y0, double z0) {
 	return std::vector<double>();
 }
 

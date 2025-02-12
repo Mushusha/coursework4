@@ -60,7 +60,7 @@ bool triElement::pointInElem(std::vector<double> point) {
 }
 
 Eigen::MatrixXd triElement::localK() {
-	return B().transpose() * planeStrainD() * B() * std::abs(C().determinant() / 2);
+	return B().transpose() * D * B() * std::abs(C().determinant() / 2);
 }
 
 std::vector<double> triElement::localF() {
@@ -91,6 +91,11 @@ std::vector<double> triElement::localR(std::vector<double> value) {
 	return R;
 }
 
+std::vector<double> triElement::coordFF(double x0, double y0, double z0) {
+	std::vector<double> coord = { x0, y0 };
+	return coord;
+}
+
 std::vector<double> triElement::FF(double ksi, double eta, double zeta) {
 	std::vector<double> FF;
 	FF.resize(3);
@@ -113,7 +118,10 @@ Eigen::MatrixXd triElement::gradFF(double ksi, double eta, double zeta) {
 }
 
 Eigen::MatrixXd triElement::J(double ksi, double eta, double zeta) {
-	return Eigen::MatrixXd();
+	Eigen::MatrixXd j = Eigen::MatrixXd::Zero(2, 2);
+	j(0, 0) = 1;
+	j(1, 1) = 1;
+	return j;
 }
 
 void triElement::set_pressure(int edge, double value) {

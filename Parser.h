@@ -20,6 +20,7 @@ void base64_decode(std::string& encoded_string);
 inline double ReadDouble(string& data, size_t i);
 inline lint ReadInt(string& data, size_t i);
 inline int ReadUInt8_t(string& data, size_t i);
+inline bool ReadBool(string& data, size_t i);
 
 enum type_cs {
 	Cartesian = 0,
@@ -51,6 +52,7 @@ struct load {
 	int cs;
 	std::array<double, 6> data;
 	int type;
+	bool inf = false;
 	void read(json load);
 };
 
@@ -65,6 +67,7 @@ struct sidesets {
 	int id;
 	std::vector<lint> apply_to;
 	size_t size;
+	int load;
 	void read(json sidesets);
 };
 
@@ -103,6 +106,7 @@ struct restraints {
 
 struct settings {
 	std::string plane_state;
+	std::string dimensions;
 	void read(json settings);
 };
 

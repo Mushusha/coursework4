@@ -24,6 +24,10 @@ double Element::get_coord(int loc_node, int comp) {
 	}
 }
 
+double Element::Jac(double ksi, double eta, double zeta) {
+	return J(ksi, eta, zeta).determinant();
+}
+
 void Element::set_load(int type, int apply_to, std::array<double, 6> value) {
 	if (type == PRESSURE)
 		set_pressure(apply_to, value[0]);
@@ -35,47 +39,5 @@ void Element::set_load(int type, int apply_to, std::array<double, 6> value) {
 		}
 }
 // need in elems
-Eigen::MatrixXd Element::planeStressD() {
-
-	Eigen::MatrixXd D = Eigen::MatrixXd::Zero(3, 3);
-	D(0, 0) = 1;
-	D(0, 1) = Poisson;
-	D(1, 0) = Poisson; 
-	D(1, 1) = 1;
-	D(2, 2) = (1 - Poisson) / 2;
-
-	D *= Young / (1 - pow(Poisson, 2));
-	return D;
-}
-
-Eigen::MatrixXd Element::planeStrainD() {
-
-	Eigen::MatrixXd D = Eigen::MatrixXd::Zero(3, 3);
-	D(0, 0) = 1;
-	D(0, 1) = Poisson / (1 - Poisson);
-	D(1, 0) = Poisson / (1 - Poisson);
-	D(1, 1) = 1;
-	D(2, 2) = (1 - 2 * Poisson) / (2 * (1 - Poisson)) ;
-
-	D *= Young * (1 - Poisson) / ((1 + Poisson) * (1 - 2 * Poisson));
-	return D;
-}
-
-Eigen::MatrixXd Element::threeMatrixD() {
-	Eigen::MatrixXd D = Eigen::MatrixXd::Zero(6, 6);
-	for (int i = 0; i < 6; i++)
-		for (int j = 0; j < 3; j++) {
-			if (i == j && i < 3)
-				D(i, j) = 1;
-			if (i != j && i < 3)
-				D(i, j) = Poisson / (1 - Poisson);
-			if (i >= 3)
-				D(i, i) = (1 - 2 * Poisson) / (2 * (1 - Poisson));
-		}
-
-	D *= Young * (1 - Poisson) / ((1 + Poisson) * (1 - 2 * Poisson));
-	return D;
-}
-
 
 // createInf ()

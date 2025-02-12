@@ -11,6 +11,7 @@
 #include "TetrahedronElements.h"
 #include "HexahedronElements.h"
 
+
 class Data {
 public:
 	Data() {}
@@ -52,9 +53,11 @@ private:
 
 	void create_nodes();
 	void create_elements();
+	void create_infelements();
 	void create_constants();
 	void create_constraints();
 	void create_load();
+	void create_D();
 
 	void addToGlobalK(int first_index, int second_index, double value);
 	void addToGlobalF(int index, double value);
@@ -73,5 +76,5 @@ private:
 	void printMeshStress();
 
 	void interpolation(std::vector<std::vector<double>>& points, std::vector<double>& values, int type, int comp);
-	
+
 };
