@@ -10,7 +10,7 @@
 #include "Element.h"
 #include "Parser.h"
 #include "Data.h"
-#include "log.h"
+#include "log1.h"
 
 // MV - matrix vector
 
