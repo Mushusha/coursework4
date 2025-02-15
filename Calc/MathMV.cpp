@@ -66,17 +66,17 @@ void KirshError(std::string filename, double P, double R) {
 
 		double an_max;
 		switch (comp) {
-		case XX_2D:
+		case Comp2D::XX:
 			for (int i = 0; i < points_x.size(); i++)
 				analitics[i] = P * (3 * pow(R / points_x[i], 4) / 4 - pow(R / points_x[i], 2)) / 2;
 			an_max = P / 6;
 			break;
-		case YY_2D:
+		case Comp2D::YY:
 			for (int i = 0; i < points_x.size(); i++)
 				analitics[i] = P * (-3 * pow(R / points_x[i], 4) / 4 + pow(R / points_x[i], 2) + 2) / 2;
 			an_max = P / 6 + P;
 			break;
-		case XY_2D:
+		case Comp2D::XY:
 			for (int i = 0; i < points_x.size(); i++)
 				analitics[i] = -P * pow(R / points_x[i], 2) / 4;
 			an_max = -P * pow(R / points_x[0], 2) / 4;
@@ -179,22 +179,22 @@ void field_name(std::string& filename, int type, int comp, int dim) {
 	}
 	if (dim == 3)
 		switch (comp) {
-		case XX:
+		case Comp3D::XX:
 			filename += "_xx";
 			break;
-		case YY:
+		case Comp3D::YY:
 			filename += "_yy";
 			break;
-		case XY:
+		case Comp3D::XY:
 			filename += "_xy";
 			break;
-		case ZZ:
+		case Comp3D::ZZ:
 			filename += "_zz";
 			break;
-		case XZ:
+		case Comp3D::XZ:
 			filename += "_xz";
 			break;
-		case YZ:
+		case Comp3D::YZ:
 			filename += "_yz";
 			break;
 		default:
@@ -202,13 +202,13 @@ void field_name(std::string& filename, int type, int comp, int dim) {
 		}
 	else
 		switch (comp) {
-		case XX_2D:
+		case Comp2D::XX:
 			filename += "_xx";
 			break;
-		case YY_2D:
+		case Comp2D::YY:
 			filename += "_yy";
 			break;
-		case XY_2D:
+		case Comp2D::XY:
 			filename += "_xy";
 			break;
 		default:

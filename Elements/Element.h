@@ -23,12 +23,8 @@
 class Element {
 public:
 	Element() {};
-	Element(int id, int type, std::vector <int> nodes) {
-		this->id = id;
-		this->type = type;
-		this->nodes.resize(nodes.size());
-		for (int i = 0; i < nodes.size(); i++)
-			this->nodes[i] = nodes[i];
+	Element(int id, int type, std::vector <int> nodes) :
+		id(id), type(type), nodes(nodes) {
 	};
 	virtual ~Element() = default;
 

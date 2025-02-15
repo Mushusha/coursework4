@@ -372,7 +372,7 @@ void Data::calcStress() {
 			//elements[elem]->results[node][STRESS].resize(output_fields(STRESS, dim), 0);
 			elements[elem]->results[node][STRESS] = elements[elem]->D * elements[elem]->results[node][STRAIN];
 			if (dim == 2)
-				elements[elem]->results[node][STRAIN][XY_2D] /= 2;
+				elements[elem]->results[node][STRAIN][Comp3D::XY] /= 2;
 
 			//productMV(elements[elem]->planeStrainD(), elements[elem]->results[node][STRAIN], elements[elem]->results[node][STRESS]);
 		}

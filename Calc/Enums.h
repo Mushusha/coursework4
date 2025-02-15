@@ -7,6 +7,11 @@ enum ElemType { TRI = 10, QUAD = 12, TETRA = 1, HEX = 3, WERGE = 6, PYR = 8, INF
 enum LoadType { PRESSURE = 4 };
 enum LocVar { KSI, ETA, ZETA };
 enum GlobVar { X, Y, Z };
-enum Comp3D { XX, YY, ZZ, XY, XZ, YZ };
-enum Comp2D { XX_2D, YY_2D, XY_2D };
+
+namespace Comp3D {
+enum Comp { XX, YY, ZZ, XY, XZ, YZ };
+}
+namespace Comp2D {
+	enum Comp { XX, YY, XY };
+}
 enum ResType { DISPLACEMENT, STRAIN, STRESS, COUNT };

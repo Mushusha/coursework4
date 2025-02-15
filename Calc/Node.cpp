@@ -46,9 +46,9 @@ void Node::printStress() {
 	file_coord_y << y << std::endl;
 	//file_coord_z << z << std::endl;
 
-	file_stress_xx << results[STRESS][XX_2D] << std::endl;
-	file_stress_yy << results[STRESS][YY_2D] << std::endl;
-	file_stress_xy << results[STRESS][XY_2D] << std::endl;
+	file_stress_xx << results[STRESS][Comp2D::XX] << std::endl;
+	file_stress_yy << results[STRESS][Comp2D::YY] << std::endl;
+	file_stress_xy << results[STRESS][Comp2D::XY] << std::endl;
 }
 
 
