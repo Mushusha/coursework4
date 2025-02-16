@@ -89,12 +89,13 @@ void Data::create_elements() {
 
 void Data::create_infelements() {
 	// if 2D
+	int inf_node = 0;
 	for (int i = 0; i < parser->sidesets.size(); i++) {
 		for (int j = 0; j < parser->sidesets[i].size; j++) {
 			auto inf = parser->sidesets[i].apply_to;
 
-			std::pair<double, double> C1(0, 0); // fc nodesets
-			std::pair<double, double> C2(0, 0);
+			std::pair<double, double> C1(this->nodes[parser->nodesets[0].apply_to[inf_node]].getX(), this->nodes[parser->nodesets[0].apply_to[inf_node]].getY()); // nodesets[0] ??? 
+			std::pair<double, double> C2(this->nodes[parser->nodesets[0].apply_to[inf_node + 1]].getX(), this->nodes[parser->nodesets[0].apply_to[inf_node + 1]].getY());
 
 			std::pair<int, int> edge;
 			if (inf[2 * j + 1] != 3)
@@ -106,7 +107,7 @@ void Data::create_infelements() {
 			edge.second = this->elements[inf[2 * j]]->get_nodes(edge.second);
 
 			int n = this->nodes.size();
-			std::vector<int> elem_nodes = { n + 1, n + 2, n + 3, n + 4 };
+			std::vector<int> elem_nodes = { static_cast<int>(parser->nodesets[0].apply_to[inf_node]), static_cast<int>(parser->nodesets[0].apply_to[inf_node] + 1), n + 1, n + 2 };
 			std::vector<double> x, y, z = { 0, 0, 0, 0 };
 
 			x.push_back(this->nodes[edge.first - 1].getX() * 2 - C1.first);
@@ -123,9 +124,8 @@ void Data::create_infelements() {
 			elem->set_coords(x, y, z);
 			this->elements.push_back(elem);
 
-			for (int k = 0; k < 4; k++) {
-				if (k == 1 || k == 2)
-					continue;
+			inf_node++;
+			for (int k = 2; k < 4; k++) {
 				std::array <double, 3> coords = { x[k], y[k], z[k] };
 				this->nodes.push_back(Node(elem_nodes[k], coords)); // C1, C2 not dublicate
 			}
@@ -372,7 +372,7 @@ void Data::calcStress() {
 			//elements[elem]->results[node][STRESS].resize(output_fields(STRESS, dim), 0);
 			elements[elem]->results[node][STRESS] = elements[elem]->D * elements[elem]->results[node][STRAIN];
 			if (dim == 2)
-				elements[elem]->results[node][STRAIN][Comp3D::XY] /= 2;
+				elements[elem]->results[node][STRAIN][Comp2D::XY] /= 2;
 
 			//productMV(elements[elem]->planeStrainD(), elements[elem]->results[node][STRAIN], elements[elem]->results[node][STRESS]);
 		}
