@@ -21,7 +21,6 @@ Elements/TriangleElements.h
 Elements/TriangleElements.cpp
 Elements/QuadElements.h
 Elements/QuadElements.cpp
-Elements/InfQuadElements.h
 Elements/InfQuadElements.cpp
 Elements/TetrahedronElements.h
 Elements/TetrahedronElements.cpp
@@ -57,7 +56,6 @@ add_executable(Core
     Elements/TriangleElements.cpp
     Elements/QuadElements.h
     Elements/QuadElements.cpp
-    Elements/InfQuadElements.h
     Elements/InfQuadElements.cpp
     Elements/TetrahedronElements.h
     Elements/TetrahedronElements.cpp

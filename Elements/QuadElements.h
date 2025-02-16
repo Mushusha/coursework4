@@ -7,7 +7,6 @@
 #include "Element.h"
 #include "MathMV.h"
 
-
 class quadElement : public Element {
 public:
 	quadElement() : Element() {}
