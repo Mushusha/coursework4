@@ -150,6 +150,20 @@ std::vector<double> quadElement::localR(std::vector<double> value) {
 	return R;
 }
 
+Eigen::MatrixXd quadElement::localM() {
+	Eigen::MatrixXd m = Eigen::MatrixXd::Zero(8, 8);
+	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
+	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
+
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			for (int gp = 0; gp < 4; gp++) {
+				m(2 * i, 2 * j) += FF(ksi[gp], eta[gp])[i] * FF(ksi[gp], eta[gp])[j] * std::abs(J(eta[gp], ksi[gp]).determinant());
+				m(2 * i + 1, 2 * j + 1) += m(2 * i, 2 * j);
+			}
+	return density * m;
+}
+
 std::vector<double> quadElement::coordFF(double x0, double y0, double z0) {
 	Eigen::Vector2d F;
 	std::vector x1 = { 1, 0, 3, 4 };

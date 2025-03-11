@@ -27,6 +27,14 @@ Elements/TetrahedronElements.cpp
 Elements/HexahedronElements.h
 Elements/HexahedronElements.cpp)
 
+source_group(Solve FILES 
+Solve/Solver.h
+Solve/Solver.cpp
+Solve/Statics.h
+Solve/Statics.cpp
+Solve/Dynamics.h
+Solve/Dynamics.cpp)
+
 source_group(Parser FILES 
 Parser/Parser.h
 Parser/Parser.cpp)
@@ -62,6 +70,13 @@ add_executable(Core
     Elements/HexahedronElements.h
     Elements/HexahedronElements.cpp
 
+    Solve/Solver.h
+    Solve/Solver.cpp
+    Solve/Statics.h
+    Solve/Statics.cpp
+    Solve/Dynamics.h
+    Solve/Dynamics.cpp
+
     Parser/Parser.h
     Parser/Parser.cpp
 
@@ -73,6 +88,7 @@ add_executable(Core
 target_include_directories(Core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Calc
     ${CMAKE_CURRENT_SOURCE_DIR}/Elements
+    ${CMAKE_CURRENT_SOURCE_DIR}/Solve
     ${CMAKE_CURRENT_SOURCE_DIR}/Parser
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests
     ${CMAKE_CURRENT_SOURCE_DIR}

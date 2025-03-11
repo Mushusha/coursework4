@@ -77,6 +77,10 @@ std::vector<double> tetraElement::localR(std::vector<double> value) {
 	return std::vector<double>();
 }
 
+Eigen::MatrixXd tetraElement::localM() {
+	return Eigen::MatrixXd();
+}
+
 std::vector<double> tetraElement::coordFF(double x0, double y0, double z0) {
 	return std::vector<double>();
 }

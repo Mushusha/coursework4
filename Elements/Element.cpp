@@ -9,9 +9,10 @@ void Element::set_coords(std::vector <double> x, std::vector <double> y, std::ve
 	}
 }
 
-void Element::set_constants(double E, double nu) {
+void Element::set_constants(double E, double nu, double rho) {
 	Young = E;
 	Poisson = nu;
+	density = rho;
 }
 
 double Element::get_coord(int loc_node, int comp) {

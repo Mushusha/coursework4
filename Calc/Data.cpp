@@ -107,7 +107,7 @@ void Data::create_infelements() {
 			edge.second = this->elements[inf[2 * j]]->get_nodes(edge.second);
 
 			int n = this->nodes.size();
-			std::vector<int> elem_nodes = { static_cast<int>(parser->nodesets[0].apply_to[inf_node]), static_cast<int>(parser->nodesets[0].apply_to[inf_node] + 1), n + 1, n + 2 };
+			std::vector<int> elem_nodes = { static_cast<int>(parser->nodesets[0].apply_to[inf_node]), n + 1, n + 2, static_cast<int>(parser->nodesets[0].apply_to[inf_node] + 1) };
 			std::vector<double> x, y, z = { 0, 0, 0, 0 };
 
 			x.push_back(this->nodes[edge.first - 1].getX() * 2 - C1.first);
@@ -127,7 +127,12 @@ void Data::create_infelements() {
 			inf_node++;
 			for (int k = 2; k < 4; k++) {
 				std::array <double, 3> coords = { x[k], y[k], z[k] };
-				this->nodes.push_back(Node(elem_nodes[k], coords)); // C1, C2 not dublicate
+				this->nodes.push_back(Node(elem_nodes[k], coords));
+			}
+
+			if (parser->sidesets[i].load != -1) { // type == PRESSURE
+				auto& load = parser->load[parser->sidesets[i].load];
+				elements[this->elements.size() - 1]->set_load(load.type, 3, load.data);
 			}
 		}
 	}
@@ -136,7 +141,7 @@ void Data::create_infelements() {
 void Data::create_constants() {
 	// need block
 	for (int i = 0; i < parser->mesh.elems_count; i++)
-		elements[i]->set_constants(parser->material[0].constants[0], parser->material[0].constants[1]);
+		elements[i]->set_constants(parser->material[0].constants[0], parser->material[0].constants[1], parser->material[0].constants[2]);
 }
 
 void Data::create_constraints() {
@@ -145,17 +150,18 @@ void Data::create_constraints() {
 		for (int node = 0; node < restraints.size; node++)
 			for (int i = 0; i < 6; i++)
 				if (restraints.flag[i])
-					nodes[restraints.apply_to[node] - 1].set_constraints(i, restraints.data[i]); // if exist --> throw
+					nodes[restraints.apply_to[node] - 1].set_constraints(i, restraints.data[i]);
 	}
 }
 
 void Data::create_load() { // type - pressure
-	for (int id = 0; id < parser->load.size(); id++) {
-		auto& load = parser->load[id];
-		if (load.type == PRESSURE) 		// else add to F
-			for (int elem = 0; elem < load.apply_to.size() / 2; elem++)
-				elements[load.apply_to[2 * elem] - 1]->set_load(load.type, load.apply_to[2 * elem + 1], load.data);
-	}
+	for (int id = 0; id < parser->load.size(); id++)
+		if (!parser->load[id].inf) {
+			auto& load = parser->load[id];
+			if (load.type == PRESSURE) 		// else add to F
+				for (int elem = 0; elem < load.apply_to.size() / 2; elem++)
+					elements[load.apply_to[2 * elem] - 1]->set_load(load.type, load.apply_to[2 * elem + 1], load.data);
+		}
 }
 
 void Data::create_D() {
@@ -210,11 +216,10 @@ void Data::create_D() {
 void Data::fillGlobalK() {
 	logger& log = logger::log();
 	log.print("Start filling stiffness matrix");
-	int inf_count = 0; // ??
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
 
-	K.resize(dim * (nodes_count + inf_count), dim * (nodes_count + inf_count));
+	K.resize(dim * nodes_count, dim * nodes_count);
 	std::vector <Eigen::Triplet <double>> tripl_vec;
 	for (int i = 0; i < elems_count; i++) {
 		Eigen::MatrixXd loc_k = elements[i]->localK();
@@ -234,11 +239,10 @@ void Data::fillGlobalF() {
 	logger& log = logger::log();
 	log.print("Start filling right vector");
 
-	int inf_count = 0; // ??
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
 
-	F.resize(dim * (nodes_count + inf_count));
+	F.resize(dim * nodes_count);
 	for (int i = 0; i < elems_count; i++) {
 		std::vector<double> loc_f = elements[i]->localF();
 		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
@@ -247,7 +251,29 @@ void Data::fillGlobalF() {
 	log.print("End filling right vector");
 }
 
-void Data::fillconstraints() {
+void Data::fillGlobalM() {
+	logger& log = logger::log();
+	log.print("Start filling mass matrix");
+	int nodes_count = parser->mesh.nodes_count;
+	int elems_count = parser->mesh.elems_count;
+
+	M.resize(dim * nodes_count, dim * nodes_count);
+	std::vector <Eigen::Triplet <double>> tripl_vec;
+	for (int i = 0; i < elems_count; i++) {
+		Eigen::MatrixXd loc_m = elements[i]->localM();
+		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
+			for (int k = 0; k < elements[i]->nodes_count() * dim; k++) {
+				Eigen::Triplet <double> trpl(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim, dim * (elements[i]->get_nodes(k / dim) - 1) + k % dim, loc_m(j, k));
+				tripl_vec.push_back(trpl);
+			}
+	}
+
+	M.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
+	zeroDiagonalCheck();
+	log.print("End filling mass matrix");
+}
+
+void Data::fillConstraints() {
 	logger& log = logger::log();
 	log.print("Start filling constraints");
 	// c.first - comp, c.second - value 
@@ -267,11 +293,10 @@ void Data::fillconstraints() {
 }
 
 void Data::fillGlobalC() {
-	int inf_count = 0; // ??
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
 
-	C.resize(nodes_count + inf_count, nodes_count + inf_count);
+	C.resize(nodes_count, nodes_count);
 	std::vector <Eigen::Triplet <double>> tripl_vec;
 	for (int i = 0; i < elems_count; i++) {
 		Eigen::MatrixXd loc_c = elements[i]->localC();
@@ -287,11 +312,10 @@ void Data::fillGlobalC() {
 }
 
 void Data::fillGlobalR(int type, int comp) {
-	int inf_count = 0; // ??
 	int nodes_count = parser->mesh.nodes_count;
 	int elems_count = parser->mesh.elems_count;
 
-	R.resize(nodes_count + inf_count);
+	R.resize(nodes_count);
 	for (int i = 0; i < elems_count; i++) {
 		std::vector<double> value;
 		for (int j = 0; j < elements[i]->nodes_count(); j++)
@@ -491,7 +515,7 @@ void Data::solve() {
 
 	fillGlobalK();
 	fillGlobalF();
-	fillconstraints();
+	fillConstraints();
 
 	zeroDiagonalCheck();
 

@@ -136,7 +136,7 @@ void material::read(json mat) {
 	this->id = mat["id"];
 	this->type = mat["elasticity"][0]["type"];
 
-	for (uint8_t i = 0; i < 2; i++) {
+	for (uint8_t i = 0; i < 3; i++) { // 1 - E, 2 - nu, 3 - rho
 		std::string tmp = mat["elasticity"][0]["constants"][i];
 		base64_decode(tmp);
 		this->constants[i] = ReadDouble(tmp, 0);

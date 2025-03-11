@@ -91,6 +91,14 @@ std::vector<double> triElement::localR(std::vector<double> value) {
 	return R;
 }
 
+Eigen::MatrixXd triElement::localM() {
+	Eigen::MatrixXd m(6, 6);
+	for (int i = 0; i < 6; i++)
+		for (int j = 0; j < 6; j++)
+			m(i, j) = (i == j) ? (std::abs(C().determinant() / 12)) : std::abs((C().determinant() / 24));
+	return density * m;
+}
+
 std::vector<double> triElement::coordFF(double x0, double y0, double z0) {
 	std::vector<double> coord = { x0, y0 };
 	return coord;

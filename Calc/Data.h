@@ -14,8 +14,51 @@
 
 class Data {
 public:
-	Data() {}
 	Data(std::shared_ptr <Parser> p);
+	Data(const Data& other)
+		: dim(other.dim),
+		line_start(other.line_start),
+		line_end(other.line_end),
+		points_count(other.points_count),
+		out_stress(other.out_stress),
+		elements(other.elements),
+		nodes(other.nodes),
+		parser(other.parser) {}
+	Data& operator=(const Data& other) {
+		if (this != &other) {
+			dim = other.dim;
+			line_start = other.line_start;
+			line_end = other.line_end;
+			points_count = other.points_count;
+			out_stress = other.out_stress;
+			elements = other.elements;
+			nodes = other.nodes;
+			parser = other.parser;
+		}
+		return *this;
+	}
+	Data(Data&& other) noexcept
+		: dim(std::exchange(other.dim, 0)),
+		line_start(std::move(other.line_start)),
+		line_end(std::move(other.line_end)),
+		points_count(std::exchange(other.points_count, 0)),
+		out_stress(std::move(other.out_stress)),
+		elements(std::move(other.elements)),
+		nodes(std::move(other.nodes)),
+		parser(std::move(other.parser)) {}
+	Data& operator=(Data&& other) noexcept {
+		if (this != &other) {
+			dim = std::exchange(other.dim, 0);
+			line_start = std::move(other.line_start);
+			line_end = std::move(other.line_end);
+			points_count = std::exchange(other.points_count, 0);
+			out_stress = std::move(other.out_stress);
+			elements = std::move(other.elements);
+			nodes = std::move(other.nodes);
+			parser = std::move(other.parser);
+		}
+		return *this;
+	}
 	virtual ~Data() = default;
 
 	const std::shared_ptr<Parser>& get_parser() const { return parser; }
@@ -24,7 +67,10 @@ public:
 
 	Eigen::SparseMatrix <double> K;
 	Eigen::SparseVector <double> F;
+	Eigen::SparseMatrix <double> M;
 	Eigen::VectorX <double> U; // displacement
+
+	int dim;
 
 	std::vector<double> line_start;
 	std::vector<double> line_end;
@@ -34,7 +80,8 @@ public:
 
 	void fillGlobalK();
 	void fillGlobalF();
-	void fillconstraints();
+	void fillGlobalM();
+	void fillConstraints();
 
 	void fillGlobalC();
 	void fillGlobalR(int type, int comp);
@@ -42,11 +89,12 @@ public:
 	void solve();
 
 private:
+	Data() = default;
+
 	std::vector <shared_ptr<Element>> elements;
 	std::vector <Node> nodes;
 
 	std::shared_ptr<Parser> parser;
-	int dim;
 
 	Eigen::SparseMatrix <double> C; // agreed resultants
 	Eigen::SparseVector <double> R;

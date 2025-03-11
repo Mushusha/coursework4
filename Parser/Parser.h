@@ -74,7 +74,7 @@ struct sidesets {
 struct material {
 	int id;
 	int type;
-	std::array<double, 2> constants;
+	std::array<double, 3> constants;
 	void read(json material);
 };
 

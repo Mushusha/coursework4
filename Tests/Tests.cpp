@@ -46,7 +46,7 @@ void test_triElement_locK() {
     std::vector<double> z = { 0, 0, 0 };
 
     elem.set_coords(x, y, z);
-    elem.set_constants(1, 0.6);
+    elem.set_constants(1, 0.6, 1);
 
     Eigen::MatrixXd expectedlocK(6, 6);
     expectedlocK <<
@@ -154,7 +154,7 @@ void test_triElement_constraintsK() {
     Data data(p);
     data.fillGlobalK();
     data.fillGlobalF();
-    data.fillconstraints();
+    data.fillConstraints();
     Eigen::SparseMatrix<double> resultGlobK = data.K;
 
     Eigen::MatrixXd expectedGlobK = Eigen::MatrixXd::Zero(10, 10);
@@ -184,7 +184,7 @@ void test_triElement_constraintsF() {
     Data data(p);
     data.fillGlobalK();
     data.fillGlobalF();
-    data.fillconstraints();
+    data.fillConstraints();
     Eigen::SparseVector<double> resultGlobF = data.F;
 
     Eigen::SparseVector<double> expectedGlobF;

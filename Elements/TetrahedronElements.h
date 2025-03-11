@@ -9,7 +9,6 @@
 
 class tetraElement : public Element {
 public:
-	tetraElement() {};
 	tetraElement(int id, int type, std::vector <int> nodes)
 		: Element (id, type, nodes) {};
 
@@ -24,6 +23,7 @@ public:
 
 	Eigen::MatrixXd localC() override;
 	std::vector <double> localR(std::vector<double> value) override;
+	Eigen::MatrixXd localM() override;
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 
@@ -34,6 +34,8 @@ protected:
 	void set_pressure(int edge, double value);
 
 private:
+	tetraElement() : Element() {};
+
 	Eigen::MatrixXd C();
 };
 

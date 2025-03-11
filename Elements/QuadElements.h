@@ -9,7 +9,6 @@
 
 class quadElement : public Element {
 public:
-	quadElement() : Element() {}
 	quadElement(int id, int type, std::vector <int> nodes)
 		: Element(id, type, nodes) {}
 	virtual ~quadElement() = default;
@@ -23,10 +22,13 @@ public:
 
 	Eigen::MatrixXd localC() override;
 	std::vector <double> localR(std::vector<double> value) override;
+	Eigen::MatrixXd localM() override;
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 
 protected:
+	quadElement() : Element() {}
+
 	Eigen::MatrixXd  gradFF(double ksi, double eta, double zeta = 0) override;
 	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;
 
@@ -39,11 +41,13 @@ private:
 
 class infQuadElement : public  quadElement {
 public:
-	infQuadElement() : quadElement() {}
 	infQuadElement(int id, int type, std::vector<int> nodes)
 		: quadElement(id, type, nodes) {
 	}
 	virtual ~infQuadElement() = default;
 
 	std::vector<double> FF(double ksi, double eta, double zeta = 0);
+
+private:
+	infQuadElement() : quadElement() {}
 };
