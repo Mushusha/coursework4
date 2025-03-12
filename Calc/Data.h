@@ -15,62 +15,21 @@
 class Data {
 public:
 	Data(std::shared_ptr <Parser> p);
-	Data(const Data& other)
-		: dim(other.dim),
-		line_start(other.line_start),
-		line_end(other.line_end),
-		points_count(other.points_count),
-		out_stress(other.out_stress),
-		elements(other.elements),
-		nodes(other.nodes),
-		parser(other.parser) {}
-	Data& operator=(const Data& other) {
-		if (this != &other) {
-			dim = other.dim;
-			line_start = other.line_start;
-			line_end = other.line_end;
-			points_count = other.points_count;
-			out_stress = other.out_stress;
-			elements = other.elements;
-			nodes = other.nodes;
-			parser = other.parser;
-		}
-		return *this;
-	}
-	Data(Data&& other) noexcept
-		: dim(std::exchange(other.dim, 0)),
-		line_start(std::move(other.line_start)),
-		line_end(std::move(other.line_end)),
-		points_count(std::exchange(other.points_count, 0)),
-		out_stress(std::move(other.out_stress)),
-		elements(std::move(other.elements)),
-		nodes(std::move(other.nodes)),
-		parser(std::move(other.parser)) {}
-	Data& operator=(Data&& other) noexcept {
-		if (this != &other) {
-			dim = std::exchange(other.dim, 0);
-			line_start = std::move(other.line_start);
-			line_end = std::move(other.line_end);
-			points_count = std::exchange(other.points_count, 0);
-			out_stress = std::move(other.out_stress);
-			elements = std::move(other.elements);
-			nodes = std::move(other.nodes);
-			parser = std::move(other.parser);
-		}
-		return *this;
-	}
+	Data(const Data& other);
+	Data& operator=(const Data& other);
+	Data(Data&& other) noexcept;
+	Data& operator=(Data&& other) noexcept;
 	virtual ~Data() = default;
 
 	const std::shared_ptr<Parser>& get_parser() const { return parser; }
 	const std::shared_ptr<Element> get_elem(int i) const { return elements[i]; }
+	Node get_node(int i) const { return nodes[i]; }
+	const int nodes_count() const { return nodes.size(); }
+	const int elements_count() const { return elements.size(); }
 	void set_output_param(std::vector<double> start, std::vector<double> end, int count);
 
-	Eigen::SparseMatrix <double> K;
-	Eigen::SparseVector <double> F;
-	Eigen::SparseMatrix <double> M;
-	Eigen::VectorX <double> U; // displacement
-
 	int dim;
+	std::string analisys_type;
 
 	std::vector<double> line_start;
 	std::vector<double> line_end;
@@ -78,15 +37,8 @@ public:
 
 	std::vector<std::vector<double>> out_stress;
 
-	void fillGlobalK();
-	void fillGlobalF();
-	void fillGlobalM();
-	void fillConstraints();
-
-	void fillGlobalC();
-	void fillGlobalR(int type, int comp);
-
-	void solve();
+	//void fillGlobalC();
+	//void fillGlobalR(int type, int comp);
 
 private:
 	Data() = default;
@@ -107,22 +59,11 @@ private:
 	void create_load();
 	void create_D();
 
-	void addToGlobalK(int first_index, int second_index, double value);
-	void addToGlobalF(int index, double value);
+	//void smoothing();
 
-	void displacementToElements();
-	void displacementToNodes();
-	void calcStrain();
-	void calcStress();
+	//void outputValues(int type, int comp);
+	//void printMeshStress();
 
-	void fillFields();
-	void smoothing();
-
-	void zeroDiagonalCheck();
-
-	void outputValues(int type, int comp);
-	void printMeshStress();
-
-	void interpolation(std::vector<std::vector<double>>& points, std::vector<double>& values, int type, int comp);
+	//void interpolation(std::vector<std::vector<double>>& points, std::vector<double>& values, int type, int comp);
 
 };

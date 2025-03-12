@@ -9,6 +9,7 @@
 
 class triElement : public Element {
 public:
+	triElement() : Element() {};
 	triElement(int id, int type, std::vector <int> nodes)
 		: Element (id, type, nodes) {};
 	triElement(const triElement& other)
@@ -47,8 +48,6 @@ protected:
 	void set_pressure(int edge, double value);
 
 private:
-	triElement() : Element() {};
-
 	Eigen::MatrixXd C();
 	double len_edge(int edge);
 	std::pair<int, int> edge_to_node(int edge);

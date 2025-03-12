@@ -22,74 +22,11 @@
 
 class Element {
 public:
-	Element(int id, int type, std::vector <int> nodes) :
-		id(id), type(type), nodes(nodes) {
-	};
-	Element(const Element& other)
-		: id(other.id),
-		type(other.type),
-		nodes(other.nodes),
-		x(other.x),
-		y(other.y),
-		z(other.z),
-		Young(other.Young),
-		Poisson(other.Poisson),
-		density(other.density),
-		load(other.load),
-		results(other.results),
-		displacements(other.displacements),
-		D(other.D) {}
-	Element& operator=(const Element& other) {
-		if (this != &other) {
-			id = other.id;
-			type = other.type;
-			nodes = other.nodes;
-			x = other.x;
-			y = other.y;
-			z = other.z;
-			Young = other.Young;
-			Poisson = other.Poisson;
-			density = other.density;
-			load = other.load;
-			results = other.results;
-			displacements = other.displacements;
-			D = other.D;
-		}
-		return *this;
-	}
-	Element(Element&& other) noexcept
-		: id(std::exchange(other.id, 0)),
-		type(std::exchange(other.type, 0)),
-		nodes(std::move(other.nodes)),
-		x(std::move(other.x)),
-		y(std::move(other.y)),
-		z(std::move(other.z)),
-		Young(std::exchange(other.Young, 0.0)),
-		Poisson(std::exchange(other.Poisson, 0.0)),
-		density(std::exchange(other.density, 0.0)),
-		load(std::move(other.load)),
-		results(std::move(other.results)),
-		displacements(std::move(other.displacements)),
-		D(std::move(other.D)) {
-	}
-	Element& operator=(Element&& other) noexcept {
-		if (this != &other) {
-			id = std::exchange(other.id, 0);
-			type = std::exchange(other.type, 0);
-			nodes = std::move(other.nodes);
-			x = std::move(other.x);
-			y = std::move(other.y);
-			z = std::move(other.z);
-			Young = std::exchange(other.Young, 0.0);
-			Poisson = std::exchange(other.Poisson, 0.0);
-			density = std::exchange(other.density, 0.0);
-			load = std::move(other.load);
-			results = std::move(other.results);
-			displacements = std::move(other.displacements);
-			D = std::move(other.D);
-		}
-		return *this;
-	}
+	Element(int id, int type, std::vector <int> nodes);
+	Element(const Element& other);
+	Element& operator=(const Element& other);
+	Element(Element&& other) noexcept;
+	Element& operator=(Element&& other) noexcept; 
 	virtual ~Element() = default;
 
 	virtual Eigen::MatrixXd localK() = 0; // <NODES * DIM, NODES * DIM>

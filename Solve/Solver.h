@@ -7,22 +7,40 @@
 #include "unsupported/Eigen/IterativeSolvers"
 
 #include "Calc/Data.h"
+#include "log1.h"
 
 class Solver {
 public:
-	Solver(Data data) : calc_data(data) {};
+	Solver(Data& data);
 	virtual ~Solver() = default;
 
 	Data calc_data;
 
-private:
-	Solver() = delete;
+	void solve();
 
+protected:
 	Eigen::SparseMatrix <double> K;
 	Eigen::SparseVector <double> F;
-	// Eigen::SparseMatrix <double> M; dyyn
-	// Eigen::SparseMatrix <double> C; dyn
 
 	Eigen::VectorX <double> U; // displacement
 
+	void addToGlobalK(int first_index, int second_index, double value);
+	void addToGlobalF(int index, double value);
+
+	void zeroDiagonalCheck();
+
+	virtual void calcDisp() = 0;
+
+private:
+	Solver() = delete;
+
+	void fillGlobalK();
+	void fillGlobalF();
+
+	void fillConstraints();
+
+	void displacementToElements();
+	void displacementToNodes();
+	void calcStrain();
+	void calcStress();
 };

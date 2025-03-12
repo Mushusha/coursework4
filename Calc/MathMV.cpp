@@ -46,7 +46,7 @@ void KirshError(std::string filename, double P, double R) {
 	Data data(p);
 
 	data.set_output_param(std::vector<double>{0.8 * R, 0.8 * R}, std::vector<double>{5, 5}, 200);
-	data.solve();
+	//data.solve();
 
 	std::string fieldname;
 
@@ -109,21 +109,21 @@ void meshConvergence(std::string name1, std::string name2, std::string name3) {
 	p1->read(file1);
 	Data data1(p1);
 	data1.set_output_param(std::vector<double>{0.3, -0.3}, std::vector<double>{3.9, -0.3}, count);
-	data1.solve();
+	//data1.solve();
 
 	std::string file2 = name2;
 	std::shared_ptr<Parser> p2 = std::make_shared<Parser>();
 	p2->read(file2);
 	Data data2(p2);
 	data2.set_output_param(std::vector<double>{0.3, -0.3}, std::vector<double>{3.9, -0.3}, count);
-	data2.solve();
+	//data2.solve();
 
 	std::string file3 = name3;
 	std::shared_ptr<Parser> p3 = std::make_shared<Parser>();
 	p3->read(file3);
 	Data data3(p3);
 	data3.set_output_param(std::vector<double>{0.1, -0.3}, std::vector<double>{3.9, -0.3}, count);
-	data3.solve();
+	//data3.solve();
 
 	std::string fieldname;
 

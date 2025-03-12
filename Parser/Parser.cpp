@@ -229,6 +229,7 @@ void settings::read(json block) {
 	this->dimensions = block["dimensions"];
 	if (this->dimensions == "2D")
 		this->plane_state = block["plane_state"];
+	this->analisys_type = block["type"];
 }
 
 void Parser::read(string name) {

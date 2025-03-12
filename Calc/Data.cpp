@@ -1,5 +1,52 @@
 #include "Data.h"
 
+Data::Data(const Data& other)
+	: dim(other.dim),
+	line_start(other.line_start),
+	line_end(other.line_end),
+	points_count(other.points_count),
+	out_stress(other.out_stress),
+	elements(other.elements),
+	nodes(other.nodes),
+	parser(other.parser) {
+}
+Data& Data::operator=(const Data& other) {
+	if (this != &other) {
+		dim = other.dim;
+		line_start = other.line_start;
+		line_end = other.line_end;
+		points_count = other.points_count;
+		out_stress = other.out_stress;
+		elements = other.elements;
+		nodes = other.nodes;
+		parser = other.parser;
+	}
+	return *this;
+}
+Data::Data(Data&& other) noexcept
+	: dim(std::exchange(other.dim, 0)),
+	line_start(std::move(other.line_start)),
+	line_end(std::move(other.line_end)),
+	points_count(std::exchange(other.points_count, 0)),
+	out_stress(std::move(other.out_stress)),
+	elements(std::move(other.elements)),
+	nodes(std::move(other.nodes)),
+	parser(std::move(other.parser)) {
+}
+Data& Data::operator=(Data&& other) noexcept {
+	if (this != &other) {
+		dim = std::exchange(other.dim, 0);
+		line_start = std::move(other.line_start);
+		line_end = std::move(other.line_end);
+		points_count = std::exchange(other.points_count, 0);
+		out_stress = std::move(other.out_stress);
+		elements = std::move(other.elements);
+		nodes = std::move(other.nodes);
+		parser = std::move(other.parser);
+	}
+	return *this;
+}
+
 Data::Data(std::shared_ptr <Parser> p) : parser(p) {
 	logger& log = logger::log();
 	log.print("Start parsing");
@@ -8,6 +55,8 @@ Data::Data(std::shared_ptr <Parser> p) : parser(p) {
 		this->dim = 2;
 	else
 		this->dim = 3;
+
+	analisys_type = parser->settings.analisys_type;
 
 	create_nodes();
 	create_elements();
@@ -213,374 +262,177 @@ void Data::create_D() {
 		}
 }
 
-void Data::fillGlobalK() {
-	logger& log = logger::log();
-	log.print("Start filling stiffness matrix");
-	int nodes_count = parser->mesh.nodes_count;
-	int elems_count = parser->mesh.elems_count;
+//void Data::fillGlobalC() {
+//	int nodes_count = parser->mesh.nodes_count;
+//	int elems_count = parser->mesh.elems_count;
+//
+//	C.resize(nodes_count, nodes_count);
+//	std::vector <Eigen::Triplet <double>> tripl_vec;
+//	for (int i = 0; i < elems_count; i++) {
+//		Eigen::MatrixXd loc_c = elements[i]->localC();
+//		for (int j = 0; j < elements[i]->nodes_count(); j++)
+//			for (int k = 0; k < elements[i]->nodes_count(); k++) {
+//				Eigen::Triplet <double> trpl(elements[i]->get_nodes(j) - 1, elements[i]->get_nodes(k) - 1, loc_c(j, k));
+//				tripl_vec.push_back(trpl);
+//			}
+//	}
+//
+//	C.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
+//	zeroDiagonalCheck();
+//}
 
-	K.resize(dim * nodes_count, dim * nodes_count);
-	std::vector <Eigen::Triplet <double>> tripl_vec;
-	for (int i = 0; i < elems_count; i++) {
-		Eigen::MatrixXd loc_k = elements[i]->localK();
-		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
-			for (int k = 0; k < elements[i]->nodes_count() * dim; k++) {
-				Eigen::Triplet <double> trpl(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim, dim * (elements[i]->get_nodes(k / dim) - 1) + k % dim, loc_k(j, k));
-				tripl_vec.push_back(trpl);
-			}
-	}
+//void Data::fillGlobalR(int type, int comp) {
+//	int nodes_count = parser->mesh.nodes_count;
+//	int elems_count = parser->mesh.elems_count;
+//
+//	R.resize(nodes_count);
+//	for (int i = 0; i < elems_count; i++) {
+//		std::vector<double> value;
+//		for (int j = 0; j < elements[i]->nodes_count(); j++)
+//			value.push_back(elements[i]->results[j][type](comp));
+//		std::vector<double> loc_r = elements[i]->localR(value);
+//		for (int j = 0; j < elements[i]->nodes_count(); j++)
+//			R.coeffRef(elements[i]->get_nodes(j) - 1) += loc_r[j];
+//	}
+//}
 
-	K.setFromTriplets(tripl_vec.begin(), tripl_vec.end());	
-	zeroDiagonalCheck();
-	log.print("End filling stiffness matrix");
-} 
+//void Data::outputValues(int type, int comp) {
+//	std::vector<double> values;
+//	values.resize(points_count, 0);
+//	std::vector<std::vector<double>> points;
+//	output_points(line_start, line_end, points_count, points);
+//	interpolation(points, values, type, comp);
+//
+//	ofstream file;
+//	std::string fieldname;
+//	field_name(fieldname, type, comp, dim);
+//	file.open(fieldname + ".txt");
+//
+//	double line_len = sqrt(pow((line_end[0] - line_start[0]), 2) + pow((line_end[1] - line_start[1]), 2));
+//	for (int i = 0; i < points_count; i++) 
+//		//file << "(" << line_len / points_count * i << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
+//		file << "(" << points[i][0] << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
+//		//file << points[i][0] << std::endl;
+//		//file << std::fixed << std::setprecision(12) << values[i] << std::endl;
+//		
+//	file.close();
+//
+//	if (type == STRESS)
+//		for (int i = 0; i < points_count; i++)
+//			out_stress[comp].push_back(values[i]);
+//
+//	logger& log = logger::log();
+//	log.print("Interpolation " + fieldname);
+//}
 
-void Data::fillGlobalF() {
-	logger& log = logger::log();
-	log.print("Start filling right vector");
+//void Data::printMeshStress() {
+//	std::ofstream file_coord_x;
+//	file_coord_x.open("coord_x.txt");
+//	std::ofstream file_coord_y;
+//	file_coord_y.open("coord_y.txt");
+//	//std::ofstream file_coord_z;
+//	//file_coord_z.open("coord_z.txt");
+//
+//	std::ofstream file_stress_xx;
+//	file_stress_xx.open("all_stress_xx.txt");
+//	std::ofstream file_stress_yy;
+//	file_stress_yy.open("all_stress_yy.txt");
+//	std::ofstream file_stress_xy;
+//	file_stress_xy.open("all_stress_xy.txt");
+//	//std::ofstream file_stress_xz;
+//	//file_stress_xz.open("all_stress_xz.txt");
+//	//std::ofstream file_stress_yz;
+//	//file_stress_yz.open("all_stress_yz.txt");
+//	//std::ofstream file_stress_zz;
+//	//file_stress_zz.open("all_stress_zz.txt");
+//
+//	for (int i = 0; i < nodes.size(); i++)
+//		nodes[i].printStress();
+//
+//	file_coord_x.close();
+//	file_coord_y.close();
+//	//file_coord_z.close();
+//
+//	file_stress_xx.close();
+//	file_stress_yy.close();
+//	file_stress_xy.close();
+//	//file_stress_xz.close();
+//	//file_stress_yz.close();
+//	//file_stress_zz.close();
+//
+//	std::ofstream file_disp_x;
+//	file_disp_x.open("all_disp_x.txt");
+//	std::ofstream file_disp_y;
+//	file_disp_y.open("all_disp_y.txt");
+//
+//	for (int i = 0; i < nodes.size(); i++) {
+//		file_disp_x << U(dim * i) << std::endl;
+//		file_disp_y << U(dim * i + 1) << std::endl;
+//	}
+//
+//	file_disp_x.close();
+//	file_disp_y.close();
+//}
 
-	int nodes_count = parser->mesh.nodes_count;
-	int elems_count = parser->mesh.elems_count;
+//void Data::interpolation(std::vector<std::vector<double>>& points, 
+//						std::vector<double>& values, int type, int comp) {
+//	for (int p = 0; p < points_count; p++)
+//		for (int i = 0; i < elements.size(); i++) {
+//			if (elements[i]->pointInElem(points[p])) {
+//				//values[p] = elements[i]->results[0][type][comp];
+//				std::vector<double> Coord = elements[i]->coordFF(points[p][0], points[p][1]); // dim == 3
+//				std::vector<double> N = elements[i]->FF(Coord[0], Coord[1]);
+//				for (int node = 0; node < elements[i]->nodes_count(); node++)
+//					values[p] += N[node] * nodes[elements[i]->get_nodes(node) - 1].get_result(type, comp);
+//
+//					//if (type != DISPLACEMENT)
+//					//	values[p] += N[node] * elements[i]->results[node][type](comp);
+//					//else
+//					//	values[p] += N[node] * elements[i]->displacements(node * dim + comp);
+//				break;
+//			}
+//		}
+//}
 
-	F.resize(dim * nodes_count);
-	for (int i = 0; i < elems_count; i++) {
-		std::vector<double> loc_f = elements[i]->localF();
-		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
-			F.coeffRef(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim) += loc_f[j];
-	}
-	log.print("End filling right vector");
-}
-
-void Data::fillGlobalM() {
-	logger& log = logger::log();
-	log.print("Start filling mass matrix");
-	int nodes_count = parser->mesh.nodes_count;
-	int elems_count = parser->mesh.elems_count;
-
-	M.resize(dim * nodes_count, dim * nodes_count);
-	std::vector <Eigen::Triplet <double>> tripl_vec;
-	for (int i = 0; i < elems_count; i++) {
-		Eigen::MatrixXd loc_m = elements[i]->localM();
-		for (int j = 0; j < elements[i]->nodes_count() * dim; j++)
-			for (int k = 0; k < elements[i]->nodes_count() * dim; k++) {
-				Eigen::Triplet <double> trpl(dim * (elements[i]->get_nodes(j / dim) - 1) + j % dim, dim * (elements[i]->get_nodes(k / dim) - 1) + k % dim, loc_m(j, k));
-				tripl_vec.push_back(trpl);
-			}
-	}
-
-	M.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
-	zeroDiagonalCheck();
-	log.print("End filling mass matrix");
-}
-
-void Data::fillConstraints() {
-	logger& log = logger::log();
-	log.print("Start filling constraints");
-	// c.first - comp, c.second - value 
-	for (int node = 0; node < nodes.size(); node++)
-		for (auto const& c: nodes[node].constraints)
-			for (int i = 0; i < K.outerSize(); i++) {
-				for (Eigen::SparseMatrix<double>::InnerIterator it(K, i); it; ++it)
-					if (((it.row() == node * dim + c.first) ||
-						(it.col() == node * dim + c.first)) && (it.row() != it.col())) {
-						it.valueRef() = 0.0;
-					}
-					else if (((it.row() == node * dim + c.first) ||
-						(it.col() == node * dim + c.first)) && (it.row() == it.col()))
-						F.coeffRef(it.row()) = c.second * it.value(); 
-			}
-	log.print("End filling constraints");
-}
-
-void Data::fillGlobalC() {
-	int nodes_count = parser->mesh.nodes_count;
-	int elems_count = parser->mesh.elems_count;
-
-	C.resize(nodes_count, nodes_count);
-	std::vector <Eigen::Triplet <double>> tripl_vec;
-	for (int i = 0; i < elems_count; i++) {
-		Eigen::MatrixXd loc_c = elements[i]->localC();
-		for (int j = 0; j < elements[i]->nodes_count(); j++)
-			for (int k = 0; k < elements[i]->nodes_count(); k++) {
-				Eigen::Triplet <double> trpl(elements[i]->get_nodes(j) - 1, elements[i]->get_nodes(k) - 1, loc_c(j, k));
-				tripl_vec.push_back(trpl);
-			}
-	}
-
-	C.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
-	zeroDiagonalCheck();
-}
-
-void Data::fillGlobalR(int type, int comp) {
-	int nodes_count = parser->mesh.nodes_count;
-	int elems_count = parser->mesh.elems_count;
-
-	R.resize(nodes_count);
-	for (int i = 0; i < elems_count; i++) {
-		std::vector<double> value;
-		for (int j = 0; j < elements[i]->nodes_count(); j++)
-			value.push_back(elements[i]->results[j][type](comp));
-		std::vector<double> loc_r = elements[i]->localR(value);
-		for (int j = 0; j < elements[i]->nodes_count(); j++)
-			R.coeffRef(elements[i]->get_nodes(j) - 1) += loc_r[j];
-	}
-}
-
-void Data::addToGlobalK(int first_index, int second_index, double value) {
-	Eigen::Triplet <double> tripl (first_index, second_index, value);
-	K.setFromTriplets(&tripl, &tripl + 1);
-}
-
-void Data::addToGlobalF(int index, double value) {
-	F.coeffRef(index) = value;
-}
-
-void Data::displacementToElements() {
-	std::vector <double> disp;
-	for (int elem = 0; elem < elements.size(); elem++) {
-		elements[elem]->results.resize(elements[elem]->nodes_count());
-		for (int node = 0; node < elements[elem]->nodes_count(); node++) {
-			elements[elem]->results[node].resize(COUNT);
-			//elements[elem]->results[node][DISPLACEMENT].resize(dim);
-
-			//elements[elem]->results[node][DISPLACEMENT][X] = U(dim * (elements[elem]->get_nodes(node) - 1));
-			//elements[elem]->results[node][DISPLACEMENT][Y] = U(dim * (elements[elem]->get_nodes(node) - 1) + 1);
-			//if (dim == 3)
-			//	elements[elem]->results[node][DISPLACEMENT][Z] = U(dim * (elements[elem]->get_nodes(node) - 1) + 2);
-
-			elements[elem]->displacements.resize(dim * elements[elem]->nodes_count());
-			elements[elem]->displacements[dim * node] = U(dim * (elements[elem]->get_nodes(node) - 1));
-			elements[elem]->displacements[dim * node + 1] = U(dim * (elements[elem]->get_nodes(node) - 1) + 1);
-			if (dim == 3)
-				elements[elem]->displacements[dim * node + 2] = U(dim * (elements[elem]->get_nodes(node) - 1) + 2);
-
-		}
-	}
-}
-
-void Data::displacementToNodes() {
-	for (int i = 0; i < nodes.size(); i++)
-		for (int j = 0; j < dim; j++) {
-			nodes[i].set_res_size(DISPLACEMENT, dim);
-			nodes[i].set_result(U.coeffRef(dim * i + j), DISPLACEMENT, j);
-		}
-}
-
-void Data::calcStrain() {
-	for (int elem = 0; elem < elements.size(); elem++) {
-		std::vector <double> ksi = { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 };
-		std::vector <double> eta = { -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 };
-		std::vector <double> zeta = { -0.57735026918926, -0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926 };
-		//std::vector <double> ksi = { -1, 1, 1, -1, -1, 1, 1, -1 };
-		//std::vector <double> eta = { -1, -1, 1, 1, -1, -1, 1, 1 };
-		//std::vector <double> zeta = { -1, -1, -1, -1, 1, 1, 1, 1 };
-		//int count;
-		//if (elements[elem]->get_type() == TRI || TETRA)
-		//	count == 1;
-		//else
-		//	count == elements[elem]->nodes_count();
-
-		for (int node = 0; node < elements[elem]->nodes_count(); node++) {
-			//elements[elem]->results[node][STRAIN].resize(output_fields(STRAIN, dim), 0);
-			elements[elem]->results[node][STRAIN] = elements[elem]->B(ksi[node], eta[node], zeta[node]) * elements[elem]->displacements;
-			//productMV(elements[elem]->B(ksi[node], eta[node], zeta[node]), elements[elem]->displacements, elements[elem]->results[node][STRAIN]);
-		}
-	}
-	logger& log = logger::log();
-	log.print("Calculate Strain");
-}
-
-void Data::calcStress() {
-	for (int elem = 0; elem < elements.size(); elem++) {
-		for (int node = 0; node < elements[elem]->nodes_count(); node++) {
-			//elements[elem]->results[node][STRESS].resize(output_fields(STRESS, dim), 0);
-			elements[elem]->results[node][STRESS] = elements[elem]->D * elements[elem]->results[node][STRAIN];
-			if (dim == 2)
-				elements[elem]->results[node][STRAIN][Comp2D::XY] /= 2;
-
-			//productMV(elements[elem]->planeStrainD(), elements[elem]->results[node][STRAIN], elements[elem]->results[node][STRESS]);
-		}
-	}
-	logger& log = logger::log();
-	log.print("Calculate Stress");
-}
-
-void Data::zeroDiagonalCheck() {
-	for (int i = 0; i < nodes.size() * dim; i++)
-		if (K.coeffRef(i, i) == 0) {
-			std::cout << "Zero on diagonal: node " + std::to_string(static_cast<int>(i / dim + 1)) + " dof " + std::to_string(static_cast<int>(i % dim)) << std::endl;
-			break;
-		}
-}
-
-void Data::outputValues(int type, int comp) {
-	std::vector<double> values;
-	values.resize(points_count, 0);
-	std::vector<std::vector<double>> points;
-	output_points(line_start, line_end, points_count, points);
-	interpolation(points, values, type, comp);
-
-	ofstream file;
-	std::string fieldname;
-	field_name(fieldname, type, comp, dim);
-	file.open(fieldname + ".txt");
-
-	double line_len = sqrt(pow((line_end[0] - line_start[0]), 2) + pow((line_end[1] - line_start[1]), 2));
-	for (int i = 0; i < points_count; i++) 
-		//file << "(" << line_len / points_count * i << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
-		file << "(" << points[i][0] << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
-		//file << points[i][0] << std::endl;
-		//file << std::fixed << std::setprecision(12) << values[i] << std::endl;
-		
-	file.close();
-
-	if (type == STRESS)
-		for (int i = 0; i < points_count; i++)
-			out_stress[comp].push_back(values[i]);
-
-	logger& log = logger::log();
-	log.print("Interpolation " + fieldname);
-}
-
-void Data::printMeshStress() {
-	std::ofstream file_coord_x;
-	file_coord_x.open("coord_x.txt");
-	std::ofstream file_coord_y;
-	file_coord_y.open("coord_y.txt");
-	//std::ofstream file_coord_z;
-	//file_coord_z.open("coord_z.txt");
-
-	std::ofstream file_stress_xx;
-	file_stress_xx.open("all_stress_xx.txt");
-	std::ofstream file_stress_yy;
-	file_stress_yy.open("all_stress_yy.txt");
-	std::ofstream file_stress_xy;
-	file_stress_xy.open("all_stress_xy.txt");
-	//std::ofstream file_stress_xz;
-	//file_stress_xz.open("all_stress_xz.txt");
-	//std::ofstream file_stress_yz;
-	//file_stress_yz.open("all_stress_yz.txt");
-	//std::ofstream file_stress_zz;
-	//file_stress_zz.open("all_stress_zz.txt");
-
-	for (int i = 0; i < nodes.size(); i++)
-		nodes[i].printStress();
-
-	file_coord_x.close();
-	file_coord_y.close();
-	//file_coord_z.close();
-
-	file_stress_xx.close();
-	file_stress_yy.close();
-	file_stress_xy.close();
-	//file_stress_xz.close();
-	//file_stress_yz.close();
-	//file_stress_zz.close();
-
-	std::ofstream file_disp_x;
-	file_disp_x.open("all_disp_x.txt");
-	std::ofstream file_disp_y;
-	file_disp_y.open("all_disp_y.txt");
-
-	for (int i = 0; i < nodes.size(); i++) {
-		file_disp_x << U(dim * i) << std::endl;
-		file_disp_y << U(dim * i + 1) << std::endl;
-	}
-
-	file_disp_x.close();
-	file_disp_y.close();
-}
-
-void Data::interpolation(std::vector<std::vector<double>>& points, 
-						std::vector<double>& values, int type, int comp) {
-	for (int p = 0; p < points_count; p++)
-		for (int i = 0; i < elements.size(); i++) {
-			if (elements[i]->pointInElem(points[p])) {
-				//values[p] = elements[i]->results[0][type][comp];
-				std::vector<double> Coord = elements[i]->coordFF(points[p][0], points[p][1]); // dim == 3
-				std::vector<double> N = elements[i]->FF(Coord[0], Coord[1]);
-				for (int node = 0; node < elements[i]->nodes_count(); node++)
-					values[p] += N[node] * nodes[elements[i]->get_nodes(node) - 1].get_result(type, comp);
-
-					//if (type != DISPLACEMENT)
-					//	values[p] += N[node] * elements[i]->results[node][type](comp);
-					//else
-					//	values[p] += N[node] * elements[i]->displacements(node * dim + comp);
-				break;
-			}
-		}
-}
-
-void Data::solve() {
-
-	fillGlobalK();
-	fillGlobalF();
-	fillConstraints();
-
-	zeroDiagonalCheck();
-
-	logger& log = logger::log();
-	log.print("Start solving");
-
-	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
-	//Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
-	solver.compute(K);
-
-	if (solver.info() != Eigen::Success)
-		throw runtime_error("Error in K");
-
-	U = solver.solve(F);
-	log.print("Solve done");
-
-	fillFields();
-	smoothing();
-}
-
-void Data::fillFields() {
-	displacementToElements();
-	calcStrain();
-	calcStress();
-}
-
-void Data::smoothing() {
-	logger& log = logger::log();
-	log.print("Start smoothing");
-
-	fillGlobalC();
-	displacementToNodes();
-
-	out_stress.resize((dim == 2) ? 3 : 6);
-
-	for (int i = 0; i < output_fields(DISPLACEMENT, dim); i++)
-		outputValues(DISPLACEMENT, i);
-
-	for (int type = 1; type < COUNT; type++)
-		for (int comp = 0; comp < output_fields(type, dim); comp++) {
-			fillGlobalR(type, comp);
-
-			Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
-			//Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
-			solver.compute(C);
-			if (solver.info() != Eigen::Success)
-				throw runtime_error("Error in C");
-
-			Eigen::MatrixXd Result;
-			Result = solver.solve(R);
-
-			for (int i = 0; i < nodes.size(); i++) {
-				nodes[i].set_res_size(type, dim);
-				nodes[i].set_result(Result(i), type, comp);
-			}
-
-			std::string fieldname;
-			field_name(fieldname, type, comp, dim);
-			log.print("Solve agreed resultant " + fieldname + " done");
-
-			outputValues(type, comp);
-		}
-
-	printMeshStress();
-
-	log.print("End smoothing");
-}
+//void Data::smoothing() {
+//	logger& log = logger::log();
+//	log.print("Start smoothing");
+//
+//	fillGlobalC();
+//	displacementToNodes();
+//
+//	out_stress.resize((dim == 2) ? 3 : 6);
+//
+//	for (int i = 0; i < output_fields(DISPLACEMENT, dim); i++)
+//		outputValues(DISPLACEMENT, i);
+//
+//	for (int type = 1; type < COUNT; type++)
+//		for (int comp = 0; comp < output_fields(type, dim); comp++) {
+//			fillGlobalR(type, comp);
+//
+//			Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+//			//Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
+//			solver.compute(C);
+//			if (solver.info() != Eigen::Success)
+//				throw runtime_error("Error in C");
+//
+//			Eigen::MatrixXd Result;
+//			Result = solver.solve(R);
+//
+//			for (int i = 0; i < nodes.size(); i++) {
+//				nodes[i].set_res_size(type, dim);
+//				nodes[i].set_result(Result(i), type, comp);
+//			}
+//
+//			std::string fieldname;
+//			field_name(fieldname, type, comp, dim);
+//			log.print("Solve agreed resultant " + fieldname + " done");
+//
+//			outputValues(type, comp);
+//		}
+//
+//	printMeshStress();
+//
+//	log.print("End smoothing");
+//}
 

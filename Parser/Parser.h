@@ -107,6 +107,7 @@ struct restraints {
 struct settings {
 	std::string plane_state;
 	std::string dimensions;
+	std::string analisys_type;
 	void read(json settings);
 };
 

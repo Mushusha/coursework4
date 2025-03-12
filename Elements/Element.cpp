@@ -1,5 +1,74 @@
 #include "Element.h"
 
+Element::Element(int id, int type, std::vector <int> nodes) :
+	id(id), type(type), nodes(nodes) {
+};
+Element::Element(const Element& other)
+	: id(other.id),
+	type(other.type),
+	nodes(other.nodes),
+	x(other.x),
+	y(other.y),
+	z(other.z),
+	Young(other.Young),
+	Poisson(other.Poisson),
+	density(other.density),
+	load(other.load),
+	results(other.results),
+	displacements(other.displacements),
+	D(other.D) {
+}
+Element& Element::operator=(const Element& other) {
+	if (this != &other) {
+		id = other.id;
+		type = other.type;
+		nodes = other.nodes;
+		x = other.x;
+		y = other.y;
+		z = other.z;
+		Young = other.Young;
+		Poisson = other.Poisson;
+		density = other.density;
+		load = other.load;
+		results = other.results;
+		displacements = other.displacements;
+		D = other.D;
+	}
+	return *this;
+}
+Element::Element(Element&& other) noexcept
+	: id(std::exchange(other.id, 0)),
+	type(std::exchange(other.type, 0)),
+	nodes(std::move(other.nodes)),
+	x(std::move(other.x)),
+	y(std::move(other.y)),
+	z(std::move(other.z)),
+	Young(std::exchange(other.Young, 0.0)),
+	Poisson(std::exchange(other.Poisson, 0.0)),
+	density(std::exchange(other.density, 0.0)),
+	load(std::move(other.load)),
+	results(std::move(other.results)),
+	displacements(std::move(other.displacements)),
+	D(std::move(other.D)) {
+}
+Element& Element::operator=(Element&& other) noexcept {
+	if (this != &other) {
+		id = std::exchange(other.id, 0);
+		type = std::exchange(other.type, 0);
+		nodes = std::move(other.nodes);
+		x = std::move(other.x);
+		y = std::move(other.y);
+		z = std::move(other.z);
+		Young = std::exchange(other.Young, 0.0);
+		Poisson = std::exchange(other.Poisson, 0.0);
+		density = std::exchange(other.density, 0.0);
+		load = std::move(other.load);
+		results = std::move(other.results);
+		displacements = std::move(other.displacements);
+		D = std::move(other.D);
+	}
+	return *this;
+}
 
 void Element::set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z) {
 	for (int i = 0; i < x.size(); i++) {

@@ -9,8 +9,23 @@
 
 class quadElement : public Element {
 public:
+	quadElement() : Element() {}
 	quadElement(int id, int type, std::vector <int> nodes)
 		: Element(id, type, nodes) {}
+	quadElement(const quadElement& other)
+		: Element(other) {}
+	quadElement& operator=(const quadElement& other) {
+		if (this != &other)
+			Element::operator=(other);
+		return *this;
+	}
+	quadElement(quadElement&& other) noexcept
+		: Element(std::move(other)) {}
+	quadElement& operator=(quadElement&& other) noexcept {
+		if (this != &other)
+			Element::operator=(std::move(other));
+		return *this;
+	}
 	virtual ~quadElement() = default;
 
 	Eigen::MatrixXd localK() override;
@@ -27,8 +42,6 @@ public:
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 
 protected:
-	quadElement() : Element() {}
-
 	Eigen::MatrixXd  gradFF(double ksi, double eta, double zeta = 0) override;
 	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;
 
@@ -41,13 +54,25 @@ private:
 
 class infQuadElement : public  quadElement {
 public:
+	infQuadElement() : quadElement() {}
 	infQuadElement(int id, int type, std::vector<int> nodes)
 		: quadElement(id, type, nodes) {
+	}
+	infQuadElement(const infQuadElement& other)
+		: quadElement(other) {}
+	infQuadElement& operator=(const infQuadElement& other) {
+		if (this != &other)
+			Element::operator=(other);
+		return *this;
+	}
+	infQuadElement(infQuadElement&& other) noexcept
+		: quadElement(std::move(other)) {}
+	infQuadElement& operator=(infQuadElement&& other) noexcept {
+		if (this != &other)
+			Element::operator=(std::move(other));
+		return *this;
 	}
 	virtual ~infQuadElement() = default;
 
 	std::vector<double> FF(double ksi, double eta, double zeta = 0);
-
-private:
-	infQuadElement() : quadElement() {}
 };

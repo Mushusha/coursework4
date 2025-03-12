@@ -9,9 +9,23 @@
 
 class tetraElement : public Element {
 public:
+	tetraElement() : Element() {};
 	tetraElement(int id, int type, std::vector <int> nodes)
 		: Element (id, type, nodes) {};
-
+	tetraElement(const tetraElement& other)
+		: Element(other) {}
+	tetraElement& operator=(const tetraElement& other) {
+		if (this != &other)
+			Element::operator=(other);
+		return *this;
+	}
+	tetraElement(tetraElement&& other) noexcept
+		: Element(std::move(other)) {}
+	tetraElement& operator=(tetraElement&& other) noexcept {
+		if (this != &other)
+			Element::operator=(std::move(other));
+		return *this;
+	}
 	virtual ~tetraElement() = default;
 
 	Eigen::MatrixXd localK() override;
@@ -34,8 +48,6 @@ protected:
 	void set_pressure(int edge, double value);
 
 private:
-	tetraElement() : Element() {};
-
 	Eigen::MatrixXd C();
 };
 
