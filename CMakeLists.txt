@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.31.5)
+cmake_minimum_required(VERSION 3.10)
 project(cw)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -33,7 +33,8 @@ Solve/Solver.cpp
 Solve/Statics.h
 Solve/Statics.cpp
 Solve/Dynamics.h
-Solve/Dynamics.cpp)
+Solve/Dynamics.cpp
+Solve/Fabric.h)
 
 source_group(Parser FILES 
 Parser/Parser.h
@@ -76,6 +77,7 @@ add_executable(Core
     Solve/Statics.cpp
     Solve/Dynamics.h
     Solve/Dynamics.cpp
+    Solve/Fabric.h
 
     Parser/Parser.h
     Parser/Parser.cpp
