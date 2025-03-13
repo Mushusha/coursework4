@@ -38,7 +38,7 @@ void Solver::fillGlobalK() {
 	log.print("End filling stiffness matrix");
 }
 
-void Solver::fillGlobalF() {
+void Solver::fillGlobalF(int n) {
 	logger& log = logger::log();
 	log.print("Start filling right vector");
 
@@ -52,6 +52,10 @@ void Solver::fillGlobalF() {
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
 			F.coeffRef(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim) += loc_f[j];
 	}
+	for (int i = 0; i < calc_data.nodes_count(); i++)
+		for (auto pair : calc_data.get_node(i).load)
+			F.coeffRef(dim * (i - 1) + pair.first) += pair.second;
+
 	log.print("End filling right vector");
 }
 

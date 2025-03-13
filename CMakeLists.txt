@@ -34,6 +34,8 @@ Solve/Statics.h
 Solve/Statics.cpp
 Solve/Dynamics.h
 Solve/Dynamics.cpp
+Solve/Smoothing.h
+Solve/Smoothing.cpp
 Solve/Fabric.h)
 
 source_group(Parser FILES 
@@ -77,6 +79,8 @@ add_executable(Core
     Solve/Statics.cpp
     Solve/Dynamics.h
     Solve/Dynamics.cpp
+    Solve/Smoothing.h
+    Solve/Smoothing.cpp
     Solve/Fabric.h
 
     Parser/Parser.h

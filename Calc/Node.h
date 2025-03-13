@@ -27,6 +27,7 @@ public:
 	Node& operator=(Node&& other) noexcept;
 	virtual ~Node() = default;
 
+	std::map <int, double> load;
 	std::map <int, double> constraints; // first - component, second - value
 	void set_constraints(int comp, double value); // need ??
 	void set_result(double value, int type, int comp);

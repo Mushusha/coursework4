@@ -51,6 +51,7 @@ struct load {
 	size_t size;
 	int cs;
 	std::array<double, 6> data;
+	std::array<double, 6> dep_type;
 	int type;
 	bool inf = false;
 	void read(json load);

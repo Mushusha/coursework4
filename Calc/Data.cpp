@@ -210,6 +210,13 @@ void Data::create_load() { // type - pressure
 			if (load.type == PRESSURE) 		// else add to F
 				for (int elem = 0; elem < load.apply_to.size() / 2; elem++)
 					elements[load.apply_to[2 * elem] - 1]->set_load(load.type, load.apply_to[2 * elem + 1], load.data);
+			else if (load.type == NODEFORCE)
+				for (int i = 0; i < 6; i++)
+					if (load.data[i] == 0.0)
+						continue;
+					else
+						for (auto node : load.apply_to)
+							nodes[node].load[i] = load.data[i];
 		}
 }
 
@@ -261,40 +268,6 @@ void Data::create_D() {
 			this->elements[i]->D *= Young * (1 - Poisson) / ((1 + Poisson) * (1 - 2 * Poisson));
 		}
 }
-
-//void Data::fillGlobalC() {
-//	int nodes_count = parser->mesh.nodes_count;
-//	int elems_count = parser->mesh.elems_count;
-//
-//	C.resize(nodes_count, nodes_count);
-//	std::vector <Eigen::Triplet <double>> tripl_vec;
-//	for (int i = 0; i < elems_count; i++) {
-//		Eigen::MatrixXd loc_c = elements[i]->localC();
-//		for (int j = 0; j < elements[i]->nodes_count(); j++)
-//			for (int k = 0; k < elements[i]->nodes_count(); k++) {
-//				Eigen::Triplet <double> trpl(elements[i]->get_nodes(j) - 1, elements[i]->get_nodes(k) - 1, loc_c(j, k));
-//				tripl_vec.push_back(trpl);
-//			}
-//	}
-//
-//	C.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
-//	zeroDiagonalCheck();
-//}
-
-//void Data::fillGlobalR(int type, int comp) {
-//	int nodes_count = parser->mesh.nodes_count;
-//	int elems_count = parser->mesh.elems_count;
-//
-//	R.resize(nodes_count);
-//	for (int i = 0; i < elems_count; i++) {
-//		std::vector<double> value;
-//		for (int j = 0; j < elements[i]->nodes_count(); j++)
-//			value.push_back(elements[i]->results[j][type](comp));
-//		std::vector<double> loc_r = elements[i]->localR(value);
-//		for (int j = 0; j < elements[i]->nodes_count(); j++)
-//			R.coeffRef(elements[i]->get_nodes(j) - 1) += loc_r[j];
-//	}
-//}
 
 //void Data::outputValues(int type, int comp) {
 //	std::vector<double> values;

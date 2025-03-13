@@ -37,9 +37,6 @@ public:
 
 	std::vector<std::vector<double>> out_stress;
 
-	//void fillGlobalC();
-	//void fillGlobalR(int type, int comp);
-
 private:
 	Data() = default;
 
@@ -47,9 +44,6 @@ private:
 	std::vector <Node> nodes;
 
 	std::shared_ptr<Parser> parser;
-
-	Eigen::SparseMatrix <double> C; // agreed resultants
-	Eigen::SparseVector <double> R;
 
 	void create_nodes();
 	void create_elements();
