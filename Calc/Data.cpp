@@ -6,6 +6,9 @@ Data::Data(const Data& other)
 	line_end(other.line_end),
 	points_count(other.points_count),
 	out_stress(other.out_stress),
+	analisys_type(other.analisys_type),
+	damping(other.damping),
+	max_time(other.max_time),
 	elements(other.elements),
 	nodes(other.nodes),
 	parser(other.parser) {
@@ -17,6 +20,9 @@ Data& Data::operator=(const Data& other) {
 		line_end = other.line_end;
 		points_count = other.points_count;
 		out_stress = other.out_stress;
+		analisys_type = other.analisys_type;
+		damping = other.damping;
+		max_time = other.max_time;
 		elements = other.elements;
 		nodes = other.nodes;
 		parser = other.parser;
@@ -29,6 +35,9 @@ Data::Data(Data&& other) noexcept
 	line_end(std::move(other.line_end)),
 	points_count(std::exchange(other.points_count, 0)),
 	out_stress(std::move(other.out_stress)),
+	analisys_type(std::exchange(other.analisys_type, 0)),
+	damping(std::exchange(other.damping, 0)),
+	max_time(std::exchange(other.max_time, 0)),
 	elements(std::move(other.elements)),
 	nodes(std::move(other.nodes)),
 	parser(std::move(other.parser)) {
@@ -40,6 +49,9 @@ Data& Data::operator=(Data&& other) noexcept {
 		line_end = std::move(other.line_end);
 		points_count = std::exchange(other.points_count, 0);
 		out_stress = std::move(other.out_stress);
+		analisys_type = std::exchange(other.analisys_type, 0);
+		damping = std::exchange(other.damping, 0);
+		max_time = std::exchange(other.max_time, 0);
 		elements = std::move(other.elements);
 		nodes = std::move(other.nodes);
 		parser = std::move(other.parser);
@@ -57,6 +69,8 @@ Data::Data(std::shared_ptr <Parser> p) : parser(p) {
 		this->dim = 3;
 
 	analisys_type = parser->settings.analisys_type;
+	damping = parser->settings.d;
+	max_time = parser->settings.max_time;
 
 	create_nodes();
 	create_elements();

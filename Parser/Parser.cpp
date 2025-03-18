@@ -96,7 +96,8 @@ void load::read(json load) {
 	//this->cs = load["cs"];
 	this->type = load["type"];
 	this->size = load["apply_to_size"];
-	this->inf = load["inf"];
+	if (load.contains("inf"))
+		this->inf = load["inf"];
 
 	this->apply_to.resize(2 * this->size);
 	std::string apply_to_s = load["apply_to"];
@@ -136,7 +137,7 @@ void material::read(json mat) {
 	this->id = mat["id"];
 	this->type = mat["elasticity"][0]["type"];
 
-	for (uint8_t i = 0; i < 3; i++) { // 1 - E, 2 - nu, 3 - rho
+	for (uint8_t i = 0; i < mat["elasticity"][0]["constants"].size(); i++) { // 1 - E, 2 - nu, 3 - rho
 		std::string tmp = mat["elasticity"][0]["constants"][i];
 		base64_decode(tmp);
 		this->constants[i] = ReadDouble(tmp, 0);
@@ -219,7 +220,7 @@ void restraints::read(json restraints) {
 	for (size_t i = 0; i < restraints["data"].size(); i++) {
 		std::string s_data = restraints["data"][i];
 		base64_decode(s_data);
-		this->data[i] = ReadDouble(s_data, 0);
+		this->data[i] = ReadDouble(s_data, i);
 	}
 
 	for (size_t i = 0; i < restraints["flag"].size(); i++)
@@ -227,9 +228,13 @@ void restraints::read(json restraints) {
 }
 void settings::read(json block) {
 	this->dimensions = block["dimensions"];
-	if (this->dimensions == "2D")
+	if (this->dimensions == "2D" && block.contains("plane_state"))
 		this->plane_state = block["plane_state"];
 	this->analisys_type = block["type"];
+	if (this->analisys_type == "dynamic") {
+		this->max_time = block["dynamics"]["max_time"];
+		this->d = block["damping"]["mass_matrix"];
+	}
 }
 
 void Parser::read(string name) {
@@ -244,38 +249,38 @@ void Parser::read(string name) {
 	for (int i = 0; i < this->block.size(); i++) {
 		this->block[i].read(_root["blocks"][i]);
 	}
-
+	
 	this->coordinate.resize(_root["coordinate_systems"].size());
 	for (auto i = 0; i < this->coordinate.size(); i++) {
 		this->coordinate[i].read(_root["coordinate_systems"][i]);
 	}
-
+	
 	this->load.resize(_root["loads"].size());
 	for (int i = 0; i < this->load.size(); i++) {
 		this->load[i].read(_root["loads"][i]);
 	}
-
+	
 	this->nodesets.resize(_root["sets"]["nodesets"].size());
 	for (int i = 0; i < this->nodesets.size(); i++) {
 		this->nodesets[i].read(_root["sets"]["nodesets"][i]);
 	}
-
+	
 	this->sidesets.resize(_root["sets"]["sidesets"].size());
 	for (int i = 0; i < this->sidesets.size(); i++) {
 		this->sidesets[i].read(_root["sets"]["sidesets"][i]);
 	}
-
+	
 	this->material.resize(_root["materials"].size());
 	for (int i = 0; i < this->material.size(); i++) {
 		this->material[i].read(_root["materials"][i]);
 	}
-
+	
 	this->mesh.read(_root["mesh"]);
-
+	
 	this->restraints.resize(_root["restraints"].size());
 	for (int i = 0; i < this->restraints.size(); i++) {
 		this->restraints[i].read(_root["restraints"][i]);
 	}
-
+	
 	this->settings.read(_root["settings"]);
 }

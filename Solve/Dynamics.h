@@ -23,7 +23,7 @@ private:
 	double alpha;
 	int iter_count;
 
-	void calcDelta_t();
+	void calcDelta_t(Data& data);
 
 	Eigen::VectorX <double> U_0;
 	Eigen::VectorX <double> V_0;

@@ -55,8 +55,11 @@ public:
 
 	double get_E() { return Young; }
 	double get_nu() { return Poisson; }
+	double get_rho() { return density; }
 	
 	double Jac(double ksi, double eta, double zeta = 0);
+
+	virtual double Volume() = 0;
 	
 	std::vector<std::vector <Eigen::VectorXd>> results; // [i] - node; [j] - field; [k] - comp
 	Eigen::VectorXd displacements;

@@ -85,6 +85,10 @@ std::vector<double> tetraElement::coordFF(double x0, double y0, double z0) {
 	return std::vector<double>();
 }
 
+double tetraElement::Volume() {
+	return 0.0;
+}
+
 std::vector<double> tetraElement::FF(double ksi, double eta, double zeta) {
 	return std::vector<double>();
 }

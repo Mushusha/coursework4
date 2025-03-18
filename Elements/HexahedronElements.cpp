@@ -98,6 +98,10 @@ std::vector<double> hexElement::coordFF(double x0, double y0, double z0) {
 	return std::vector<double>();
 }
 
+double hexElement::Volume() {
+	return 0.0;
+}
+
 //double hexInfN(double ksi, double eta, double zeta, std::vector <double> a) {
 //	return ((-ksi / (1 - ksi)) * ((1 - eta) * (1 - zeta) * a[0] + (1 + eta) * (1 - zeta) * a[1] +
 //		(1 + eta) * (1 + zeta) * a[2] + (1 - eta) * (1 + zeta) * a[3])

@@ -41,6 +41,8 @@ public:
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 
+	double Volume() final;
+
 protected:
 	Eigen::MatrixXd  gradFF(double ksi, double eta, double zeta = 0) override;
 	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;

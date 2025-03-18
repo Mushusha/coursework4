@@ -37,6 +37,9 @@ public:
 
 	std::vector<std::vector<double>> out_stress;
 
+	double damping;
+	double max_time;
+
 private:
 	Data() = default;
 

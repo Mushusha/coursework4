@@ -110,6 +110,8 @@ struct settings {
 	std::string dimensions;
 	std::string analisys_type;
 	void read(json settings);
+	double max_time;
+	double d;
 };
 
 class Parser {

@@ -3,10 +3,10 @@
 Dynamics::Dynamics(Data& data) : Solver(calc_data) {
 	fillGlobalM();
 	// ...
-	iter_count = 10;
+	calcDelta_t(data);
+	iter_count = calc_data.max_time / delta_t;
 	beta1 = 0.5;
-	alpha = 1;
-	calcDelta_t();
+	alpha = calc_data.damping;
 	
 	U_0.resize(calc_data.dim * calc_data.nodes_count());
 	U_0.setZero();
@@ -38,11 +38,18 @@ void Dynamics::fillGlobalM() {
 	log.print("End filling mass matrix");
 }
 
-void Dynamics::calcDelta_t() {
-	delta_t = 0.1
+void Dynamics::calcDelta_t(Data& data) {
+	double h_min = data.get_elem(0)->Volume();
+	double v_max = 0;
+	for (int i = 0; i < data.elements_count(); i++) {
+		h_min = (h_min > data.get_elem(i)->Volume()) ? data.get_elem(i)->Volume() : h_min;
+		double nu = data.get_elem(i)->get_nu();
+		double E = data.get_elem(i)->get_E();
+		double v_i = std::sqrt((E * nu / ((1 + nu) * (1 - 2 * nu)) + E / (2 * (1 + nu))) / data.get_elem(i)->get_rho());
+		v_max = (v_i > v_max) ? v_i : v_max;
+	}
+	delta_t = 0.8 * h_min / v_max;
 }
-
-
 
 void Dynamics::U_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
 	U = U_prev + V_prev * delta_t + A_prev * pow(delta_t, 2) / 2;

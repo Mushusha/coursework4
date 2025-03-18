@@ -157,10 +157,13 @@ Eigen::MatrixXd quadElement::localM() {
 
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
-			for (int gp = 0; gp < 4; gp++) {
-				m(2 * i, 2 * j) += FF(ksi[gp], eta[gp])[i] * FF(ksi[gp], eta[gp])[j] * std::abs(J(eta[gp], ksi[gp]).determinant());
-				m(2 * i + 1, 2 * j + 1) += m(2 * i, 2 * j);
-			}
+			if ((i + j) % 2 == 1)
+				m(i, j) = 0;
+			else
+				for (int gp = 0; gp < 4; gp++) {
+					m(2 * i, 2 * j) += FF(ksi[gp], eta[gp])[i] * FF(ksi[gp], eta[gp])[j] * std::abs(J(eta[gp], ksi[gp]).determinant());
+					m(2 * i + 1, 2 * j + 1) += m(2 * i, 2 * j);
+				}
 	return density * m;
 }
 
@@ -193,6 +196,18 @@ std::vector<double> quadElement::coordFF(double x0, double y0, double z0) {
 
 	std::vector<double> coord = { ksi0, eta0 };
 	return coord;
+}
+
+double quadElement::Volume() {
+	double S = 0;
+	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
+	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
+
+	for (int i = 0; i < 4; i++)
+		for (int gp = 0; gp < 4; gp++)
+			S += FF(ksi[gp], eta[gp])[i] * std::abs(J(eta[gp], ksi[gp]).determinant());
+
+	return S;
 }
 
 //double quadInfN(double ksi, double eta, std::vector <double> a) {
