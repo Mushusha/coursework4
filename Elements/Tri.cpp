@@ -3,7 +3,7 @@
 
 #include <math.h>
 
-Eigen::MatrixXd triElement::C() {
+Eigen::MatrixXd Tri::C() {
 	Eigen::Matrix3d C;
 	for (int i = 0; i < 3; i++) {
 		C(i, 0) = 1;
@@ -13,7 +13,7 @@ Eigen::MatrixXd triElement::C() {
 	return C;
 }
 
-std::pair<int, int> triElement::edge_to_node(int edge) {
+std::pair<int, int> Tri::edge_to_node(int edge) {
 	if (edge != 2)
 		return std::pair<int, int>(edge, edge + 1);
 	else if (edge == 2)
@@ -22,12 +22,12 @@ std::pair<int, int> triElement::edge_to_node(int edge) {
 		throw runtime_error("Error: wrong edge");
 }
 
-double triElement::len_edge(int edge) {
+double Tri::len_edge(int edge) {
 	std::pair<int, int> coords = edge_to_node(edge);
 	return std::sqrt(std::pow((x[coords.first] - x[coords.second]), 2) + std::pow((y[coords.first] - y[coords.second]), 2));
 }
 
-Eigen::MatrixXd triElement::B(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Tri::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd B(3, 6);
 	for (int i = 0; i < 3; i++) {
 		B(0, 2 * i) = y[(1 + i) % 3] - y[(2 + i) % 3];
@@ -41,7 +41,7 @@ Eigen::MatrixXd triElement::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
-bool triElement::pointInElem(std::vector<double> point) {
+bool Tri::pointInElem(std::vector<double> point) {
 	bool answer = true;
 	for (int i = 0; i < 3; i++) {
 		std::vector<double> a{ x[i], y[i] };
@@ -59,11 +59,11 @@ bool triElement::pointInElem(std::vector<double> point) {
 	return answer;
 }
 
-Eigen::MatrixXd triElement::localK() {
+Eigen::MatrixXd Tri::localK() {
 	return B().transpose() * D * B() * std::abs(C().determinant() / 2);
 }
 
-std::vector<double> triElement::localF() {
+std::vector<double> Tri::localF() {
 	std::vector<double> F;
 	F.resize(6);
 	// l.first.first - edge, l.first.second - comp, l.second - value
@@ -75,7 +75,7 @@ std::vector<double> triElement::localF() {
 	return F;
 }
 
-Eigen::MatrixXd triElement::localC() {
+Eigen::MatrixXd Tri::localC() {
 	Eigen::MatrixXd c(3, 3);
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
@@ -83,7 +83,7 @@ Eigen::MatrixXd triElement::localC() {
 	return c;
 }
 
-std::vector<double> triElement::localR(std::vector<double> value) {
+std::vector<double> Tri::localR(std::vector<double> value) {
 	std::vector<double> R;
 	R.resize(3);
 	for (int i = 0; i < 3; i++)
@@ -91,7 +91,7 @@ std::vector<double> triElement::localR(std::vector<double> value) {
 	return R;
 }
 
-Eigen::MatrixXd triElement::localM() {
+Eigen::MatrixXd Tri::localM() {
 	Eigen::MatrixXd m(6, 6);
 	for (int i = 0; i < 6; i++)
 		for (int j = 0; j < 6; j++)
@@ -102,16 +102,16 @@ Eigen::MatrixXd triElement::localM() {
 	return density * m;
 }
 
-std::vector<double> triElement::coordFF(double x0, double y0, double z0) {
+std::vector<double> Tri::coordFF(double x0, double y0, double z0) {
 	std::vector<double> coord = { x0, y0 };
 	return coord;
 }
 
-double triElement::Volume() {
+double Tri::Volume() {
 	return C().determinant();
 }
 
-std::vector<double> triElement::FF(double ksi, double eta, double zeta) {
+std::vector<double> Tri::FF(double ksi, double eta, double zeta) {
 	std::vector<double> FF;
 	FF.resize(3);
 	Eigen::Vector3d f = { 1, ksi, eta };
@@ -128,18 +128,18 @@ std::vector<double> triElement::FF(double ksi, double eta, double zeta) {
 	return FF;
 }
 
-Eigen::MatrixXd triElement::gradFF(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Tri::gradFF(double ksi, double eta, double zeta) {
 	return Eigen::MatrixXd();
 }
 
-Eigen::MatrixXd triElement::J(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Tri::J(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd j = Eigen::MatrixXd::Zero(2, 2);
 	j(0, 0) = 1;
 	j(1, 1) = 1;
 	return j;
 }
 
-void triElement::set_pressure(int edge, double value) {
+void Tri::set_pressure(int edge, double value) {
 	std::pair<int, int> node = edge_to_node(edge);
 	std::array<double, 2> comp;
 	comp[0] = -y[node.first] + y[node.second];

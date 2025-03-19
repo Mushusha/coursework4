@@ -1,6 +1,6 @@
 #include "QuadElements.h"
 
-std::vector<double> infQuadElement::FF(double ksi, double eta, double zeta) {
+std::vector<double> infQuad::FF(double ksi, double eta, double zeta) {
 	std::vector<double> FF;
 	FF.resize(4);
 	FF[0] = (1 + ksi / (1 - ksi)) * (1 - eta) / 2; // Q0

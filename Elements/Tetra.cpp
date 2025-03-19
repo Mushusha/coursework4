@@ -1,7 +1,7 @@
 #include "TetrahedronElements.h"
 
 
-Eigen::MatrixXd tetraElement::C() {
+Eigen::MatrixXd Tetra::C() {
 
 	Eigen::Matrix4d C;
 	for (int i = 0; i < 4; i++) {
@@ -14,7 +14,7 @@ Eigen::MatrixXd tetraElement::C() {
 	return C;
 }
 
-Eigen::MatrixXd tetraElement::B(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Tetra::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6, 12);
 	Eigen::Matrix4d coef;
 	Eigen::Matrix3d a, b, c, d;
@@ -57,49 +57,49 @@ Eigen::MatrixXd tetraElement::B(double ksi, double eta, double zeta) {
 	return B / (6 * C().determinant());
 }
 
-bool tetraElement::pointInElem(std::vector<double> point) {
+bool Tetra::pointInElem(std::vector<double> point) {
 	return false;
 }
 
-Eigen::MatrixXd tetraElement::localK() {
+Eigen::MatrixXd Tetra::localK() {
 	return B().transpose() * D * B() * C().determinant() / 6;
 }
 
-std::vector<double> tetraElement::localF() {
+std::vector<double> Tetra::localF() {
 	return std::vector<double>();
 }
 
-Eigen::MatrixXd tetraElement::localC() {
+Eigen::MatrixXd Tetra::localC() {
 	return Eigen::MatrixXd();
 }
 
-std::vector<double> tetraElement::localR(std::vector<double> value) {
+std::vector<double> Tetra::localR(std::vector<double> value) {
 	return std::vector<double>();
 }
 
-Eigen::MatrixXd tetraElement::localM() {
+Eigen::MatrixXd Tetra::localM() {
 	return Eigen::MatrixXd();
 }
 
-std::vector<double> tetraElement::coordFF(double x0, double y0, double z0) {
+std::vector<double> Tetra::coordFF(double x0, double y0, double z0) {
 	return std::vector<double>();
 }
 
-double tetraElement::Volume() {
+double Tetra::Volume() {
 	return 0.0;
 }
 
-std::vector<double> tetraElement::FF(double ksi, double eta, double zeta) {
+std::vector<double> Tetra::FF(double ksi, double eta, double zeta) {
 	return std::vector<double>();
 }
 
-Eigen::MatrixXd tetraElement::gradFF(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Tetra::gradFF(double ksi, double eta, double zeta) {
 	return Eigen::MatrixXd();
 }
 
-Eigen::MatrixXd tetraElement::J(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Tetra::J(double ksi, double eta, double zeta) {
 	return Eigen::MatrixXd();
 }
 
-void tetraElement::set_pressure(int edge, double value) {
+void Tetra::set_pressure(int edge, double value) {
 }

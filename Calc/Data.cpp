@@ -2,9 +2,6 @@
 
 Data::Data(const Data& other)
 	: dim(other.dim),
-	line_start(other.line_start),
-	line_end(other.line_end),
-	points_count(other.points_count),
 	out_stress(other.out_stress),
 	analisys_type(other.analisys_type),
 	damping(other.damping),
@@ -16,9 +13,6 @@ Data::Data(const Data& other)
 Data& Data::operator=(const Data& other) {
 	if (this != &other) {
 		dim = other.dim;
-		line_start = other.line_start;
-		line_end = other.line_end;
-		points_count = other.points_count;
 		out_stress = other.out_stress;
 		analisys_type = other.analisys_type;
 		damping = other.damping;
@@ -31,9 +25,6 @@ Data& Data::operator=(const Data& other) {
 }
 Data::Data(Data&& other) noexcept
 	: dim(std::exchange(other.dim, 0)),
-	line_start(std::move(other.line_start)),
-	line_end(std::move(other.line_end)),
-	points_count(std::exchange(other.points_count, 0)),
 	out_stress(std::move(other.out_stress)),
 	analisys_type(std::exchange(other.analisys_type, 0)),
 	damping(std::exchange(other.damping, 0)),
@@ -45,9 +36,6 @@ Data::Data(Data&& other) noexcept
 Data& Data::operator=(Data&& other) noexcept {
 	if (this != &other) {
 		dim = std::exchange(other.dim, 0);
-		line_start = std::move(other.line_start);
-		line_end = std::move(other.line_end);
-		points_count = std::exchange(other.points_count, 0);
 		out_stress = std::move(other.out_stress);
 		analisys_type = std::exchange(other.analisys_type, 0);
 		damping = std::exchange(other.damping, 0);
@@ -82,12 +70,6 @@ Data::Data(std::shared_ptr <Parser> p) : parser(p) {
 	log.print("End parsing");
 }
 
-void Data::set_output_param(std::vector<double> start, std::vector<double> end, int count) {
-	this->line_end = end;
-	this->line_start = start;
-	this->points_count = count;
-}
-
 void Data::create_nodes() {
 	for (int i = 0; i < parser->mesh.nodes_count; i++) {
 		std::array <double, 3> coords;
@@ -108,28 +90,28 @@ void Data::create_elements() {
 			for (int j = 0; j < 3; j++)
 				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 3;
-			elem = std::make_shared<triElement>(triElement(parser->mesh.elem_id[i], TRI, elem_nodes));
+			elem = std::make_shared<Tri>(Tri(parser->mesh.elem_id[i], TRI, elem_nodes));
 			break;
 		case QUAD:
 			elem_nodes.resize(4);
 			for (int j = 0; j < 4; j++)
 				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 4;
-			elem = std::make_shared<quadElement>(quadElement(parser->mesh.elem_id[i], QUAD, elem_nodes));
+			elem = std::make_shared<Quad>(Quad(parser->mesh.elem_id[i], QUAD, elem_nodes));
 			break;
 		case TETRA:
 			elem_nodes.resize(4);
 			for (int j = 0; j < 4; j++)
 				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 4;
-			elem = std::make_shared<tetraElement>(tetraElement(parser->mesh.elem_id[i], TETRA, elem_nodes));
+			elem = std::make_shared<Tetra>(Tetra(parser->mesh.elem_id[i], TETRA, elem_nodes));
 			break;
 		case HEX:
 			elem_nodes.resize(8);
 			for (int j = 0; j < 8; j++)
 				elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
 			node_tmp += 8;
-			elem = std::make_shared<hexElement>(hexElement(parser->mesh.elem_id[i], HEX, elem_nodes));
+			elem = std::make_shared<Hex>(Hex(parser->mesh.elem_id[i], HEX, elem_nodes));
 			break;
 		default:
 			throw runtime_error("Error: incorrect element " + to_string(i) +
@@ -183,7 +165,7 @@ void Data::create_infelements() {
 			y.push_back(C2.second);
 			y.push_back(this->nodes[edge.second - 1].getY() * 2 - C2.second);
 
-			std::shared_ptr<Element> elem = std::make_shared<infQuadElement>(infQuadElement(this->elements.size(), INFQUAD, elem_nodes));
+			std::shared_ptr<Element> elem = std::make_shared<infQuad>(infQuad(this->elements.size(), INFQUAD, elem_nodes));
 			elem->set_coords(x, y, z);
 			this->elements.push_back(elem);
 

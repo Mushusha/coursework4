@@ -12,9 +12,14 @@
 
 class Smoothing {
 public:
-	Smoothing(Data& data) : calc_data(data) {};
+	Smoothing(Data& data, std::vector<double> start, 
+		std::vector<double> end, int count);
 
 	Data calc_data;
+
+	std::vector<double> line_start;
+	std::vector<double> line_end;
+	int points_count;
 
 private:
 	Smoothing() = delete;
@@ -24,6 +29,4 @@ private:
 
 	void fillGlobalC();
 	void fillGlobalR(int type, int comp);
-
-
 };

@@ -7,31 +7,32 @@
 #include "Element.h"
 
 
-class tetraElement : public Element {
+class Hex : public Element {
 public:
-	tetraElement() : Element() {};
-	tetraElement(int id, int type, std::vector <int> nodes)
+	Hex() : Element() {};
+	Hex(int id, int type, std::vector <int> nodes)
 		: Element (id, type, nodes) {};
-	tetraElement(const tetraElement& other)
+	Hex(const Hex& other)
 		: Element(other) {}
-	tetraElement& operator=(const tetraElement& other) {
+	Hex& operator=(const Hex& other) {
 		if (this != &other)
 			Element::operator=(other);
 		return *this;
 	}
-	tetraElement(tetraElement&& other) noexcept
+	Hex(Hex&& other) noexcept
 		: Element(std::move(other)) {}
-	tetraElement& operator=(tetraElement&& other) noexcept {
-		if (this != &other)
+	Hex& operator=(Hex&& other) noexcept {
+		if (this != &other) {
 			Element::operator=(std::move(other));
+		}
 		return *this;
 	}
-	virtual ~tetraElement() = default;
+	virtual ~Hex() = default;
 
 	Eigen::MatrixXd localK() override;
 	std::vector <double> localF() override;
-	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
-	std::vector <double> FF(double ksi, double eta, double zeta) override;
+	Eigen::MatrixXd B(double ksi, double eta, double zeta) override;
+	std::vector<double> FF(double ksi, double eta, double zeta) override;
 
 	bool pointInElem(std::vector<double> point) override;
 
@@ -48,18 +49,16 @@ protected:
 	Eigen::MatrixXd J(double ksi, double eta, double zeta) override;
 
 	void set_pressure(int edge, double value);
-
-private:
-	Eigen::MatrixXd C();
 };
 
-//class tetraInfElement : public tetraElement {
+//class hexaInfElement : public Hex {
 //public:
-//	tetraInfElement() {};
-//	virtual ~tetraInfElement() = default;
+//	hexaInfElement() {};
+//	virtual ~hexaInfElement() = default;
 //	/*
 //	dim = 3;
-//	numNodes = 4;
-//	tetraLocK();
+//	numNodes = 8;
+//	quadLocK(hexaInfN);
 //	*/
 //};
+

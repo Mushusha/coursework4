@@ -1,6 +1,6 @@
 #include "QuadElements.h"
 
-std::vector<double> quadElement::FF(double ksi, double eta, double zeta) {
+std::vector<double> Quad::FF(double ksi, double eta, double zeta) {
 	std::vector<double> FF;
 	FF.resize(4);
 	FF[0] = (1 - ksi) * (1 - eta) / 4;
@@ -10,7 +10,7 @@ std::vector<double> quadElement::FF(double ksi, double eta, double zeta) {
 	return FF;
 }
 
-Eigen::MatrixXd quadElement::gradFF(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Quad::gradFF(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd gradFF = Eigen::MatrixXd::Zero(2, 4);
 	double h = 0.01;
 	for (int i = 0; i < 4; i++) {
@@ -20,7 +20,7 @@ Eigen::MatrixXd quadElement::gradFF(double ksi, double eta, double zeta) {
 	return gradFF;
 }
 
-Eigen::MatrixXd quadElement::J(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Quad::J(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd J = Eigen::MatrixXd::Zero(2, 2);
 
 	for (int i = 0; i < 4; i++) {
@@ -32,7 +32,7 @@ Eigen::MatrixXd quadElement::J(double ksi, double eta, double zeta) {
 	return J;
 }
 
-Eigen::MatrixXd  quadElement::B(double ksi, double eta, double zeta) {
+Eigen::MatrixXd  Quad::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(3, 8);
 	Eigen::Matrix2d invJ;
 	invJ = J(ksi, eta).inverse();
@@ -47,7 +47,7 @@ Eigen::MatrixXd  quadElement::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
-bool quadElement::pointInElem(std::vector<double> point) {
+bool Quad::pointInElem(std::vector<double> point) {
 	bool answer = true;
 	for (int i = 0; i < 4; i++) {
 		std::vector<double> a{ x[i], y[i] };
@@ -69,7 +69,7 @@ bool quadElement::pointInElem(std::vector<double> point) {
 	return answer;
 }
 
-void quadElement::set_pressure(int edge, double value) {
+void Quad::set_pressure(int edge, double value) {
 	std::pair<int, int> node = edge_to_node(edge);
 	std::array<double, 2> comp;
 	comp[0] = -y[node.first] + y[node.second];
@@ -86,12 +86,12 @@ void quadElement::set_pressure(int edge, double value) {
 	}
 }
 
-double quadElement::len_edge(int edge) {
+double Quad::len_edge(int edge) {
 	std::pair<int, int> coords = edge_to_node(edge);
 	return std::sqrt(std::pow((x[coords.first] - x[coords.second]), 2) + std::pow((y[coords.first] - y[coords.second]), 2));
 }
 
-std::pair<int, int> quadElement::edge_to_node(int edge) {
+std::pair<int, int> Quad::edge_to_node(int edge) {
 	if (edge != 3)
 		return std::pair<int, int>(edge, edge + 1);
 	else if (edge == 3)
@@ -100,7 +100,7 @@ std::pair<int, int> quadElement::edge_to_node(int edge) {
 		throw runtime_error("Error: wrong edge");
 }
 
-Eigen::MatrixXd quadElement::localK() {
+Eigen::MatrixXd Quad::localK() {
 
 	Eigen::MatrixXd k = Eigen::MatrixXd::Zero(8, 8);
 	std::vector <double> ksi = { -0.5774, 0.5774, 0.5774, -0.5774 };
@@ -112,7 +112,7 @@ Eigen::MatrixXd quadElement::localK() {
 	return k;
 }
 
-std::vector<double> quadElement::localF() {
+std::vector<double> Quad::localF() {
 	std::vector<double> F;
 	F.resize(8);
 
@@ -126,7 +126,7 @@ std::vector<double> quadElement::localF() {
 	return F;
 }
 
-Eigen::MatrixXd quadElement::localC() {
+Eigen::MatrixXd Quad::localC() {
 	Eigen::MatrixXd c = Eigen::MatrixXd::Zero(4, 4);
 	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
@@ -138,7 +138,7 @@ Eigen::MatrixXd quadElement::localC() {
 	return c;
 }
 
-std::vector<double> quadElement::localR(std::vector<double> value) {
+std::vector<double> Quad::localR(std::vector<double> value) {
 	std::vector<double> R;
 	R.resize(4);
 
@@ -150,7 +150,7 @@ std::vector<double> quadElement::localR(std::vector<double> value) {
 	return R;
 }
 
-Eigen::MatrixXd quadElement::localM() {
+Eigen::MatrixXd Quad::localM() {
 	Eigen::MatrixXd m = Eigen::MatrixXd::Zero(8, 8);
 	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
@@ -167,7 +167,7 @@ Eigen::MatrixXd quadElement::localM() {
 	return density * m;
 }
 
-std::vector<double> quadElement::coordFF(double x0, double y0, double z0) {
+std::vector<double> Quad::coordFF(double x0, double y0, double z0) {
 	Eigen::Vector2d F;
 	std::vector x1 = { 1, 0, 3, 4 };
 	std::vector y1 = { 0, 2, 4, 0 };
@@ -198,7 +198,7 @@ std::vector<double> quadElement::coordFF(double x0, double y0, double z0) {
 	return coord;
 }
 
-double quadElement::Volume() {
+double Quad::Volume() {
 	double S = 0;
 	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };

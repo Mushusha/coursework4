@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 	p->read(file);
 
 	Data data(p);
-	data.set_output_param(std::vector<double>{0.1, 0.1}, std::vector<double>{5, 5}, 50);
+	//data.set_output_param(std::vector<double>{0.1, 0.1}, std::vector<double>{5, 5}, 50);
 	
 	std::shared_ptr <Solver> solv = FabricSolver::createSolver(data);
 	

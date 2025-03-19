@@ -1,7 +1,7 @@
 #include "HexahedronElements.h"
 
 
-std::vector<double> hexElement::FF(double ksi, double eta, double zeta) {
+std::vector<double> Hex::FF(double ksi, double eta, double zeta) {
 	std::vector<double> FF;
 	FF[0] = (1 - ksi) * (1 - eta) * (1 - zeta) / 8;
 	FF[1] = (1 + ksi) * (1 - eta) * (1 - zeta) / 8;
@@ -14,7 +14,7 @@ std::vector<double> hexElement::FF(double ksi, double eta, double zeta) {
 	return FF;
 }
 
-Eigen::MatrixXd hexElement::gradFF(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Hex::gradFF(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd gradFF;
 	//for (int i = 0; i < 8; i++) {
 	//	gradFF[KSI][i] = (FF(ksi + h, eta, zeta)[i] - FF(ksi - h, eta, zeta)[i]) / (2 * h);
@@ -24,7 +24,7 @@ Eigen::MatrixXd hexElement::gradFF(double ksi, double eta, double zeta) {
 	return gradFF;
 }
 
-Eigen::MatrixXd hexElement::J(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Hex::J(double ksi, double eta, double zeta) {
 	Eigen::Matrix3d J;
 	double h = 0.01;
 	for (int i = 0; i < 8; i++) {
@@ -41,7 +41,7 @@ Eigen::MatrixXd hexElement::J(double ksi, double eta, double zeta) {
 	return J;
 }
 
-Eigen::MatrixXd hexElement::B(double ksi, double eta, double zeta) {
+Eigen::MatrixXd Hex::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6, 24);
 	Eigen::Matrix3d invJ;
 	invJ = J(ksi, eta, zeta).inverse();
@@ -60,14 +60,14 @@ Eigen::MatrixXd hexElement::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
-bool hexElement::pointInElem(std::vector<double> point) {
+bool Hex::pointInElem(std::vector<double> point) {
 	return false;
 }
 
-void hexElement::set_pressure(int edge, double value) {
+void Hex::set_pressure(int edge, double value) {
 }
 
-Eigen::MatrixXd hexElement::localK() {
+Eigen::MatrixXd Hex::localK() {
 	Eigen::MatrixXd k = Eigen::MatrixXd::Zero(24, 24);
 	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774, 0.5774 };
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774 };
@@ -78,27 +78,27 @@ Eigen::MatrixXd hexElement::localK() {
 	return k;
 }
 
-std::vector<double> hexElement::localF() {
+std::vector<double> Hex::localF() {
 	return std::vector<double>();
 }
 
-Eigen::MatrixXd hexElement::localC() {
+Eigen::MatrixXd Hex::localC() {
 	return Eigen::MatrixXd();
 }
 
-std::vector<double> hexElement::localR(std::vector<double> value) {
+std::vector<double> Hex::localR(std::vector<double> value) {
 	return std::vector<double>();
 }
 
-Eigen::MatrixXd hexElement::localM() {
+Eigen::MatrixXd Hex::localM() {
 	return Eigen::MatrixXd();
 }
 
-std::vector<double> hexElement::coordFF(double x0, double y0, double z0) {
+std::vector<double> Hex::coordFF(double x0, double y0, double z0) {
 	return std::vector<double>();
 }
 
-double hexElement::Volume() {
+double Hex::Volume() {
 	return 0.0;
 }
 

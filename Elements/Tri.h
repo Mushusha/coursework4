@@ -7,26 +7,26 @@
 #include "Element.h"
 
 
-class triElement : public Element {
+class Tri : public Element {
 public:
-	triElement() : Element() {};
-	triElement(int id, int type, std::vector <int> nodes)
+	Tri() : Element() {};
+	Tri(int id, int type, std::vector <int> nodes)
 		: Element (id, type, nodes) {};
-	triElement(const triElement& other)
+	Tri(const Tri& other)
 		: Element(other) {}
-	triElement& operator=(const triElement& other) {
+	Tri& operator=(const Tri& other) {
 		if (this != &other)
 			Element::operator=(other);
 		return *this;
 	}
-	triElement(triElement&& other) noexcept
+	Tri(Tri&& other) noexcept
 		: Element(std::move(other)) {}
-	triElement& operator=(triElement&& other) noexcept {
+	Tri& operator=(Tri&& other) noexcept {
 		if (this != &other)
 			Element::operator=(std::move(other));
 		return *this;
 	}
-	virtual ~triElement() = default;
+	virtual ~Tri() = default;
 	
 	Eigen::MatrixXd localK() override;
 	std::vector <double> localF() override;

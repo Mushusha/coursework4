@@ -7,26 +7,26 @@
 #include "Element.h"
 #include "MathMV.h"
 
-class quadElement : public Element {
+class Quad : public Element {
 public:
-	quadElement() : Element() {}
-	quadElement(int id, int type, std::vector <int> nodes)
+	Quad() : Element() {}
+	Quad(int id, int type, std::vector <int> nodes)
 		: Element(id, type, nodes) {}
-	quadElement(const quadElement& other)
+	Quad(const Quad& other)
 		: Element(other) {}
-	quadElement& operator=(const quadElement& other) {
+	Quad& operator=(const Quad& other) {
 		if (this != &other)
 			Element::operator=(other);
 		return *this;
 	}
-	quadElement(quadElement&& other) noexcept
+	Quad(Quad&& other) noexcept
 		: Element(std::move(other)) {}
-	quadElement& operator=(quadElement&& other) noexcept {
+	Quad& operator=(Quad&& other) noexcept {
 		if (this != &other)
 			Element::operator=(std::move(other));
 		return *this;
 	}
-	virtual ~quadElement() = default;
+	virtual ~Quad() = default;
 
 	Eigen::MatrixXd localK() override;
 	std::vector <double> localF() override;
@@ -54,27 +54,27 @@ private:
 };
 
 
-class infQuadElement : public  quadElement {
+class infQuad : public  Quad {
 public:
-	infQuadElement() : quadElement() {}
-	infQuadElement(int id, int type, std::vector<int> nodes)
-		: quadElement(id, type, nodes) {
+	infQuad() : Quad() {}
+	infQuad(int id, int type, std::vector<int> nodes)
+		: Quad(id, type, nodes) {
 	}
-	infQuadElement(const infQuadElement& other)
-		: quadElement(other) {}
-	infQuadElement& operator=(const infQuadElement& other) {
+	infQuad(const infQuad& other)
+		: Quad(other) {}
+	infQuad& operator=(const infQuad& other) {
 		if (this != &other)
 			Element::operator=(other);
 		return *this;
 	}
-	infQuadElement(infQuadElement&& other) noexcept
-		: quadElement(std::move(other)) {}
-	infQuadElement& operator=(infQuadElement&& other) noexcept {
+	infQuad(infQuad&& other) noexcept
+		: Quad(std::move(other)) {}
+	infQuad& operator=(infQuad&& other) noexcept {
 		if (this != &other)
 			Element::operator=(std::move(other));
 		return *this;
 	}
-	virtual ~infQuadElement() = default;
+	virtual ~infQuad() = default;
 
 	std::vector<double> FF(double ksi, double eta, double zeta = 0) final;
 };

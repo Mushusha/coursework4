@@ -18,7 +18,7 @@ double eps = 10e-06;
 // TRIANGLE TESTS
 
 //void test_triElement_B() {
-//    triElement elem;
+//    Tri elem;
 //    std::vector<double> x = { 1, 4, 9 };
 //    std::vector<double> y = { 1, 6, 1 };
 //    std::vector<double> z = { 0, 0, 0 };
@@ -40,7 +40,7 @@ double eps = 10e-06;
 //}
 //
 //void test_triElement_locK() {
-//    triElement elem;
+//    Tri elem;
 //    std::vector<double> x = { 1, 4, 9 };
 //    std::vector<double> y = { 1, 6, 1 };
 //    std::vector<double> z = { 0, 0, 0 };
@@ -105,7 +105,7 @@ double eps = 10e-06;
 //}
 //
 //void test_triElement_locF() {
-//    triElement elem;
+//    Tri elem;
 //    std::vector<double> x = { 1, 1, 5 };
 //    std::vector<double> y = { 1, 4, 1 };
 //    std::vector<double> z = { 0, 0, 0 };

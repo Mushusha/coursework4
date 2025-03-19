@@ -26,14 +26,9 @@ public:
 	Node get_node(int i) const { return nodes[i]; }
 	const int nodes_count() const { return nodes.size(); }
 	const int elements_count() const { return elements.size(); }
-	void set_output_param(std::vector<double> start, std::vector<double> end, int count);
 
 	int dim;
 	std::string analisys_type;
-
-	std::vector<double> line_start;
-	std::vector<double> line_end;
-	int points_count;
 
 	std::vector<std::vector<double>> out_stress;
 

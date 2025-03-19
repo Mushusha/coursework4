@@ -1,5 +1,10 @@
 #include "Smoothing.h"
 
+Smoothing::Smoothing(Data& data, std::vector<double> start, std::vector<double> end, int count)
+	: calc_data(data), line_start(start), line_end(end), points_count(count) {
+	fillGlobalC();
+}
+
 void Smoothing::fillGlobalC() {
 	int nodes_count = calc_data.nodes_count();
 	int elems_count = calc_data.elements_count();

@@ -17,15 +17,15 @@ Calc/Enums.h)
 source_group(Elements FILES 
 Elements/Element.h
 Elements/Element.cpp
-Elements/TriangleElements.h
-Elements/TriangleElements.cpp
-Elements/QuadElements.h
-Elements/QuadElements.cpp
-Elements/InfQuadElements.cpp
-Elements/TetrahedronElements.h
-Elements/TetrahedronElements.cpp
-Elements/HexahedronElements.h
-Elements/HexahedronElements.cpp)
+Elements/Tri.h
+Elements/Tri.cpp
+Elements/Quad.h
+Elements/Quad.cpp
+Elements/InfQuad.cpp
+Elements/Tetra.h
+Elements/Tetra.cpp
+Elements/Hex.h
+Elements/Hex.cpp)
 
 source_group(Solve FILES 
 Solve/Solver.h
@@ -37,6 +37,15 @@ Solve/Dynamics.cpp
 Solve/Smoothing.h
 Solve/Smoothing.cpp
 Solve/Fabric.h)
+
+source_group(Smoothing FILES 
+Smoothing/Smoothing.h
+Smoothing/Smoothing.cpp
+Smoothing/Strain.h
+Smoothing/Strain.cpp
+Smoothing/Stress.h
+Smoothing/Stress.cpp
+Smoothing/Fabric.h)
 
 source_group(Parser FILES 
 Parser/Parser.h
@@ -63,15 +72,14 @@ add_executable(Core
 
     Elements/Element.h
     Elements/Element.cpp
-    Elements/TriangleElements.h
-    Elements/TriangleElements.cpp
-    Elements/QuadElements.h
-    Elements/QuadElements.cpp
-    Elements/InfQuadElements.cpp
-    Elements/TetrahedronElements.h
-    Elements/TetrahedronElements.cpp
-    Elements/HexahedronElements.h
-    Elements/HexahedronElements.cpp
+    Elements/Tri.h
+    Elements/Tri
+    Elements/Quad.cpp
+    Elements/InfQuad.cpp
+    Elements/Tetra.h
+    Elements/Tetra.cpp
+    Elements/Hex.h
+    Elements/Hex.cpp
 
     Solve/Solver.h
     Solve/Solver.cpp
@@ -79,9 +87,15 @@ add_executable(Core
     Solve/Statics.cpp
     Solve/Dynamics.h
     Solve/Dynamics.cpp
-    Solve/Smoothing.h
-    Solve/Smoothing.cpp
     Solve/Fabric.h
+
+    Smoothing/Smoothing.h
+    Smoothing/Smoothing.cpp
+    Smoothing/Strain.h
+    Smoothing/Strain.cpp
+    Smoothing/Stress.h
+    Smoothing/Stress.cpp
+    Smoothing/Fabric.h
 
     Parser/Parser.h
     Parser/Parser.cpp
