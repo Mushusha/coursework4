@@ -4,12 +4,24 @@
 
 class Dynamics : public Solver { // explicit
 public:
-	Dynamics(Data& data);
+	Dynamics(Data& data) : Solver(data) {}
+	Dynamics(const Dynamics& other) : Solver(other) {}
+	Dynamics& operator=(const Dynamics& other) {
+		if (this != &other) {
+			Solver::operator=(other);
+		}
+		return *this;
+	}
+	Dynamics(Dynamics&& other) noexcept
+		: Solver(std::move(other)) {}
+	Dynamics& operator=(Dynamics&& other) noexcept {
+		if (this != &other) {
+			Solver::operator=(std::move(other));
+		}
+	}
 	virtual ~Dynamics() = default;
 
 private:
-	Dynamics() = delete;
-
 	Eigen::SparseMatrix <double> M; 
 	//Eigen::SparseMatrix <double> C;
 	Eigen::VectorX <double> V;

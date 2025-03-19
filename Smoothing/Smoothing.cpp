@@ -4,6 +4,44 @@ Smoothing::Smoothing(Data& data, std::vector<double> start, std::vector<double> 
 	: calc_data(data), line_start(start), line_end(end), points_count(count) {
 	fillGlobalC();
 }
+Smoothing::Smoothing(const Smoothing& other)
+    : calc_data(other.calc_data),
+    line_start(other.line_start),
+    line_end(other.line_end),
+    points_count(other.points_count),
+    C(other.C),
+    R(other.R) {
+}
+Smoothing& Smoothing::operator=(const Smoothing& other) {
+    if (this != &other) {
+        calc_data = other.calc_data;
+        line_start = other.line_start;
+        line_end = other.line_end;
+        points_count = other.points_count;
+        C = other.C;
+        R = other.R;
+    }
+    return *this;
+}
+Smoothing::Smoothing(Smoothing&& other)
+    : calc_data(std::move(other.calc_data)),
+    line_start(std::move(other.line_start)),
+    line_end(std::move(other.line_end)),
+    points_count(std::move(other.points_count)),
+    C(std::move(other.C)),
+    R(std::move(other.R)) {
+}
+Smoothing& Smoothing::operator=(Smoothing&& other) {
+    if (this != &other) {
+        calc_data = std::move(other.calc_data);
+        line_start = std::move(other.line_start);
+        line_end = std::move(other.line_end);
+        points_count = std::move(other.points_count);
+        C = std::move(other.C);
+        R = std::move(other.R);
+    }
+    return *this;
+}
 
 void Smoothing::fillGlobalC() {
 	int nodes_count = calc_data.nodes_count();

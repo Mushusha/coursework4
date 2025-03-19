@@ -12,6 +12,10 @@
 class Solver {
 public:
 	Solver(Data& data);
+    Solver(const Solver& other);
+    Solver& operator=(const Solver& other);
+	Solver(Solver&& other) noexcept;
+	Solver& operator=(Solver&& other) noexcept;
 	virtual ~Solver() = default;
 
 	Data calc_data;

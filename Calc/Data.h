@@ -6,10 +6,10 @@
 #include "Enums.h"
 #include "Node.h"
 #include "Element.h"
-#include "TriangleElements.h"
-#include "QuadElements.h"
-#include "TetrahedronElements.h"
-#include "HexahedronElements.h"
+#include "Tri.h"
+#include "Quad.h"
+#include "Tetra.h"
+#include "Hex.h"
 
 
 class Data {

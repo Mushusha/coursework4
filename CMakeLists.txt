@@ -73,7 +73,7 @@ add_executable(Core
     Elements/Element.h
     Elements/Element.cpp
     Elements/Tri.h
-    Elements/Tri
+    Elements/Tri.cpp
     Elements/Quad.cpp
     Elements/InfQuad.cpp
     Elements/Tetra.h

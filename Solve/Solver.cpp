@@ -5,6 +5,36 @@ Solver::Solver(Data& data) : calc_data(data) {
 	fillGlobalF();
 	fillConstraints();
 }
+Solver::Solver(const Solver& other)
+	: calc_data(other.calc_data),
+	K(other.K),
+	F(other.F),
+	U(other.U) {
+}
+Solver& Solver::operator=(const Solver& other) {
+	if (this != &other) {
+		calc_data = other.calc_data;
+		K = other.K;
+		F = other.F;
+		U = other.U;
+	}
+	return *this;
+}
+Solver::Solver(Solver&& other)
+	: calc_data(std::move(other.calc_data)),
+	K(std::move(other.K)),
+	F(std::move(other.F)),
+	U(std::move(other.U)) {
+}
+Solver& Solver::operator=(Solver&& other) {
+	if (this != &other) {
+		calc_data = std::move(other.calc_data);
+		K = std::move(other.K);
+		F = std::move(other.F);
+		U = std::move(other.U);
+	}
+	return *this;
+}
 
 void Solver::solve() {
 	logger& log = logger::log();

@@ -2,7 +2,7 @@
 #include "Parser.h"
 #include "Data.h"
 #include "Element.h"
-#include "TriangleElements.h"
+#include "Tri.h"
 #include "MathMV.h"
 
 #include "Eigen/Dense"
