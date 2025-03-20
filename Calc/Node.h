@@ -17,7 +17,7 @@ private:
 	double x;
 	double y;
 	double z;
-	std::vector <std::vector <double>> results; // agreed
+	std::array <std::vector <double>, Tensor::COUNT> results; // [i] - type, [j] - comp // agreed tensor
 
 public:
 	Node(int id, std::array<double, 3> coords);
@@ -31,13 +31,10 @@ public:
 	std::map <int, double> constraints; // first - component, second - value
 	void set_constraints(int comp, double value); // need ??
 	void set_result(double value, int type, int comp);
-	void set_res_size(int type_size, int dim);
 
 	int getID() { return id; }
 	double getX() { return x; }
 	double getY() { return y; }
 	double getZ() { return z; }
 	double get_result(int type, int comp) { return results[type][comp]; }
-
-	void printStress();
 };

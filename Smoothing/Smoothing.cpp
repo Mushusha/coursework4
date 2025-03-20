@@ -1,46 +1,32 @@
 #include "Smoothing.h"
 
-Smoothing::Smoothing(Data& data, std::vector<double> start, std::vector<double> end, int count)
-	: calc_data(data), line_start(start), line_end(end), points_count(count) {
+Smoothing::Smoothing(Data& data, Tensor::ResType type)
+	: calc_data(data), type(type) {
 	fillGlobalC();
 }
 Smoothing::Smoothing(const Smoothing& other)
-    : calc_data(other.calc_data),
-    line_start(other.line_start),
-    line_end(other.line_end),
-    points_count(other.points_count),
-    C(other.C),
-    R(other.R) {
-}
+	: calc_data(other.calc_data),
+	type(other.type),
+	C(other.C) {}
 Smoothing& Smoothing::operator=(const Smoothing& other) {
-    if (this != &other) {
-        calc_data = other.calc_data;
-        line_start = other.line_start;
-        line_end = other.line_end;
-        points_count = other.points_count;
-        C = other.C;
-        R = other.R;
-    }
-    return *this;
+	if (this != &other) {
+		calc_data = other.calc_data;
+		C = other.C;
+		type = other.type;
+	}
+	return *this;
 }
-Smoothing::Smoothing(Smoothing&& other)
-    : calc_data(std::move(other.calc_data)),
-    line_start(std::move(other.line_start)),
-    line_end(std::move(other.line_end)),
-    points_count(std::move(other.points_count)),
-    C(std::move(other.C)),
-    R(std::move(other.R)) {
-}
-Smoothing& Smoothing::operator=(Smoothing&& other) {
-    if (this != &other) {
-        calc_data = std::move(other.calc_data);
-        line_start = std::move(other.line_start);
-        line_end = std::move(other.line_end);
-        points_count = std::move(other.points_count);
-        C = std::move(other.C);
-        R = std::move(other.R);
-    }
-    return *this;
+Smoothing::Smoothing(Smoothing&& other) noexcept
+	: calc_data(std::move(other.calc_data)),
+	type(std::move(other.type)),
+	C(std::move(other.C)) {}
+Smoothing& Smoothing::operator=(Smoothing&& other) noexcept {
+	if (this != &other) {
+		calc_data = std::move(other.calc_data);
+		type = std::move(other.type);
+		C = std::move(other.C);
+	}
+	return *this;
 }
 
 void Smoothing::fillGlobalC() {
@@ -74,4 +60,28 @@ void Smoothing::fillGlobalR(int type, int comp) {
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count(); j++)
 			R.coeffRef(calc_data.get_elem(i)->get_nodes(j) - 1) += loc_r[j];
 	}
+}
+
+void Smoothing::solve() {
+	logger& log = logger::log();
+	log.print("Start smoothing");
+	
+	for (int comp = 0; comp < ((calc_data.dim == 2) ? 3 : 6); comp++) {
+		fillGlobalR(type, comp);
+
+		Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+		solver.compute(C);
+
+		if (solver.info() != Eigen::Success)
+			throw runtime_error("Error in C");
+
+		Eigen::MatrixXd Result;
+		Result = solver.solve(R);
+
+		for (int i = 0; i < calc_data.nodes_count(); i++) {
+			calc_data.get_node(i).set_result(Result(i), type, comp);
+		}
+	}
+
+	log.print("End smoothing");
 }

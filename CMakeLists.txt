@@ -41,10 +41,6 @@ Solve/Fabric.h)
 source_group(Smoothing FILES 
 Smoothing/Smoothing.h
 Smoothing/Smoothing.cpp
-Smoothing/Strain.h
-Smoothing/Strain.cpp
-Smoothing/Stress.h
-Smoothing/Stress.cpp
 Smoothing/Fabric.h)
 
 source_group(Parser FILES 
@@ -91,10 +87,6 @@ add_executable(Core
 
     Smoothing/Smoothing.h
     Smoothing/Smoothing.cpp
-    Smoothing/Strain.h
-    Smoothing/Strain.cpp
-    Smoothing/Stress.h
-    Smoothing/Stress.cpp
     Smoothing/Fabric.h
 
     Parser/Parser.h

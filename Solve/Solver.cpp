@@ -20,13 +20,12 @@ Solver& Solver::operator=(const Solver& other) {
 	}
 	return *this;
 }
-Solver::Solver(Solver&& other)
+Solver::Solver(Solver&& other) noexcept
 	: calc_data(std::move(other.calc_data)),
 	K(std::move(other.K)),
 	F(std::move(other.F)),
-	U(std::move(other.U)) {
-}
-Solver& Solver::operator=(Solver&& other) {
+	U(std::move(other.U)) {}
+Solver& Solver::operator=(Solver&& other) noexcept {
 	if (this != &other) {
 		calc_data = std::move(other.calc_data);
 		K = std::move(other.K);
@@ -41,9 +40,11 @@ void Solver::solve() {
 	log.print("Start solving");
 
 	calcDisp();
+	dispToElem();
+	calcStrain();
+	calcStress();
 
 	log.print("Solve done");
-
 }
 
 void Solver::fillGlobalK() {
@@ -128,15 +129,13 @@ void Solver::zeroDiagonalCheck() {
 		}
 }
 
-
-void Solver::displacementToElements() {
+void Solver::dispToElem() {
 	int dim = calc_data.dim;
 
 	std::vector <double> disp;
 	for (int elem = 0; elem < calc_data.elements_count(); elem++) {
 		calc_data.get_elem(elem)->results.resize(calc_data.get_elem(elem)->nodes_count());
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			calc_data.get_elem(elem)->results[node].resize(COUNT);
 			//elements[elem]->results[node][DISPLACEMENT].resize(dim);
 
 			//elements[elem]->results[node][DISPLACEMENT][X] = U(dim * (elements[elem]->get_nodes(node) - 1));
@@ -149,17 +148,8 @@ void Solver::displacementToElements() {
 			calc_data.get_elem(elem)->displacements[dim * node + 1] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1) + 1);
 			if (dim == 3)
 				calc_data.get_elem(elem)->displacements[dim * node + 2] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1) + 2);
-
 		}
 	}
-}
-
-void Solver::displacementToNodes() {
-	for (int i = 0; i < calc_data.nodes_count(); i++)
-		for (int j = 0; j < calc_data.dim; j++) {
-			calc_data.get_node(i).set_res_size(DISPLACEMENT, calc_data.dim);
-			calc_data.get_node(i).set_result(U.coeffRef(calc_data.dim * i + j), DISPLACEMENT, j);
-		}
 }
 
 void Solver::calcStrain() {
@@ -170,16 +160,10 @@ void Solver::calcStrain() {
 		//std::vector <double> ksi = { -1, 1, 1, -1, -1, 1, 1, -1 };
 		//std::vector <double> eta = { -1, -1, 1, 1, -1, -1, 1, 1 };
 		//std::vector <double> zeta = { -1, -1, -1, -1, 1, 1, 1, 1 };
-		//int count;
-		//if (elements[elem]->get_type() == TRI || TETRA)
-		//	count == 1;
-		//else
-		//	count == elements[elem]->nodes_count();
 
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			//elements[elem]->results[node][STRAIN].resize(output_fields(STRAIN, dim), 0);
-			calc_data.get_elem(elem)->results[node][STRAIN] = calc_data.get_elem(elem)->B(ksi[node], eta[node], zeta[node]) * calc_data.get_elem(elem)->displacements;
-			//productMV(elements[elem]->B(ksi[node], eta[node], zeta[node]), elements[elem]->displacements, elements[elem]->results[node][STRAIN]);
+			calc_data.get_elem(elem)->results[node][Tensor::STRAIN] = 
+				calc_data.get_elem(elem)->B(ksi[node], eta[node], zeta[node]) * calc_data.get_elem(elem)->displacements;
 		}
 	}
 	logger& log = logger::log();
@@ -189,12 +173,9 @@ void Solver::calcStrain() {
 void Solver::calcStress() {
 	for (int elem = 0; elem < calc_data.elements_count(); elem++) {
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			//elements[elem]->results[node][STRESS].resize(output_fields(STRESS, dim), 0);
-			calc_data.get_elem(elem)->results[node][STRESS] = calc_data.get_elem(elem)->D * calc_data.get_elem(elem)->results[node][STRAIN];
+			calc_data.get_elem(elem)->results[node][Tensor::STRESS] = calc_data.get_elem(elem)->D * calc_data.get_elem(elem)->results[node][Tensor::STRAIN];
 			if (calc_data.dim == 2)
-				calc_data.get_elem(elem)->results[node][STRAIN][Comp2D::XY] /= 2;
-
-			//productMV(elements[elem]->planeStrainD(), elements[elem]->results[node][STRAIN], elements[elem]->results[node][STRESS]);
+				calc_data.get_elem(elem)->results[node][Tensor::STRAIN][Comp2D::XY] /= 2;
 		}
 	}
 	logger& log = logger::log();

@@ -9,9 +9,14 @@ enum LocVar { KSI, ETA, ZETA };
 enum GlobVar { X, Y, Z };
 
 namespace Comp3D {
-enum Comp { XX, YY, ZZ, XY, XZ, YZ };
+	enum Comp { XX, YY, ZZ, XY, XZ, YZ };
 }
 namespace Comp2D {
 	enum Comp { XX, YY, XY };
 }
-enum ResType { DISPLACEMENT, STRAIN, STRESS, COUNT };
+namespace Tensor {
+	enum ResType { STRAIN, STRESS, COUNT };
+}
+namespace Vector {
+	enum ResType { DISPLACEMENT, VELOCITY, ACCELERATION, COUNT }; 
+}

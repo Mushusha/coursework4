@@ -61,7 +61,7 @@ public:
 
 	virtual double Volume() = 0;
 	
-	std::vector<std::vector <Eigen::VectorXd>> results; // [i] - node; [j] - field; [k] - comp
+	std::vector<std::array <Eigen::VectorXd, Tensor::COUNT>> results; // [i] - node; [j] - field; [k] - comp // tensor
 	Eigen::VectorXd displacements;
 
 protected:

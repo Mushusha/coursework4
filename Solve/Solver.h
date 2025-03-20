@@ -44,8 +44,7 @@ private:
 
 	void fillConstraints();
 
-	void displacementToElements();
-	void displacementToNodes();
+	void dispToElem();
 	void calcStrain();
 	void calcStress();
 };

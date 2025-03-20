@@ -12,8 +12,7 @@
 
 class Smoothing {
 public:
-	Smoothing(Data& data, std::vector<double> start, 
-		std::vector<double> end, int count);
+	Smoothing(Data& data, Tensor::ResType type);
     Smoothing(const Smoothing& other);
     Smoothing& operator=(const Smoothing& other);
     Smoothing(Smoothing&& other) noexcept;
@@ -21,15 +20,20 @@ public:
     virtual ~Smoothing() = default;
 
 	Data calc_data;
+	Tensor::ResType type;
 
-	std::vector<double> line_start;
-	std::vector<double> line_end;
-	int points_count;
+	void solve();
+	//std::vector<double> line_start;
+	//std::vector<double> line_end;
+	//int points_count;
+	//Smoothing(Data& data, std::vector<double> start,
+	//	std::vector<double> end, int count);
+
 
 private:
 	Smoothing() = delete;
 
-	Eigen::SparseMatrix <double> C; // agreed resultants
+	Eigen::SparseMatrix <double> C;
 	Eigen::SparseVector <double> R;
 
 	void fillGlobalC();

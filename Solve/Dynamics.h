@@ -4,7 +4,7 @@
 
 class Dynamics : public Solver { // explicit
 public:
-	Dynamics(Data& data) : Solver(data) {}
+	Dynamics(Data& data);
 	Dynamics(const Dynamics& other) : Solver(other) {}
 	Dynamics& operator=(const Dynamics& other) {
 		if (this != &other) {

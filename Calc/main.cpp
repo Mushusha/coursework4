@@ -1,6 +1,7 @@
 #include "Parser.h"
 #include "Data.h"
 #include "Solver.h"
+#include "Smoothing/Smoothing.h"
 #include "Fabric.h"
 
 #include "Tests.h"
@@ -18,7 +19,10 @@ int main(int argc, char* argv[]) {
 	//data.set_output_param(std::vector<double>{0.1, 0.1}, std::vector<double>{5, 5}, 50);
 	
 	std::shared_ptr <Solver> solv = FabricSolver::createSolver(data);
-	
+	solv->solve();
+
+	Smoothing stress(data, Tensor::STRESS);
+	stress.solve();
 	// KirshError(argv[1], 1000000, 0.25);
 	log.print("Done");
 	

@@ -1,4 +1,4 @@
-#include "TriangleElements.h"
+#include "Tri.h"
 #include "Data.h"
 
 #include <math.h>

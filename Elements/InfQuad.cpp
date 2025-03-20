@@ -1,4 +1,4 @@
-#include "QuadElements.h"
+#include "Quad.h"
 
 std::vector<double> infQuad::FF(double ksi, double eta, double zeta) {
 	std::vector<double> FF;
