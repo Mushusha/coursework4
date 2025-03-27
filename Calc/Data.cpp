@@ -294,55 +294,6 @@ void Data::create_D() {
 //	log.print("Interpolation " + fieldname);
 //}
 
-//void Data::printMeshStress() {
-//	std::ofstream file_coord_x;
-//	file_coord_x.open("coord_x.txt");
-//	std::ofstream file_coord_y;
-//	file_coord_y.open("coord_y.txt");
-//	//std::ofstream file_coord_z;
-//	//file_coord_z.open("coord_z.txt");
-//
-//	std::ofstream file_stress_xx;
-//	file_stress_xx.open("all_stress_xx.txt");
-//	std::ofstream file_stress_yy;
-//	file_stress_yy.open("all_stress_yy.txt");
-//	std::ofstream file_stress_xy;
-//	file_stress_xy.open("all_stress_xy.txt");
-//	//std::ofstream file_stress_xz;
-//	//file_stress_xz.open("all_stress_xz.txt");
-//	//std::ofstream file_stress_yz;
-//	//file_stress_yz.open("all_stress_yz.txt");
-//	//std::ofstream file_stress_zz;
-//	//file_stress_zz.open("all_stress_zz.txt");
-//
-//	for (int i = 0; i < nodes.size(); i++)
-//		nodes[i].printStress();
-//
-//	file_coord_x.close();
-//	file_coord_y.close();
-//	//file_coord_z.close();
-//
-//	file_stress_xx.close();
-//	file_stress_yy.close();
-//	file_stress_xy.close();
-//	//file_stress_xz.close();
-//	//file_stress_yz.close();
-//	//file_stress_zz.close();
-//
-//	std::ofstream file_disp_x;
-//	file_disp_x.open("all_disp_x.txt");
-//	std::ofstream file_disp_y;
-//	file_disp_y.open("all_disp_y.txt");
-//
-//	for (int i = 0; i < nodes.size(); i++) {
-//		file_disp_x << U(dim * i) << std::endl;
-//		file_disp_y << U(dim * i + 1) << std::endl;
-//	}
-//
-//	file_disp_x.close();
-//	file_disp_y.close();
-//}
-
 //void Data::interpolation(std::vector<std::vector<double>>& points, 
 //						std::vector<double>& values, int type, int comp) {
 //	for (int p = 0; p < points_count; p++)
@@ -362,46 +313,3 @@ void Data::create_D() {
 //			}
 //		}
 //}
-
-//void Data::smoothing() {
-//	logger& log = logger::log();
-//	log.print("Start smoothing");
-//
-//	fillGlobalC();
-//	displacementToNodes();
-//
-//	out_stress.resize((dim == 2) ? 3 : 6);
-//
-//	for (int i = 0; i < output_fields(DISPLACEMENT, dim); i++)
-//		outputValues(DISPLACEMENT, i);
-//
-//	for (int type = 1; type < COUNT; type++)
-//		for (int comp = 0; comp < output_fields(type, dim); comp++) {
-//			fillGlobalR(type, comp);
-//
-//			Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
-//			//Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double>> solver;
-//			solver.compute(C);
-//			if (solver.info() != Eigen::Success)
-//				throw runtime_error("Error in C");
-//
-//			Eigen::MatrixXd Result;
-//			Result = solver.solve(R);
-//
-//			for (int i = 0; i < nodes.size(); i++) {
-//				nodes[i].set_res_size(type, dim);
-//				nodes[i].set_result(Result(i), type, comp);
-//			}
-//
-//			std::string fieldname;
-//			field_name(fieldname, type, comp, dim);
-//			log.print("Solve agreed resultant " + fieldname + " done");
-//
-//			outputValues(type, comp);
-//		}
-//
-//	printMeshStress();
-//
-//	log.print("End smoothing");
-//}
-

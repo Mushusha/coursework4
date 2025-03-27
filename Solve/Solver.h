@@ -18,11 +18,11 @@ public:
 	Solver& operator=(Solver&& other) noexcept;
 	virtual ~Solver() = default;
 
-	Data calc_data;
-
 	void solve();
 
 protected:
+	Data calc_data;
+
 	Eigen::SparseMatrix <double> K;
 	Eigen::SparseVector <double> F;
 

@@ -132,7 +132,6 @@ void Solver::zeroDiagonalCheck() {
 void Solver::dispToElem() {
 	int dim = calc_data.dim;
 
-	std::vector <double> disp;
 	for (int elem = 0; elem < calc_data.elements_count(); elem++) {
 		calc_data.get_elem(elem)->results.resize(calc_data.get_elem(elem)->nodes_count());
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {

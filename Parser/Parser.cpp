@@ -142,6 +142,11 @@ void material::read(json mat) {
 		base64_decode(tmp);
 		this->constants[i] = ReadDouble(tmp, 0);
 	}
+	if (mat.contains("common")) {
+		std::string tmp = mat["common"][0]["constants"][0];
+		base64_decode(tmp);
+		this->constants[2] = ReadDouble(tmp, 0);
+	}
 }
 void mesh::read(json mesh) {
 	this->elems_count = mesh["elems_count"];

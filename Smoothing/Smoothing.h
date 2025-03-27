@@ -19,9 +19,6 @@ public:
 	Smoothing& operator=(Smoothing&& other) noexcept;
     virtual ~Smoothing() = default;
 
-	Data calc_data;
-	Tensor::ResType type;
-
 	void solve();
 	//std::vector<double> line_start;
 	//std::vector<double> line_end;
@@ -32,6 +29,9 @@ public:
 
 private:
 	Smoothing() = delete;
+
+	Data calc_data;
+	Tensor::ResType type;
 
 	Eigen::SparseMatrix <double> C;
 	Eigen::SparseVector <double> R;

@@ -1,18 +1,18 @@
 #include "Dynamics.h"
 
-Dynamics::Dynamics(Data& data) : Solver(calc_data) {
+Dynamics::Dynamics(Data& data) : Solver(data) {
 	fillGlobalM();
 	// ...
 	calcDelta_t(data);
-	iter_count = calc_data.max_time / delta_t;
+	iter_count = 100; //data.max_time / delta_t;
 	beta1 = 0.5;
-	alpha = calc_data.damping;
+	alpha = data.damping;
 	
-	U_0.resize(calc_data.dim * calc_data.nodes_count());
+	U_0.resize(data.dim * data.nodes_count());
 	U_0.setZero();
-	V_0.resize(calc_data.dim * calc_data.nodes_count());
+	V_0.resize(data.dim * data.nodes_count());
 	V_0.setZero();
-	A_0.resize(calc_data.dim * calc_data.nodes_count());
+	A_0.resize(data.dim * data.nodes_count());
 	A_0.setZero();
 }
 
@@ -61,8 +61,8 @@ void Dynamics::V_curr(Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
 
 void Dynamics::A_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
 	Eigen::SparseMatrix <double> M1 = (1 + alpha) * M;
-	Eigen::VectorX<double> F1 = F - alpha * M *
-		(U_prev + A * delta_t * (1 - beta1)) - 
+	Eigen::VectorX <double> F1 = F - alpha * M *
+		(U_prev + A_prev * delta_t * (1 - beta1)) -
 		K * (U_prev + V_prev * delta_t + A_prev * pow(delta_t, 2) / 2);
 
 	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
@@ -89,4 +89,8 @@ void Dynamics::calcDisp() {
 		V_prev = V;
 		U_prev = U;
 	}
+
+	A_curr(U_prev, V_prev, A_prev);
+	V_curr(V_prev, A_prev);
+	U_curr(U_prev, V_prev, A_prev);
 }

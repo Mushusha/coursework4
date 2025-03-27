@@ -6,7 +6,7 @@
 
 class FabricSolver {
 public:
-	static std::shared_ptr<Solver> createSolver(Data data) {
+	static std::shared_ptr<Solver> createSolver(Data& data) {
 		if (data.analisys_type == "dynamic")
 			return std::make_shared<Dynamics>(data);
 
