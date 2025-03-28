@@ -17,7 +17,7 @@ private:
 	double x;
 	double y;
 	double z;
-	std::array <std::vector <double>, Tensor::COUNT> results; // [i] - type, [j] - comp // agreed tensor
+	std::array <std::vector <double>, numTensor()> results; // [i] - type, [j] - comp // agreed tensor
 
 public:
 	Node(int id, std::array<double, 3> coords);

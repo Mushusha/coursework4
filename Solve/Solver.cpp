@@ -161,7 +161,7 @@ void Solver::calcStrain() {
 		//std::vector <double> zeta = { -1, -1, -1, -1, 1, 1, 1, 1 };
 
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			calc_data.get_elem(elem)->results[node][Tensor::STRAIN] = 
+			calc_data.get_elem(elem)->results[node][STRAIN] = 
 				calc_data.get_elem(elem)->B(ksi[node], eta[node], zeta[node]) * calc_data.get_elem(elem)->displacements;
 		}
 	}
@@ -172,9 +172,9 @@ void Solver::calcStrain() {
 void Solver::calcStress() {
 	for (int elem = 0; elem < calc_data.elements_count(); elem++) {
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			calc_data.get_elem(elem)->results[node][Tensor::STRESS] = calc_data.get_elem(elem)->D * calc_data.get_elem(elem)->results[node][Tensor::STRAIN];
+			calc_data.get_elem(elem)->results[node][STRESS] = calc_data.get_elem(elem)->D * calc_data.get_elem(elem)->results[node][Tensor::STRAIN];
 			if (calc_data.dim == 2)
-				calc_data.get_elem(elem)->results[node][Tensor::STRAIN][Comp2D::XY] /= 2;
+				calc_data.get_elem(elem)->results[node][STRAIN][Comp2D::XY] /= 2;
 		}
 	}
 	logger& log = logger::log();

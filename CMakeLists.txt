@@ -45,10 +45,13 @@ Smoothing/Interpolation.h
 Smoothing/Interpolation.cpp
 Smoothing/Fabric.h)
 
+source_group(Output FILES 
+Output/Output.h
+Output/Output.cpp)
+
 source_group(Parser FILES 
 Parser/Parser.h
 Parser/Parser.cpp)
-
 
 source_group(Tests FILES 
 Tests/Tests.h

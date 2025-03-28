@@ -14,9 +14,45 @@ namespace Comp3D {
 namespace Comp2D {
 	enum Comp { XX, YY, XY };
 }
-namespace Tensor {
-	enum ResType { STRAIN, STRESS, COUNT };
+
+enum ResType { STRAIN, STRESS, DISPLACEMENT, VELOCITY, ACCELERATION, COUNT };
+
+bool isTensor(ResType type) {
+	if (type == STRAIN ||
+		type == STRESS)
+		return true;
+	return false;
 }
-namespace Vector {
-	enum ResType { DISPLACEMENT, VELOCITY, ACCELERATION, COUNT }; 
+bool isVector(ResType type) {
+	if (type == DISPLACEMENT ||
+		type == VELOCITY ||
+		type == ACCELERATION)
+		return true;
+	return false;
+}
+int numComp(ResType type, int dim) {
+	switch (type) {
+		case STRAIN:
+		case STRESS:
+			if (dim == 2)
+				return 3;
+			if (dim == 3)
+				return 6;
+		case DISPLACEMENT:
+		case VELOCITY:
+		case ACCELERATION:
+			if (dim == 2)
+				return 2;
+			if (dim == 3)
+				return 3;
+		case COUNT:
+		default:
+			return 0;
+	}
+}
+constexpr int numTensor() {
+	return 2;
+}
+constexpr int numVector() {
+	return 3;
 }

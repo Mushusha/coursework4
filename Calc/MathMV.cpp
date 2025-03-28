@@ -18,15 +18,6 @@ double line(std::vector<double> A, std::vector<double> B, std::vector<double> X)
 	return (X[1] - A[1]) * (B[0] - A[0]) - (X[0] - A[0]) * (B[1] - A[1]);
 }
 
-void output_points(std::vector<double> start, std::vector<double> end, int count, std::vector<std::vector<double>>& points) {
-	points.resize(count);
-	for (int i = 0; i < count; i++) {
-		points[i].resize(start.size());
-		for (int j = 0; j < start.size(); j++)
-			points[i][j] = (end[j] - start[j]) * i / (count - 1) + start[j];
-	}
-}
-
 //void KirshError(std::string filename, double P, double R) {
 //	logger& log = logger::log();
 //	log.print("Start calculate Kirsh error");
