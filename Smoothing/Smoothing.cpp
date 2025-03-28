@@ -1,6 +1,6 @@
 #include "Smoothing.h"
 
-Smoothing::Smoothing(Data& data, Tensor::ResType type)
+Smoothing::Smoothing(Data& data, ResType type)
 	: calc_data(data), type(type) {
 	fillGlobalC();
 }

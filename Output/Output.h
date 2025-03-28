@@ -10,8 +10,8 @@
 class Output {
 public:
 	Output() = delete;
-	Output(std::vector<std::vector<double>> points, 
-		   std::vector<std::vector<double>> values, 
+	Output(std::vector<std::vector<double>>& points, 
+		   std::vector<std::vector<double>>& values, 
 		   ResType type, int dim);
 
 	void write();

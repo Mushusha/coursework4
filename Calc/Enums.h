@@ -17,20 +17,20 @@ namespace Comp2D {
 
 enum ResType { STRAIN, STRESS, DISPLACEMENT, VELOCITY, ACCELERATION, COUNT };
 
-bool isTensor(ResType type) {
+inline bool isTensor(ResType type) {
 	if (type == STRAIN ||
 		type == STRESS)
 		return true;
 	return false;
 }
-bool isVector(ResType type) {
+inline bool isVector(ResType type) {
 	if (type == DISPLACEMENT ||
 		type == VELOCITY ||
 		type == ACCELERATION)
 		return true;
 	return false;
 }
-int numComp(ResType type, int dim) {
+inline int numComp(ResType type, int dim) {
 	switch (type) {
 		case STRAIN:
 		case STRESS:
@@ -50,9 +50,9 @@ int numComp(ResType type, int dim) {
 			return 0;
 	}
 }
-constexpr int numTensor() {
+inline constexpr int numTensor() {
 	return 2;
 }
-constexpr int numVector() {
+inline constexpr int numVector() {
 	return 3;
 }

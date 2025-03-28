@@ -12,7 +12,7 @@
 
 class Smoothing {
 public:
-	Smoothing(Data& data, Tensor::ResType type);
+	Smoothing(Data& data, ResType type);
     Smoothing(const Smoothing& other);
     Smoothing& operator=(const Smoothing& other);
     Smoothing(Smoothing&& other) noexcept;
@@ -31,7 +31,7 @@ private:
 	Smoothing() = delete;
 
 	Data calc_data;
-	Tensor::ResType type;
+	ResType type;
 
 	Eigen::SparseMatrix <double> C;
 	Eigen::SparseVector <double> R;

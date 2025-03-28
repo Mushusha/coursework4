@@ -96,6 +96,9 @@ add_executable(Core
     Smoothing/Interpolation.cpp
     Smoothing/Fabric.h
 
+    Output/Output.h
+    Output/Output.cpp
+
     Parser/Parser.h
     Parser/Parser.cpp
 

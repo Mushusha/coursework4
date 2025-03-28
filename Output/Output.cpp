@@ -1,7 +1,7 @@
 #include "Output.h"
 
-Output::Output(std::vector<std::vector<double>> points, 
-			   std::vector<std::vector<double>> values, 
+Output::Output(std::vector<std::vector<double>>& points, 
+			   std::vector<std::vector<double>>& values, 
 			   ResType type, int dim) 
 	: points(points), values(values),
 	  type(type), dim(dim) {}
@@ -15,11 +15,10 @@ void Output::write() {
 
 		//double line_len = sqrt(pow((line_end[0] - line_start[0]), 2) + pow((line_end[1] - line_start[1]), 2));
 		for (int i = 0; i < points[comp].size(); i++)
-		//file << "(" << line_len / points_count * i << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
-		file << "(" << points[i][0] << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
-		//file << points[i][0] << std::endl;
-		//file << std::fixed << std::setprecision(12) << values[i] << std::endl;
-
+			//file << "(" << line_len / points_count * i << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
+			file << "(" << points[i][0] << ", " << std::fixed << std::setprecision(12) << values[comp][i] << ")" << std::endl;
+			//file << points[i][0] << std::endl;
+			//file << std::fixed << std::setprecision(12) << values[i] << std::endl;
 
 		file.close();
 	}

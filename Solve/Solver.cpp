@@ -172,7 +172,7 @@ void Solver::calcStrain() {
 void Solver::calcStress() {
 	for (int elem = 0; elem < calc_data.elements_count(); elem++) {
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			calc_data.get_elem(elem)->results[node][STRESS] = calc_data.get_elem(elem)->D * calc_data.get_elem(elem)->results[node][Tensor::STRAIN];
+			calc_data.get_elem(elem)->results[node][STRESS] = calc_data.get_elem(elem)->D * calc_data.get_elem(elem)->results[node][STRAIN];
 			if (calc_data.dim == 2)
 				calc_data.get_elem(elem)->results[node][STRAIN][Comp2D::XY] /= 2;
 		}
