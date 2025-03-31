@@ -14,7 +14,7 @@
 
 class Data {
 public:
-	Data(std::shared_ptr <Parser> p);
+	Data(std::shared_ptr<Parser> p);
 	Data(const Data& other);
 	Data& operator=(const Data& other);
 	Data(Data&& other) noexcept;
@@ -23,7 +23,7 @@ public:
 
 	const std::shared_ptr<Parser>& get_parser() const { return parser; }
 	const std::shared_ptr<Element> get_elem(int i) const { return elements[i]; }
-	Node get_node(int i) const { return nodes[i]; }
+	const std::shared_ptr<Node> get_node(int i) const { return nodes[i]; }
 	const int nodes_count() const { return nodes.size(); }
 	const int elements_count() const { return elements.size(); }
 
@@ -34,12 +34,12 @@ public:
 
 	double damping;
 	double max_time;
-
+	  
 private:
 	Data() = default;
 
-	std::vector <shared_ptr<Element>> elements;
-	std::vector <Node> nodes;
+	std::vector<shared_ptr<Element>> elements;
+	std::vector<shared_ptr<Node>> nodes;
 
 	std::shared_ptr<Parser> parser;
 
@@ -50,12 +50,4 @@ private:
 	void create_constraints();
 	void create_load();
 	void create_D();
-
-	//void smoothing();
-
-	//void outputValues(int type, int comp);
-	//void printMeshStress();
-
-	//void interpolation(std::vector<std::vector<double>>& points, std::vector<double>& values, int type, int comp);
-
-};
+}; 

@@ -20,12 +20,6 @@ public:
     virtual ~Smoothing() = default;
 
 	void solve();
-	//std::vector<double> line_start;
-	//std::vector<double> line_end;
-	//int points_count;
-	//Smoothing(Data& data, std::vector<double> start,
-	//	std::vector<double> end, int count);
-
 
 private:
 	Smoothing() = delete;
@@ -37,5 +31,5 @@ private:
 	Eigen::SparseVector <double> R;
 
 	void fillGlobalC();
-	void fillGlobalR(int type, int comp);
+	void fillGlobalR(ResType type, int comp);
 };

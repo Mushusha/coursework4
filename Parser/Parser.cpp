@@ -238,7 +238,8 @@ void settings::read(json block) {
 	this->analisys_type = block["type"];
 	if (this->analisys_type == "dynamic") {
 		this->max_time = block["dynamics"]["max_time"];
-		this->d = block["damping"]["mass_matrix"];
+		if (block.contains("damping"))
+			this->d = block["damping"]["mass_matrix"];
 	}
 }
 
@@ -247,7 +248,7 @@ void Parser::read(string name) {
 	std::ifstream fc_file(this->filename, std::ios::in);
 	if (!fc_file)
 		throw std::runtime_error("cannot open fc file: " + this->filename);
-	auto _root = nlohmann::json::parse(fc_file);
+           	auto _root = nlohmann::json::parse(fc_file);
 	fc_file.close();
 
 	this->block.resize(_root["blocks"].size());

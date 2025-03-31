@@ -47,7 +47,7 @@ void Smoothing::fillGlobalC() {
 	C.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
 }
 
-void Smoothing::fillGlobalR(int type, int comp) {
+void Smoothing::fillGlobalR(ResType type, int comp) {
 	int nodes_count = calc_data.nodes_count();
 	int elems_count = calc_data.elements_count();
 
@@ -66,7 +66,7 @@ void Smoothing::solve() {
 	logger& log = logger::log();
 	log.print("Start smoothing");
 	
-	for (int comp = 0; comp < ((calc_data.dim == 2) ? 3 : 6); comp++) {
+	for (int comp = 0; comp < numComp(type, calc_data.dim); comp++) {
 		fillGlobalR(type, comp);
 
 		Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
@@ -79,7 +79,7 @@ void Smoothing::solve() {
 		Result = solver.solve(R);
 
 		for (int i = 0; i < calc_data.nodes_count(); i++) {
-			calc_data.get_node(i).set_result(Result(i), type, comp);
+			calc_data.get_node(i)->set_result(Result(i), type);
 		}
 	}
 

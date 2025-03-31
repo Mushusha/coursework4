@@ -23,7 +23,7 @@ void Interpolation::solve() {
 				for (int node = 0; node < calc_data.get_elem(i)->nodes_count(); node++)
 					for (int comp = 0; comp < numComp(type, calc_data.dim); comp++)
 						if (isTensor(type))
-							values[comp][p] += N[node] * calc_data.get_node(calc_data.get_elem(i)->get_nodes(node) - 1).get_result(type, comp);
+							values[comp][p] += N[node] * calc_data.get_node(calc_data.get_elem(i)->get_nodes(node) - 1)->get_result(type, comp);
 						else if (isVector(type))
 							values[comp][p] += N[node] * calc_data.get_elem(i)->displacements(node * calc_data.dim + comp);
 					//if (type != DISPLACEMENT)

@@ -26,10 +26,12 @@ int main(int argc, char* argv[]) {
 	Smoothing stressSm(data, STRESS);
 	stressSm.solve();
 
-	Interpolation stressIn(data, std::vector<double>{0.1, 0.1}, std::vector<double>{5, 5}, 50, STRESS);
+	Interpolation stressIn(data, std::vector<double>{0.1, 0.1}, std::vector<double>{5, 5}, 100, STRESS);
 	stressIn.solve();
 
 	Output stressOut(stressIn.points, stressIn.values, STRESS, data.dim);
+	stressOut.write();
+
 	// KirshError(argv[1], 1000000, 0.25);
 	log.print("Done");
 	

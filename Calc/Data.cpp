@@ -75,7 +75,7 @@ void Data::create_nodes() {
 		std::array <double, 3> coords;
 		for (int j = 0; j < 3; j++)
 			coords[j] = parser->mesh.nodes_coord[3 * i + j];
-		this->nodes.push_back(Node(parser->mesh.node_id[i], coords));
+		this->nodes.push_back(std::make_shared<Node>(parser->mesh.node_id[i], coords));
 	}
 }
 
@@ -139,8 +139,8 @@ void Data::create_infelements() {
 		for (int j = 0; j < parser->sidesets[i].size; j++) {
 			auto inf = parser->sidesets[i].apply_to;
 
-			std::pair<double, double> C1(this->nodes[parser->nodesets[0].apply_to[inf_node]].getX(), this->nodes[parser->nodesets[0].apply_to[inf_node]].getY()); // nodesets[0] ??? 
-			std::pair<double, double> C2(this->nodes[parser->nodesets[0].apply_to[inf_node + 1]].getX(), this->nodes[parser->nodesets[0].apply_to[inf_node + 1]].getY());
+			std::pair<double, double> C1(this->nodes[parser->nodesets[0].apply_to[inf_node]]->getX(), this->nodes[parser->nodesets[0].apply_to[inf_node]]->getY()); // nodesets[0] ??? 
+			std::pair<double, double> C2(this->nodes[parser->nodesets[0].apply_to[inf_node + 1]]->getX(), this->nodes[parser->nodesets[0].apply_to[inf_node + 1]]->getY());
 
 			std::pair<int, int> edge;
 			if (inf[2 * j + 1] != 3)
@@ -155,15 +155,15 @@ void Data::create_infelements() {
 			std::vector<int> elem_nodes = { static_cast<int>(parser->nodesets[0].apply_to[inf_node]), n + 1, n + 2, static_cast<int>(parser->nodesets[0].apply_to[inf_node] + 1) };
 			std::vector<double> x, y, z = { 0, 0, 0, 0 };
 
-			x.push_back(this->nodes[edge.first - 1].getX() * 2 - C1.first);
+			x.push_back(this->nodes[edge.first - 1]->getX() * 2 - C1.first);
 			x.push_back(C1.first);
 			x.push_back(C2.first);
-			x.push_back(this->nodes[edge.second - 1].getX() * 2 - C2.first);
+			x.push_back(this->nodes[edge.second - 1]->getX() * 2 - C2.first);
 
-			y.push_back(this->nodes[edge.first - 1].getY() * 2 - C1.second);
+			y.push_back(this->nodes[edge.first - 1]->getY() * 2 - C1.second);
 			y.push_back(C1.second);
 			y.push_back(C2.second);
-			y.push_back(this->nodes[edge.second - 1].getY() * 2 - C2.second);
+			y.push_back(this->nodes[edge.second - 1]->getY() * 2 - C2.second);
 
 			std::shared_ptr<Element> elem = std::make_shared<infQuad>(infQuad(this->elements.size(), INFQUAD, elem_nodes));
 			elem->set_coords(x, y, z);
@@ -172,7 +172,7 @@ void Data::create_infelements() {
 			inf_node++;
 			for (int k = 2; k < 4; k++) {
 				std::array <double, 3> coords = { x[k], y[k], z[k] };
-				this->nodes.push_back(Node(elem_nodes[k], coords));
+				this->nodes.push_back(make_shared<Node>(elem_nodes[k], coords));
 			}
 
 			if (parser->sidesets[i].load != -1) { // type == PRESSURE
@@ -195,7 +195,7 @@ void Data::create_constraints() {
 		for (int node = 0; node < restraints.size; node++)
 			for (int i = 0; i < 6; i++)
 				if (restraints.flag[i])
-					nodes[restraints.apply_to[node] - 1].set_constraints(i, restraints.data[i]);
+					nodes[restraints.apply_to[node] - 1]->set_constraints(i, restraints.data[i]);
 	}
 }
 
@@ -212,7 +212,7 @@ void Data::create_load() { // type - pressure
 						continue;
 					else
 						for (auto node : load.apply_to)
-							nodes[node].load[i] = load.data[i];
+							nodes[node]->load[i] = load.data[i];
 		}
 }
 

@@ -11,6 +11,7 @@ Node::Node(const Node& other)
 	x(other.x),
 	y(other.y),
 	z(other.z),
+	load(other.load),
 	results(other.results),
 	constraints(other.constraints) {
 }
@@ -20,6 +21,7 @@ Node& Node::operator=(const Node& other) {
 		x = other.x;
 		y = other.y;
 		z = other.z;
+		load = other.load;
 		results = other.results;
 		constraints = other.constraints;
 	}
@@ -30,6 +32,7 @@ Node::Node(Node&& other) noexcept
 	x(std::exchange(other.x, 0.0)),
 	y(std::exchange(other.y, 0.0)),
 	z(std::exchange(other.z, 0.0)),
+	load(std::move(other.load)),
 	results(std::move(other.results)),
 	constraints(std::move(other.constraints)) {
 }
@@ -39,6 +42,7 @@ Node& Node::operator=(Node&& other) noexcept {
 		x = std::exchange(other.x, 0.0);
 		y = std::exchange(other.y, 0.0);
 		z = std::exchange(other.z, 0.0);
+		load = std::move(other.load);
 		results = std::move(other.results);
 		constraints = std::move(other.constraints);
 	}
@@ -49,6 +53,6 @@ void Node::set_constraints(int comp, double value) {
 	constraints.insert({ comp, value });
 }
 
-void Node::set_result(double value, int type, int comp) {
+void Node::set_result(double value, ResType type) {
 	results[type].push_back(value);
 }

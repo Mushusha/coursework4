@@ -84,7 +84,7 @@ void Solver::fillGlobalF(int n) {
 			F.coeffRef(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim) += loc_f[j];
 	}
 	for (int i = 0; i < calc_data.nodes_count(); i++)
-		for (auto pair : calc_data.get_node(i).load)
+		for (auto pair : calc_data.get_node(i)->load)
 			F.coeffRef(dim * (i - 1) + pair.first) += pair.second;
 
 	log.print("End filling right vector");
@@ -98,7 +98,7 @@ void Solver::fillConstraints() {
 
 	// c.first - comp, c.second - value 
 	for (int node = 0; node < calc_data.nodes_count(); node++)
-		for (auto const& c : calc_data.get_node(node).constraints)
+		for (auto const& c : calc_data.get_node(node)->constraints)
 			for (int i = 0; i < K.outerSize(); i++) {
 				for (Eigen::SparseMatrix<double>::InnerIterator it(K, i); it; ++it)
 					if (((it.row() == node * dim + c.first) ||

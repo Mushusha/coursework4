@@ -9,12 +9,12 @@ Output::Output(std::vector<std::vector<double>>& points,
 void Output::write() {
 	std::ofstream file;
 
-	for (int comp = 0; comp < points.size(); comp++) {
+	for (int comp = 0; comp < numComp(type, dim); comp++) {
 		std::string name = filename(type, comp, dim);
 		file.open(name + ".txt");
 
 		//double line_len = sqrt(pow((line_end[0] - line_start[0]), 2) + pow((line_end[1] - line_start[1]), 2));
-		for (int i = 0; i < points[comp].size(); i++)
+		for (int i = 0; i < points.size(); i++)
 			//file << "(" << line_len / points_count * i << ", " << std::fixed << std::setprecision(12) << values[i] << ")" << std::endl;
 			file << "(" << points[i][0] << ", " << std::fixed << std::setprecision(12) << values[comp][i] << ")" << std::endl;
 			//file << points[i][0] << std::endl;
