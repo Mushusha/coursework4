@@ -13,6 +13,12 @@ void printVector(Eigen::SparseVector<double> B) {
 			std::cout << i << "\t" << B.coeffRef(i) << std::endl;
 }
 
+void printVector(Eigen::VectorX <double> B) {
+	for (int i = 0; i < B.size(); i++)
+		if (B(i) != 0.0)
+			std::cout << i << "\t" << B(i) << std::endl;
+}
+
 double line(std::vector<double> A, std::vector<double> B, std::vector<double> X) {
 	// return value y - f(x)
 	return (X[1] - A[1]) * (B[0] - A[0]) - (X[0] - A[0]) * (B[1] - A[1]);

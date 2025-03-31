@@ -16,6 +16,7 @@
 
 void printMatrix(Eigen::SparseMatrix<double> A);
 void printVector(Eigen::SparseVector<double> B);
+void printVector(Eigen::VectorX <double> B);
 void productMV(Eigen::MatrixXd A, std::vector<double> b, std::vector<double>& c);
 double line(std::vector<double> a, std::vector<double> b, std::vector<double> x);
 void output_points(std::vector<double> start, std::vector<double> end, int count, std::vector<std::vector<double>>& points);

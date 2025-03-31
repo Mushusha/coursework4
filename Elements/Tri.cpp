@@ -92,6 +92,9 @@ std::vector<double> Tri::localR(std::vector<double> value) {
 }
 
 Eigen::MatrixXd Tri::localM() {
+	if (density == 0.0)
+		throw runtime_error("Error: density is zero in element " + to_string(id));
+
 	Eigen::MatrixXd m(6, 6);
 	for (int i = 0; i < 6; i++)
 		for (int j = 0; j < 6; j++)

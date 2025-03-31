@@ -50,7 +50,7 @@ Node& Node::operator=(Node&& other) noexcept {
 }
 
 void Node::set_constraints(int comp, double value) {
-	constraints.insert({ comp, value });
+	constraints[comp] = value;
 }
 
 void Node::set_result(double value, ResType type) {

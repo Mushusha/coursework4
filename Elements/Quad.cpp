@@ -151,6 +151,9 @@ std::vector<double> Quad::localR(std::vector<double> value) {
 }
 
 Eigen::MatrixXd Quad::localM() {
+	if (density == 0.0)
+		throw runtime_error("Error: density is zero in element " + to_string(id));
+
 	Eigen::MatrixXd m = Eigen::MatrixXd::Zero(8, 8);
 	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };

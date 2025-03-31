@@ -49,6 +49,7 @@ void Dynamics::calcDelta_t(Data& data) {
 		v_max = (v_i > v_max) ? v_i : v_max;
 	}
 	delta_t = 0.8 * h_min / v_max;
+	delta_t = 6.84888e-6;
 }
 
 void Dynamics::U_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
@@ -60,18 +61,20 @@ void Dynamics::V_curr(Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
 }
 
 void Dynamics::A_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
-	Eigen::SparseMatrix <double> M1 = (1 + alpha) * M;
+	Eigen::SparseMatrix <double> M1 = (1 + alpha) * M / beta1;
 	Eigen::VectorX <double> F1 = F - alpha * M *
 		(U_prev + A_prev * delta_t * (1 - beta1)) -
 		K * (U_prev + V_prev * delta_t + A_prev * pow(delta_t, 2) / 2);
 
 	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
 	solver.compute(M1);
-
 	if (solver.info() != Eigen::Success)
 		throw runtime_error("Error in K");
 
 	A = solver.solve(F1);
+	printVector(F1);
+	printMatrix(M);
+	printVector(A);
 }
 
 void Dynamics::calcDisp() {
@@ -84,7 +87,7 @@ void Dynamics::calcDisp() {
 		A_curr(U_prev, V_prev, A_prev);
 		V_curr(V_prev, A_prev);
 		U_curr(U_prev, V_prev, A_prev);
-
+		printVector(V);
 		A_prev = A;
 		V_prev = V;
 		U_prev = U;
