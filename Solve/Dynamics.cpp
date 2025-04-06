@@ -2,12 +2,13 @@
 
 Dynamics::Dynamics(Data& data) : Solver(data) {
 	fillGlobalM();
+	updateM();
 	// ...
 	calcDelta_t(data);
-	iter_count = 100; //data.max_time / delta_t;
+	iter_count = std::min(static_cast<int>(data.max_time / delta_t), data.max_iter);
 	beta1 = 0.5;
 	alpha = data.damping;
-	
+
 	U_0.resize(data.dim * data.nodes_count());
 	U_0.setZero();
 	V_0.resize(data.dim * data.nodes_count());
@@ -38,6 +39,28 @@ void Dynamics::fillGlobalM() {
 	log.print("End filling mass matrix");
 }
 
+void Dynamics::updateM() {
+	logger& log = logger::log();
+	log.print("Start updating mass matrix");
+
+	Eigen::SparseMatrix<double> result(M.rows(), M.cols());
+	result.reserve(Eigen::VectorXi::Constant(M.rows(), 1));
+
+	for (int row = 0; row < M.outerSize(); ++row) {
+		double rowSum = 0;
+		for (Eigen::SparseMatrix<double>::InnerIterator it(M, row); it; ++it)
+			rowSum += it.value();
+
+		if (row < M.cols())
+			result.insert(row, row) = rowSum;
+	}
+
+	result.makeCompressed();
+
+	M = result;
+	log.print("End updating mass matrix");
+}
+
 void Dynamics::calcDelta_t(Data& data) {
 	double h_min = data.get_elem(0)->Volume();
 	double v_max = 0;
@@ -48,8 +71,7 @@ void Dynamics::calcDelta_t(Data& data) {
 		double v_i = std::sqrt((E * nu / ((1 + nu) * (1 - 2 * nu)) + E / (2 * (1 + nu))) / data.get_elem(i)->get_rho());
 		v_max = (v_i > v_max) ? v_i : v_max;
 	}
-	delta_t = 0.8 * h_min / v_max;
-	delta_t = 6.84888e-6;
+	delta_t = 0.8 * h_min / v_max * 20;
 }
 
 void Dynamics::U_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
@@ -66,15 +88,10 @@ void Dynamics::A_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::Vec
 		(U_prev + A_prev * delta_t * (1 - beta1)) -
 		K * (U_prev + V_prev * delta_t + A_prev * pow(delta_t, 2) / 2);
 
-	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
-	solver.compute(M1);
-	if (solver.info() != Eigen::Success)
-		throw runtime_error("Error in K");
-
-	A = solver.solve(F1);
-	printVector(F1);
-	printMatrix(M);
-	printVector(A);
+	A.resize(A_0.size());
+	A_0.setZero();
+	for (int i = 0; i < A.size(); i++)
+		A(i) = F1(i) / M1.coeffRef(i, i) * 2;
 }
 
 void Dynamics::calcDisp() {
@@ -87,7 +104,7 @@ void Dynamics::calcDisp() {
 		A_curr(U_prev, V_prev, A_prev);
 		V_curr(V_prev, A_prev);
 		U_curr(U_prev, V_prev, A_prev);
-		printVector(V);
+
 		A_prev = A;
 		V_prev = V;
 		U_prev = U;

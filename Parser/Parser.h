@@ -111,6 +111,7 @@ struct settings {
 	std::string analisys_type;
 	void read(json settings);
 	double max_time;
+	int max_iter;
 	double d;
 };
 

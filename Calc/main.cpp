@@ -23,13 +23,13 @@ int main(int argc, char* argv[]) {
 	std::shared_ptr<Solver> solv = FabricSolver::createSolver(data);
 	solv->solve();
 
-	//Smoothing stressSm(data, STRESS);
-	//stressSm.solve();
+	Smoothing stressSm(data, STRESS);
+	stressSm.solve();
 
-	Interpolation stressIn(data, std::vector<double>{0.1, 0.1}, std::vector<double>{5, 5}, 100, DISPLACEMENT);
+	Interpolation stressIn(data, std::vector<double>{0.1, 0.1}, std::vector<double>{5, 5}, 100, STRESS);
 	stressIn.solve();
 
-	Output stressOut(stressIn.points, stressIn.values, DISPLACEMENT, data.dim);
+	Output stressOut(stressIn.points, stressIn.values, STRESS, data.dim);
 	stressOut.write();
 
 	// KirshError(argv[1], 1000000, 0.25);

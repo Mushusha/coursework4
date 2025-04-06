@@ -6,6 +6,7 @@ Data::Data(const Data& other)
 	analisys_type(other.analisys_type),
 	damping(other.damping),
 	max_time(other.max_time),
+	max_iter(other.max_iter),
 	elements(other.elements),
 	nodes(other.nodes),
 	parser(other.parser) {
@@ -17,6 +18,7 @@ Data& Data::operator=(const Data& other) {
 		analisys_type = other.analisys_type;
 		damping = other.damping;
 		max_time = other.max_time;
+		max_iter = other.max_iter;
 		elements = other.elements;
 		nodes = other.nodes;
 		parser = other.parser;
@@ -29,6 +31,7 @@ Data::Data(Data&& other) noexcept
 	analisys_type(std::exchange(other.analisys_type, 0)),
 	damping(std::exchange(other.damping, 0)),
 	max_time(std::exchange(other.max_time, 0)),
+	max_iter(std::exchange(other.max_iter, 0)),
 	elements(std::move(other.elements)),
 	nodes(std::move(other.nodes)),
 	parser(std::move(other.parser)) {
@@ -40,6 +43,7 @@ Data& Data::operator=(Data&& other) noexcept {
 		analisys_type = std::exchange(other.analisys_type, 0);
 		damping = std::exchange(other.damping, 0);
 		max_time = std::exchange(other.max_time, 0);
+		max_iter = std::exchange(other.max_iter, 0);
 		elements = std::move(other.elements);
 		nodes = std::move(other.nodes);
 		parser = std::move(other.parser);
@@ -59,6 +63,7 @@ Data::Data(std::shared_ptr <Parser> p) : parser(p) {
 	analisys_type = parser->settings.analisys_type;
 	damping = parser->settings.d;
 	max_time = parser->settings.max_time;
+	max_iter = parser->settings.max_iter;
 
 	create_nodes();
 	create_elements();

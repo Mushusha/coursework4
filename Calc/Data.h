@@ -34,6 +34,7 @@ public:
 
 	double damping;
 	double max_time;
+	int max_iter;
 	  
 private:
 	Data() = default;

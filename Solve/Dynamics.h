@@ -28,6 +28,7 @@ private:
 	Eigen::VectorX <double> A;
 
 	void fillGlobalM();
+	void updateM();
 	// void fillGlobalC();
 
 	double beta1;

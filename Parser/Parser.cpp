@@ -238,6 +238,7 @@ void settings::read(json block) {
 	this->analisys_type = block["type"];
 	if (this->analisys_type == "dynamic") {
 		this->max_time = block["dynamics"]["max_time"];
+		this->max_iter = block["dynamics"]["max_steps_count"];
 		if (block.contains("damping"))
 			this->d = block["damping"]["mass_matrix"];
 	}
