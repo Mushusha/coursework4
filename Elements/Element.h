@@ -58,7 +58,7 @@ public:
 	double get_rho() { return density; }
 	
 	double Jac(double ksi, double eta, double zeta = 0);
-
+	virtual double gaussPoint(LocVar var, int i) = 0;
 	virtual double Volume() = 0;
 	
 	std::vector<std::map <ResType, Eigen::VectorXd>> results; // [i] - node; [j] - field; [k] - comp // tensor

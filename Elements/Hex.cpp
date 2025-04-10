@@ -41,6 +41,14 @@ Eigen::MatrixXd Hex::J(double ksi, double eta, double zeta) {
 	return J;
 }
 
+double Hex::gaussPoint(LocVar var, int i) {
+	//std::vector <double> ksi = { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 };
+	//std::vector <double> eta = { -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 };
+	//std::vector <double> zeta = { -0.57735026918926, -0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926 };
+
+	return 0.0;
+}
+
 Eigen::MatrixXd Hex::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6, 24);
 	Eigen::Matrix3d invJ;

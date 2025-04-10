@@ -42,8 +42,7 @@ source_group(Smoothing FILES
 Smoothing/Smoothing.h
 Smoothing/Smoothing.cpp
 Smoothing/Interpolation.h
-Smoothing/Interpolation.cpp
-Smoothing/Fabric.h)
+Smoothing/Interpolation.cpp)
 
 source_group(Output FILES 
 Output/Output.h
@@ -75,6 +74,7 @@ add_executable(Core
     Elements/Element.cpp
     Elements/Tri.h
     Elements/Tri.cpp
+    Elements/Quad.h
     Elements/Quad.cpp
     Elements/InfQuad.cpp
     Elements/Tetra.h
@@ -88,7 +88,6 @@ add_executable(Core
     Solve/Statics.cpp
     Solve/Dynamics.h
     Solve/Dynamics.cpp
-    Solve/Fabric.h
 
     Smoothing/Smoothing.h
     Smoothing/Smoothing.cpp

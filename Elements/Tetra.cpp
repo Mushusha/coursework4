@@ -101,5 +101,9 @@ Eigen::MatrixXd Tetra::J(double ksi, double eta, double zeta) {
 	return Eigen::MatrixXd();
 }
 
+double Tetra::gaussPoint(LocVar var, int i) {
+	return 0.0;
+}
+
 void Tetra::set_pressure(int edge, double value) {
 }

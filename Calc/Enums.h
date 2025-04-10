@@ -4,7 +4,7 @@
 #include <string>
 
 enum ElemType { TRI = 10, QUAD = 12, TETRA = 1, HEX = 3, WERGE = 6, PYR = 8, INFQUAD = 10};
-enum LoadType { PRESSURE = 4, NODEFORCE = 5 };
+enum LoadType { PRESSURE = 4, NODEFORCE = 5, BERLAGE = 20 };
 enum LocVar { KSI, ETA, ZETA };
 enum GlobVar { X, Y, Z };
 

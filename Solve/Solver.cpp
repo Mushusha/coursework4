@@ -60,7 +60,8 @@ void Solver::fillGlobalK() {
 		Eigen::MatrixXd loc_k = calc_data.get_elem(i)->localK();
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
 			for (int k = 0; k < calc_data.get_elem(i)->nodes_count() * dim; k++) {
-				Eigen::Triplet <double> trpl(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim, dim * (calc_data.get_elem(i)->get_nodes(k / dim) - 1) + k % dim, loc_k(j, k));
+				Eigen::Triplet <double> trpl(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim, 
+											 dim * (calc_data.get_elem(i)->get_nodes(k / dim) - 1) + k % dim, loc_k(j, k));
 				tripl_vec.push_back(trpl);
 			}
 	}
@@ -153,16 +154,10 @@ void Solver::dispToElem() {
 
 void Solver::calcStrain() {
 	for (int elem = 0; elem < calc_data.elements_count(); elem++) {
-		std::vector <double> ksi = { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 };
-		std::vector <double> eta = { -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 };
-		std::vector <double> zeta = { -0.57735026918926, -0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926 };
-		//std::vector <double> ksi = { -1, 1, 1, -1, -1, 1, 1, -1 };
-		//std::vector <double> eta = { -1, -1, 1, 1, -1, -1, 1, 1 };
-		//std::vector <double> zeta = { -1, -1, -1, -1, 1, 1, 1, 1 };
-
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			calc_data.get_elem(elem)->results[node][STRAIN] = 
-				calc_data.get_elem(elem)->B(ksi[node], eta[node], zeta[node]) * calc_data.get_elem(elem)->displacements;
+			calc_data.get_elem(elem)->results[node][STRAIN] = calc_data.get_elem(elem)->
+				B(calc_data.get_elem(elem)->gaussPoint(KSI, node), calc_data.get_elem(elem)->gaussPoint(ETA, node), 
+				  calc_data.get_elem(elem)->gaussPoint(ZETA, node)) * calc_data.get_elem(elem)->displacements;
 		}
 	}
 	logger& log = logger::log();

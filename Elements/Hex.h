@@ -41,6 +41,7 @@ public:
 	Eigen::MatrixXd localM() override;
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
+	double gaussPoint(LocVar var, int i) override;
 
 	double Volume() final;
 

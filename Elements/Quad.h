@@ -1,6 +1,8 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <complex>
+#include <cmath>
 
 #include "Eigen/Core"
 
@@ -40,6 +42,7 @@ public:
 	Eigen::MatrixXd localM() override;
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
+	double gaussPoint(LocVar var, int i) override;
 
 	double Volume() final;
 
@@ -78,3 +81,36 @@ public:
 
 	std::vector<double> FF(double ksi, double eta, double zeta = 0) final;
 };
+
+class infQuadDyn : public  Quad {
+public:
+	infQuadDyn() : Quad() {}
+	infQuadDyn(int id, int type, std::vector<int> nodes)
+		: Quad(id, type, nodes) {
+	}
+	infQuadDyn(const infQuad& other)
+		: Quad(other) {
+	}
+	infQuadDyn& operator=(const infQuadDyn& other) {
+		if (this != &other)
+			Element::operator=(other);
+		return *this;
+	}
+	infQuadDyn(infQuad&& other) noexcept
+		: Quad(std::move(other)) {
+	}
+	infQuadDyn& operator=(infQuadDyn&& other) noexcept {
+		if (this != &other)
+			Element::operator=(std::move(other));
+		return *this;
+	}
+	virtual ~infQuadDyn() = default;
+
+	std::vector<double> FF(double ksi, double eta, double zeta = 0) final;
+	double gaussPoint(LocVar var, int i) final;
+
+private:
+	double A;
+	double k;
+};
+

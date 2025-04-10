@@ -142,6 +142,10 @@ Eigen::MatrixXd Tri::J(double ksi, double eta, double zeta) {
 	return j;
 }
 
+double Tri::gaussPoint(LocVar var, int i) {
+	return 0.0;
+}
+
 void Tri::set_pressure(int edge, double value) {
 	std::pair<int, int> node = edge_to_node(edge);
 	std::array<double, 2> comp;

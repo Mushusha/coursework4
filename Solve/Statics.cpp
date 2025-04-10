@@ -2,7 +2,6 @@
 
 void Statics::calcDisp() {
 	zeroDiagonalCheck();
-	printMatrix(K);
 	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
 	solver.compute(K);
 

@@ -32,6 +32,14 @@ Eigen::MatrixXd Quad::J(double ksi, double eta, double zeta) {
 	return J;
 }
 
+double Quad::gaussPoint(LocVar var, int i) {
+	std::vector<std::vector<double>> gp = { { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 },
+										  { -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 },
+										  { 0.0, 0.0, 0.0, 0.0 } };
+
+	return gp[static_cast<int>(var)][i];
+}
+
 Eigen::MatrixXd  Quad::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(3, 8);
 	Eigen::Matrix2d invJ;
@@ -103,11 +111,10 @@ std::pair<int, int> Quad::edge_to_node(int edge) {
 Eigen::MatrixXd Quad::localK() {
 
 	Eigen::MatrixXd k = Eigen::MatrixXd::Zero(8, 8);
-	std::vector <double> ksi = { -0.5774, 0.5774, 0.5774, -0.5774 };
-	std::vector <double> eta = { -0.5774, -0.5774, 0.5774, 0.5774 };
 
 	for (int gp = 0; gp < 4; gp++)
-		k += B(ksi[gp], eta[gp]).transpose() * D * B(ksi[gp], eta[gp]) * std::abs(J(eta[gp], ksi[gp]).determinant());
+		k += B(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).transpose() * D * B(gaussPoint(KSI, gp), gaussPoint(ETA, gp))
+		   * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
 
 	return k;
 }
@@ -128,13 +135,12 @@ std::vector<double> Quad::localF() {
 
 Eigen::MatrixXd Quad::localC() {
 	Eigen::MatrixXd c = Eigen::MatrixXd::Zero(4, 4);
-	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
-	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
 
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
 			for (int gp = 0; gp < 4; gp++)
-				c(i, j) += FF(ksi[gp], eta[gp])[i] * FF(ksi[gp], eta[gp])[j] * std::abs(J(eta[gp], ksi[gp]).determinant());
+				c(i, j) += FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[i] * FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[j]
+						 * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
 	return c;
 }
 
@@ -142,11 +148,10 @@ std::vector<double> Quad::localR(std::vector<double> value) {
 	std::vector<double> R;
 	R.resize(4);
 
-	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
-	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
 	for (int i = 0; i < 4; i++)
 		for (int gp = 0; gp < 4; gp++)
-			R[i] += value[i] * FF(ksi[gp], eta[gp])[i] * std::abs(J(eta[gp], ksi[gp]).determinant());
+			R[i] += value[i] * FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[i] 
+			      * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
 	return R;
 }
 
@@ -155,8 +160,6 @@ Eigen::MatrixXd Quad::localM() {
 		throw runtime_error("Error: density is zero in element " + to_string(id));
 
 	Eigen::MatrixXd m = Eigen::MatrixXd::Zero(8, 8);
-	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
-	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
 
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
@@ -164,7 +167,9 @@ Eigen::MatrixXd Quad::localM() {
 				m(i, j) = 0;
 			else
 				for (int gp = 0; gp < 4; gp++) {
-					m(2 * i, 2 * j) += FF(ksi[gp], eta[gp])[i] * FF(ksi[gp], eta[gp])[j] * std::abs(J(eta[gp], ksi[gp]).determinant());
+					m(2 * i, 2 * j) += FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[i] * FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[j]
+						             * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
+
 					m(2 * i + 1, 2 * j + 1) += m(2 * i, 2 * j);
 				}
 	return density * m;
@@ -172,9 +177,6 @@ Eigen::MatrixXd Quad::localM() {
 
 std::vector<double> Quad::coordFF(double x0, double y0, double z0) {
 	Eigen::Vector2d F;
-	std::vector x1 = { 1, 0, 3, 4 };
-	std::vector y1 = { 0, 2, 4, 0 };
-
 	double ksi0 = 0, eta0 = 0;
 	for (int i = 0; i < 50; i++) {
 		F(0) = 0;
@@ -203,12 +205,10 @@ std::vector<double> Quad::coordFF(double x0, double y0, double z0) {
 
 double Quad::Volume() {
 	double S = 0;
-	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774 };
-	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774 };
 
 	for (int i = 0; i < 4; i++)
 		for (int gp = 0; gp < 4; gp++)
-			S += FF(ksi[gp], eta[gp])[i] * std::abs(J(eta[gp], ksi[gp]).determinant());
+			S += FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[i] * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
 
 	return S;
 }
