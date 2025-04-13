@@ -126,7 +126,10 @@ void sidesets::read(json sidesets) {
 	this->id = sidesets["id"];
 	this->size = sidesets["apply_to_size"];
 	this->apply_to.resize(2 * this->size);
-	this->load = sidesets["load"];
+	if (sidesets.contains("load"))
+		this->load = sidesets["load"];
+	else
+		this->load = -1;
 	std::string apply_to_s = sidesets["apply_to"];
 	base64_decode(apply_to_s);
 	for (size_t i = 0; i < this->apply_to.size(); i++)

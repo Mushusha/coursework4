@@ -1,6 +1,6 @@
 #include "Element.h"
 
-Element::Element(int id, int type, std::vector <int> nodes) :
+Element::Element(int id, ElemType type, std::vector <int> nodes) :
 	id(id), type(type), nodes(nodes) {
 };
 Element::Element(const Element& other)
@@ -38,7 +38,7 @@ Element& Element::operator=(const Element& other) {
 }
 Element::Element(Element&& other) noexcept
 	: id(std::exchange(other.id, 0)),
-	type(std::exchange(other.type, 0)),
+	type(std::move(other.type)),
 	nodes(std::move(other.nodes)),
 	x(std::move(other.x)),
 	y(std::move(other.y)),
@@ -54,7 +54,7 @@ Element::Element(Element&& other) noexcept
 Element& Element::operator=(Element&& other) noexcept {
 	if (this != &other) {
 		id = std::exchange(other.id, 0);
-		type = std::exchange(other.type, 0);
+		type = std::move(other.type);
 		nodes = std::move(other.nodes);
 		x = std::move(other.x);
 		y = std::move(other.y);

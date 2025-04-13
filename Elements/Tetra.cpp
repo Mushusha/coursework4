@@ -105,5 +105,9 @@ double Tetra::gaussPoint(LocVar var, int i) {
 	return 0.0;
 }
 
+double Tetra::weight(LocVar var, int i) {
+	return 0.0;
+}
+
 void Tetra::set_pressure(int edge, double value) {
 }

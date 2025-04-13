@@ -68,10 +68,11 @@ void Dynamics::calcDelta_t(Data& data) {
 		h_min = (h_min > data.get_elem(i)->Volume()) ? data.get_elem(i)->Volume() : h_min;
 		double nu = data.get_elem(i)->get_nu();
 		double E = data.get_elem(i)->get_E();
-		double v_i = std::sqrt((E * nu / ((1 + nu) * (1 - 2 * nu)) + E / (2 * (1 + nu))) / data.get_elem(i)->get_rho());
-		v_max = (v_i > v_max) ? v_i : v_max;
+		double v_p = std::sqrt((E * nu / ((1 + nu) * (1 - 2 * nu)) + E / (2 * (1 + nu))) / data.get_elem(i)->get_rho());
+		v_max = (v_p > v_max) ? v_p : v_max;
 	}
-	delta_t = 0.8 * h_min / v_max * 20;
+	delta_t = 0.8 * h_min / v_max;
+	delta_t = 0.00171221 / 6.5;
 }
 
 void Dynamics::U_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
@@ -83,15 +84,15 @@ void Dynamics::V_curr(Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
 }
 
 void Dynamics::A_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::VectorXd A_prev) {
-	Eigen::SparseMatrix <double> M1 = (1 + alpha) * M / beta1;
+	Eigen::SparseMatrix <double> M1 = (1 + alpha * delta_t * beta1) * M;
 	Eigen::VectorX <double> F1 = F - alpha * M *
 		(U_prev + A_prev * delta_t * (1 - beta1)) -
 		K * (U_prev + V_prev * delta_t + A_prev * pow(delta_t, 2) / 2);
 
 	A.resize(A_0.size());
-	A_0.setZero();
+	A.setZero();
 	for (int i = 0; i < A.size(); i++)
-		A(i) = F1(i) / M1.coeffRef(i, i) * 2;
+		A(i) = F1(i) / M1.coeffRef(i, i);
 }
 
 void Dynamics::calcDisp() {
@@ -101,15 +102,25 @@ void Dynamics::calcDisp() {
 
 	for (int i = 0; i < iter_count; i++) {
 		fillGlobalF(i);
+
 		A_curr(U_prev, V_prev, A_prev);
 		V_curr(V_prev, A_prev);
 		U_curr(U_prev, V_prev, A_prev);
+		
+		//printVector(A);
+		//std::cout << "-----------------------    A   ----------------------" << std::endl;
+		//printVector(V);
+		//std::cout << "-----------------------    V   ----------------------" << std::endl;
+		//printVector(U);
+		//std::cout << "-----------------------    U   ----------------------" << std::endl;
+		//std::cout << "-----------------------    " << i << "   ----------------------" << std::endl;
+
 
 		A_prev = A;
 		V_prev = V;
 		U_prev = U;
 	}
-
+	printVector(U);
 	A_curr(U_prev, V_prev, A_prev);
 	V_curr(V_prev, A_prev);
 	U_curr(U_prev, V_prev, A_prev);

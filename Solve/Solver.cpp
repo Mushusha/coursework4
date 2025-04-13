@@ -86,7 +86,7 @@ void Solver::fillGlobalF(int n) {
 	}
 	for (int i = 0; i < calc_data.nodes_count(); i++)
 		for (auto pair : calc_data.get_node(i)->load)
-			F.coeffRef(dim * (i - 1) + pair.first) += pair.second;
+			F.coeffRef(dim * i + pair.first) += pair.second;
 
 	log.print("End filling right vector");
 }

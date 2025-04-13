@@ -49,6 +49,10 @@ double Hex::gaussPoint(LocVar var, int i) {
 	return 0.0;
 }
 
+double Hex::weight(LocVar var, int i) {
+	return 0.0;
+}
+
 Eigen::MatrixXd Hex::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6, 24);
 	Eigen::Matrix3d invJ;

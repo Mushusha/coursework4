@@ -12,7 +12,7 @@
 class Quad : public Element {
 public:
 	Quad() : Element() {}
-	Quad(int id, int type, std::vector <int> nodes)
+	Quad(int id, ElemType type, std::vector <int> nodes)
 		: Element(id, type, nodes) {}
 	Quad(const Quad& other)
 		: Element(other) {}
@@ -43,11 +43,11 @@ public:
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 	double gaussPoint(LocVar var, int i) override;
-
+	double weight(LocVar var, int i) override;
 	double Volume() final;
 
 protected:
-	Eigen::MatrixXd  gradFF(double ksi, double eta, double zeta = 0) override;
+	Eigen::MatrixXd gradFF(double ksi, double eta, double zeta = 0) override;
 	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;
 
 	void set_pressure(int edge, double value) override;
@@ -60,7 +60,7 @@ private:
 class infQuad : public  Quad {
 public:
 	infQuad() : Quad() {}
-	infQuad(int id, int type, std::vector<int> nodes)
+	infQuad(int id, ElemType type, std::vector<int> nodes)
 		: Quad(id, type, nodes) {
 	}
 	infQuad(const infQuad& other)
@@ -79,38 +79,14 @@ public:
 	}
 	virtual ~infQuad() = default;
 
-	std::vector<double> FF(double ksi, double eta, double zeta = 0) final;
-};
-
-class infQuadDyn : public  Quad {
-public:
-	infQuadDyn() : Quad() {}
-	infQuadDyn(int id, int type, std::vector<int> nodes)
-		: Quad(id, type, nodes) {
-	}
-	infQuadDyn(const infQuad& other)
-		: Quad(other) {
-	}
-	infQuadDyn& operator=(const infQuadDyn& other) {
-		if (this != &other)
-			Element::operator=(other);
-		return *this;
-	}
-	infQuadDyn(infQuad&& other) noexcept
-		: Quad(std::move(other)) {
-	}
-	infQuadDyn& operator=(infQuadDyn&& other) noexcept {
-		if (this != &other)
-			Element::operator=(std::move(other));
-		return *this;
-	}
-	virtual ~infQuadDyn() = default;
+	bool is_dyn;
+	double omega;
 
 	std::vector<double> FF(double ksi, double eta, double zeta = 0) final;
-	double gaussPoint(LocVar var, int i) final;
+	double gaussPoint(LocVar var, int i) override;
+	double weight(LocVar var, int i) override;
 
 private:
 	double A;
 	double k;
 };
-

@@ -22,7 +22,7 @@
 
 class Element {
 public:
-	Element(int id, int type, std::vector <int> nodes);
+	Element(int id, ElemType type, std::vector <int> nodes);
 	Element(const Element& other);
 	Element& operator=(const Element& other);
 	Element(Element&& other) noexcept;
@@ -48,7 +48,6 @@ public:
 	void set_load(int type, int edge, std::array<double, 6> value); // nodes
 	void set_constants(double E, double nu, double rho);
 
-	int get_type() { return type; }
 	int get_nodes(int i) { return nodes[i]; }
 	int nodes_count() { return nodes.size(); }
 	double get_coord(int loc_node, int comp);
@@ -59,6 +58,7 @@ public:
 	
 	double Jac(double ksi, double eta, double zeta = 0);
 	virtual double gaussPoint(LocVar var, int i) = 0;
+	virtual double weight(LocVar var, int i) = 0;
 	virtual double Volume() = 0;
 	
 	std::vector<std::map <ResType, Eigen::VectorXd>> results; // [i] - node; [j] - field; [k] - comp // tensor
@@ -67,7 +67,7 @@ public:
 protected:
 	Element() = default;
 
-	int type;
+	ElemType type;
 	int id;
 	std::vector <double> x, y, z;
 	std::vector <int> nodes; // find in Node

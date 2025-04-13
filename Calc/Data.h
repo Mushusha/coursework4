@@ -14,14 +14,13 @@
 
 class Data {
 public:
-	Data(std::shared_ptr<Parser> p);
+	Data(std::shared_ptr<const Parser> p);
 	Data(const Data& other);
 	Data& operator=(const Data& other);
 	Data(Data&& other) noexcept;
 	Data& operator=(Data&& other) noexcept;
 	virtual ~Data() = default;
 
-	const std::shared_ptr<Parser>& get_parser() const { return parser; }
 	const std::shared_ptr<Element> get_elem(int i) const { return elements[i]; }
 	const std::shared_ptr<Node> get_node(int i) const { return nodes[i]; }
 	const int nodes_count() const { return nodes.size(); }
@@ -42,13 +41,11 @@ private:
 	std::vector<shared_ptr<Element>> elements;
 	std::vector<shared_ptr<Node>> nodes;
 
-	std::shared_ptr<Parser> parser;
-
-	void create_nodes();
-	void create_elements();
-	void create_infelements();
-	void create_constants();
-	void create_constraints();
-	void create_load();
-	void create_D();
+	void create_nodes(std::shared_ptr <const Parser> parser);
+	void create_elements(std::shared_ptr <const Parser> parser);
+	void create_infelements(std::shared_ptr <const Parser> parser);
+	void create_constants(std::shared_ptr <const Parser> parser);
+	void create_constraints(std::shared_ptr <const Parser> parser);
+	void create_load(std::shared_ptr <const Parser> parser);
+	void create_D(std::shared_ptr <const Parser> parser);
 }; 

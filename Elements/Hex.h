@@ -10,7 +10,7 @@
 class Hex : public Element {
 public:
 	Hex() : Element() {};
-	Hex(int id, int type, std::vector <int> nodes)
+	Hex(int id, ElemType type, std::vector <int> nodes)
 		: Element (id, type, nodes) {};
 	Hex(const Hex& other)
 		: Element(other) {}
@@ -42,7 +42,7 @@ public:
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 	double gaussPoint(LocVar var, int i) override;
-
+	double weight(LocVar var, int i) override;
 	double Volume() final;
 
 protected:

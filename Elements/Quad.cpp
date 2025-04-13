@@ -40,6 +40,10 @@ double Quad::gaussPoint(LocVar var, int i) {
 	return gp[static_cast<int>(var)][i];
 }
 
+double Quad::weight(LocVar var, int i) {
+	return 1.0;
+}
+
 Eigen::MatrixXd  Quad::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(3, 8);
 	Eigen::Matrix2d invJ;
@@ -112,10 +116,12 @@ Eigen::MatrixXd Quad::localK() {
 
 	Eigen::MatrixXd k = Eigen::MatrixXd::Zero(8, 8);
 
-	for (int gp = 0; gp < 4; gp++)
-		k += B(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).transpose() * D * B(gaussPoint(KSI, gp), gaussPoint(ETA, gp))
-		   * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
+	for (int gp = 0; gp < 4; gp++) {
+		double ksi = gaussPoint(KSI, gp);
+		double eta = gaussPoint(ETA, gp);
 
+		k += weight(KSI, gp) * weight(ETA, gp) * B(ksi, eta).transpose() * D * B(ksi, eta) * std::abs(J(ksi, eta).determinant());
+	}
 	return k;
 }
 
@@ -138,9 +144,12 @@ Eigen::MatrixXd Quad::localC() {
 
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
-			for (int gp = 0; gp < 4; gp++)
-				c(i, j) += FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[i] * FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[j]
-						 * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
+			for (int gp = 0; gp < 4; gp++) {
+				double ksi = gaussPoint(KSI, gp);
+				double eta = gaussPoint(ETA, gp);
+
+				c(i, j) += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * FF(ksi, eta)[j] * std::abs(J(ksi, eta).determinant());
+			}
 	return c;
 }
 
@@ -149,9 +158,12 @@ std::vector<double> Quad::localR(std::vector<double> value) {
 	R.resize(4);
 
 	for (int i = 0; i < 4; i++)
-		for (int gp = 0; gp < 4; gp++)
-			R[i] += value[i] * FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[i] 
-			      * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
+		for (int gp = 0; gp < 4; gp++) {
+			double ksi = gaussPoint(KSI, gp);
+			double eta = gaussPoint(ETA, gp);
+
+			R[i] += value[i] * weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * std::abs(J(ksi, eta).determinant());
+		}
 	return R;
 }
 
@@ -167,9 +179,11 @@ Eigen::MatrixXd Quad::localM() {
 				m(i, j) = 0;
 			else
 				for (int gp = 0; gp < 4; gp++) {
-					m(2 * i, 2 * j) += FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[i] * FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[j]
-						             * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
+					double ksi = gaussPoint(KSI, gp);
+					double eta = gaussPoint(ETA, gp);
 
+					m(2 * i, 2 * j) += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * FF(ksi, eta)[j] * std::abs(J(ksi, eta).determinant());
+					
 					m(2 * i + 1, 2 * j + 1) += m(2 * i, 2 * j);
 				}
 	return density * m;
@@ -207,8 +221,12 @@ double Quad::Volume() {
 	double S = 0;
 
 	for (int i = 0; i < 4; i++)
-		for (int gp = 0; gp < 4; gp++)
-			S += FF(gaussPoint(KSI, gp), gaussPoint(ETA, gp))[i] * std::abs(J(gaussPoint(KSI, gp), gaussPoint(ETA, gp)).determinant());
+		for (int gp = 0; gp < 4; gp++) {
+			double ksi = gaussPoint(KSI, gp);
+			double eta = gaussPoint(ETA, gp);
+
+			S += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * std::abs(J(ksi, eta).determinant());
+		}
 
 	return S;
 }

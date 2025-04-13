@@ -9,5 +9,7 @@ void Statics::calcDisp() {
 		throw runtime_error("Error in K");
 
 	U = solver.solve(F);
+	printMatrix(K);
+	printVector(U);
 }
 

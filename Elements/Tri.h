@@ -10,7 +10,7 @@
 class Tri : public Element {
 public:
 	Tri() : Element() {};
-	Tri(int id, int type, std::vector <int> nodes)
+	Tri(int id, ElemType type, std::vector <int> nodes)
 		: Element (id, type, nodes) {};
 	Tri(const Tri& other)
 		: Element(other) {}
@@ -41,11 +41,11 @@ public:
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 	double gaussPoint(LocVar var, int i) override;
-
+	double weight(LocVar var, int i) override;
 	double Volume() final;
 
 protected:
-	Eigen::MatrixXd  gradFF(double ksi, double eta, double zeta = 0) override;
+	Eigen::MatrixXd gradFF(double ksi, double eta, double zeta = 0) override;
 	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;
 
 	void set_pressure(int edge, double value);

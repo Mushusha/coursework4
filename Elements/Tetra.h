@@ -10,7 +10,7 @@
 class Tetra : public Element {
 public:
 	Tetra() : Element() {};
-	Tetra(int id, int type, std::vector <int> nodes)
+	Tetra(int id, ElemType type, std::vector <int> nodes)
 		: Element (id, type, nodes) {};
 	Tetra(const Tetra& other)
 		: Element(other) {}
@@ -41,7 +41,7 @@ public:
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 	double gaussPoint(LocVar var, int i) override;
-
+	double weight(LocVar var, int i) override;
 	double Volume() final;
 
 protected:
