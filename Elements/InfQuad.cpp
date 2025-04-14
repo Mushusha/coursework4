@@ -27,7 +27,7 @@ std::vector<double> infQuad::FF(double ksi, double eta, double zeta) {
 
 double infQuad::gaussPoint(LocVar var, int i) {
 	std::vector<std::vector<double>> gp = { { 0.3333333333, -1.0, -1.0, 0.3333333333 },
-										  { 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926 },
+										  { -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 },
 										  { 0.0, 0.0, 0.0, 0.0 } };
 
 	return gp[static_cast<int>(var)][i];

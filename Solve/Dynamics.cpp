@@ -120,7 +120,20 @@ void Dynamics::calcDisp() {
 		V_prev = V;
 		U_prev = U;
 	}
-	printVector(U);
+	//printVector(U);
+	std::ofstream file;
+	file.open("disp_y.txt");
+	for (int i = 0; i < 1618 * 2; i++)
+		if (i % 2 == 1)
+			file << U(i) << std::endl;
+	file.close();
+	std::ofstream file1;
+	file1.open("disp_x.txt");
+	for (int i = 0; i < 1618 * 2; i++)
+		if (i % 2 == 0)
+			file1 << U(i) << std::endl;
+	file1.close();
+
 	A_curr(U_prev, V_prev, A_prev);
 	V_curr(V_prev, A_prev);
 	U_curr(U_prev, V_prev, A_prev);

@@ -193,27 +193,27 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 	// nodeset 0 - C, C1
 	// nodeset 1 - Q, Q1
 	for (int i = 0; i < parser->nodesets[0].apply_to.size() - 1; i++) {
-		std::vector<int> elem_nodes = { n, static_cast<int>(parser->nodesets[0].apply_to[i] - 1), static_cast<int>(parser->nodesets[0].apply_to[i + 1] - 1), n + 1 };
-		std::vector<double> x, y, z = { 0, 0, 0, 0 };
+		std::vector<int> elem_nodes = { n, static_cast<int>(parser->nodesets[1].apply_to[i]), static_cast<int>(parser->nodesets[1].apply_to[i + 1]), n + 1 };
+		std::vector<double> x1, y1, z1 = { 0, 0, 0, 0 };
 
-		x.push_back(this->nodes[2 * static_cast<int>(parser->nodesets[1].apply_to[i] - 1)]->getX() - this->nodes[elem_nodes[1]]->getX());
-		x.push_back(this->nodes[elem_nodes[1]]->getX());
-		x.push_back(this->nodes[elem_nodes[2]]->getX());
-		x.push_back(this->nodes[2 * static_cast<int>(parser->nodesets[1].apply_to[i + 1] - 1)]->getX() - this->nodes[elem_nodes[2]]->getX());
+		x1.push_back(2 * this->nodes[static_cast<int>(parser->nodesets[0].apply_to[i] - 1)]->getX() - this->nodes[elem_nodes[1]]->getX());
+		x1.push_back(this->nodes[elem_nodes[1] - 1]->getX());
+		x1.push_back(this->nodes[elem_nodes[2] - 1]->getX());
+		x1.push_back(2 * this->nodes[static_cast<int>(parser->nodesets[0].apply_to[i + 1] - 1)]->getX() - this->nodes[elem_nodes[2]]->getX());
 
-		y.push_back(this->nodes[2 * static_cast<int>(parser->nodesets[1].apply_to[i] - 1)]->getY() - this->nodes[elem_nodes[1]]->getY());
-		y.push_back(this->nodes[elem_nodes[1]]->getY());
-		y.push_back(this->nodes[elem_nodes[2]]->getY());
-		y.push_back(this->nodes[2 * static_cast<int>(parser->nodesets[1].apply_to[i + 1] - 1)]->getY() - this->nodes[elem_nodes[2]]->getY());
+		y1.push_back(2 * this->nodes[static_cast<int>(parser->nodesets[0].apply_to[i] - 1)]->getY() - this->nodes[elem_nodes[1]]->getY());
+		y1.push_back(this->nodes[elem_nodes[1] - 1]->getY());
+		y1.push_back(this->nodes[elem_nodes[2] - 1]->getY());
+		y1.push_back(2 * this->nodes[static_cast<int>(parser->nodesets[0].apply_to[i + 1] - 1)]->getY() - this->nodes[elem_nodes[2]]->getY());
 
 		std::shared_ptr<Element> elem = std::make_shared<infQuad>(infQuad(this->elements.size(), INFQUAD, elem_nodes));
-		elem->set_coords(x, y, z);
+		elem->set_coords(x1, y1, z1);
 		this->elements.push_back(elem);
 
-		std::array <double, 3> coords0 = { x[0], y[0], z[0] };
+		std::array <double, 3> coords0 = { x1[0], y1[0], z1[0] };
 		this->nodes.push_back(std::make_shared<Node>(elem_nodes[0], coords0));
 		if (i == parser->nodesets[0].apply_to.size() - 2) {
-			std::array <double, 3> coords3 = { x[3], y[3], z[3] };
+			std::array <double, 3> coords3 = { x1[3], y1[3], z1[3] };
 			this->nodes.push_back(std::make_shared<Node>(elem_nodes[3], coords3));
 		}
 		if (parser->settings.analisys_type == "dynamic") {
