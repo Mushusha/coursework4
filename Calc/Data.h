@@ -34,6 +34,7 @@ public:
 	double damping;
 	double max_time;
 	int max_iter;
+	int num_inf_elems;
 	  
 private:
 	Data() = default;

@@ -55,7 +55,7 @@ void Smoothing::fillGlobalR(ResType type, int comp) {
 	for (int i = 0; i < elems_count; i++) {
 		std::vector<double> value;
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count(); j++)
-			value.push_back(calc_data.get_elem(i)->results[j][type](comp));
+			value.push_back(calc_data.get_elem(i)->results[j][type](comp).real());
 		std::vector<double> loc_r = calc_data.get_elem(i)->localR(value);
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count(); j++)
 			R.coeffRef(calc_data.get_elem(i)->get_nodes(j) - 1) += loc_r[j];

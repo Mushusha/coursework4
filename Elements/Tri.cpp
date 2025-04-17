@@ -27,8 +27,8 @@ double Tri::len_edge(int edge) {
 	return std::sqrt(std::pow((x[coords.first] - x[coords.second]), 2) + std::pow((y[coords.first] - y[coords.second]), 2));
 }
 
-Eigen::MatrixXd Tri::B(double ksi, double eta, double zeta) {
-	Eigen::MatrixXd B(3, 6);
+Eigen::MatrixXcd Tri::B(double ksi, double eta, double zeta) {
+	Eigen::MatrixXcd B(3, 6);
 	for (int i = 0; i < 3; i++) {
 		B(0, 2 * i) = y[(1 + i) % 3] - y[(2 + i) % 3];
 		B(0, 2 * i + 1) = 0;
@@ -59,7 +59,7 @@ bool Tri::pointInElem(std::vector<double> point) {
 	return answer;
 }
 
-Eigen::MatrixXd Tri::localK() {
+Eigen::MatrixXcd Tri::localK() {
 	return B().transpose() * D * B() * std::abs(C().determinant() / 2);
 }
 
@@ -91,7 +91,7 @@ std::vector<double> Tri::localR(std::vector<double> value) {
 	return R;
 }
 
-Eigen::MatrixXd Tri::localM() {
+Eigen::MatrixXcd Tri::localM() {
 	if (density == 0.0)
 		throw runtime_error("Error: density is zero in element " + to_string(id));
 
@@ -114,11 +114,11 @@ double Tri::Volume() {
 	return C().determinant();
 }
 
-std::vector<double> Tri::FF(double ksi, double eta, double zeta) {
-	std::vector<double> FF;
+std::vector<std::complex<double>> Tri::FF(double ksi, double eta, double zeta) {
+	std::vector<std::complex<double>> FF;
 	FF.resize(3);
-	Eigen::Vector3d f = { 1, ksi, eta };
-	Eigen::Vector3d ff = f.transpose() * C().inverse();
+	Eigen::Vector3cd f = { 1, ksi, eta };
+	Eigen::Vector3cd ff = f.transpose() * C().inverse();
 	FF = { ff(0), ff(1), ff(2) };
 	//for (int i = 0; i < 3; i++) {
 	//	Eigen::MatrixXd A(3, 3);
@@ -131,11 +131,11 @@ std::vector<double> Tri::FF(double ksi, double eta, double zeta) {
 	return FF;
 }
 
-Eigen::MatrixXd Tri::gradFF(double ksi, double eta, double zeta) {
+Eigen::MatrixXcd Tri::gradFF(double ksi, double eta, double zeta) {
 	return Eigen::MatrixXd();
 }
 
-Eigen::MatrixXd Tri::J(double ksi, double eta, double zeta) {
+Eigen::MatrixXcd Tri::J(double ksi, double eta, double zeta) {
 	Eigen::MatrixXd j = Eigen::MatrixXd::Zero(2, 2);
 	j(0, 0) = 1;
 	j(1, 1) = 1;

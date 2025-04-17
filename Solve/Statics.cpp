@@ -2,7 +2,8 @@
 
 void Statics::calcDisp() {
 	zeroDiagonalCheck();
-	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+
+	Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> solver;
 	solver.compute(K);
 
 	if (solver.info() != Eigen::Success)

@@ -53,19 +53,20 @@ void Solver::fillGlobalK() {
 	int nodes_count = calc_data.nodes_count();
 	int elems_count = calc_data.elements_count();
 	int dim = calc_data.dim;
-
+	
 	K.resize(dim * nodes_count, dim * nodes_count);
-	std::vector <Eigen::Triplet <double>> tripl_vec;
+	std::vector <Eigen::Triplet <std::complex<double>>> tripl_vec;
 	for (int i = 0; i < elems_count; i++) {
-		Eigen::MatrixXd loc_k = calc_data.get_elem(i)->localK();
+		Eigen::MatrixXcd loc_k = calc_data.get_elem(i)->localK();
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
 			for (int k = 0; k < calc_data.get_elem(i)->nodes_count() * dim; k++) {
-				Eigen::Triplet <double> trpl(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim, 
+	
+				Eigen::Triplet <std::complex<double>> trpl(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim, 
 											 dim * (calc_data.get_elem(i)->get_nodes(k / dim) - 1) + k % dim, loc_k(j, k));
 				tripl_vec.push_back(trpl);
 			}
 	}
-
+	
 	K.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
 	log.print("End filling stiffness matrix");
 }
@@ -77,7 +78,7 @@ void Solver::fillGlobalF(int n) {
 	int nodes_count = calc_data.nodes_count();
 	int elems_count = calc_data.elements_count();
 	int dim = calc_data.dim;
-
+	
 	F.resize(dim * nodes_count);
 	for (int i = 0; i < elems_count; i++) {
 		std::vector<double> loc_f = calc_data.get_elem(i)->localF();
@@ -101,7 +102,7 @@ void Solver::fillConstraints() {
 	for (int node = 0; node < calc_data.nodes_count(); node++)
 		for (auto const& c : calc_data.get_node(node)->constraints)
 			for (int i = 0; i < K.outerSize(); i++) {
-				for (Eigen::SparseMatrix<double>::InnerIterator it(K, i); it; ++it)
+				for (Eigen::SparseMatrix<std::complex<double>>::InnerIterator it(K, i); it; ++it)
 					if (((it.row() == node * dim + c.first) ||
 						(it.col() == node * dim + c.first)) && (it.row() != it.col())) {
 						it.valueRef() = 0.0;
@@ -124,7 +125,7 @@ void Solver::addToGlobalF(int index, double value) {
 
 void Solver::zeroDiagonalCheck() {
 	for (int i = 0; i < calc_data.nodes_count() * calc_data.dim; i++)
-		if (K.coeffRef(i, i) == 0) {
+		if (K.coeffRef(i, i) == std::complex<double>(0, 0)) {
 			std::cout << "Zero on diagonal: node " + std::to_string(static_cast<int>(i / calc_data.dim + 1)) + " dof " + std::to_string(static_cast<int>(i % calc_data.dim)) << std::endl;
 			break;
 		}
@@ -137,17 +138,17 @@ void Solver::dispToElem() {
 		calc_data.get_elem(elem)->results.resize(calc_data.get_elem(elem)->nodes_count());
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
 			//elements[elem]->results[node][DISPLACEMENT].resize(dim);
-
+	
 			//elements[elem]->results[node][DISPLACEMENT][X] = U(dim * (elements[elem]->get_nodes(node) - 1));
 			//elements[elem]->results[node][DISPLACEMENT][Y] = U(dim * (elements[elem]->get_nodes(node) - 1) + 1);
 			//if (dim == 3)
 			//	elements[elem]->results[node][DISPLACEMENT][Z] = U(dim * (elements[elem]->get_nodes(node) - 1) + 2);
-
+	
 			calc_data.get_elem(elem)->displacements.resize(dim * calc_data.get_elem(elem)->nodes_count());
-			calc_data.get_elem(elem)->displacements[dim * node] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1));
-			calc_data.get_elem(elem)->displacements[dim * node + 1] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1) + 1);
+			calc_data.get_elem(elem)->displacements[dim * node] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1)).real();
+			calc_data.get_elem(elem)->displacements[dim * node + 1] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1) + 1).real();
 			if (dim == 3)
-				calc_data.get_elem(elem)->displacements[dim * node + 2] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1) + 2);
+				calc_data.get_elem(elem)->displacements[dim * node + 2] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1) + 2).real();
 		}
 	}
 }

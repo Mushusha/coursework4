@@ -1,7 +1,7 @@
 #include "Quad.h"
 
-std::vector<double> Quad::FF(double ksi, double eta, double zeta) {
-	std::vector<double> FF;
+std::vector<std::complex<double>> Quad::FF(double ksi, double eta, double zeta) {
+	std::vector<std::complex<double>> FF;
 	FF.resize(4);
 	FF[0] = (1 - ksi) * (1 - eta) / 4;
 	FF[1] = (1 + ksi) * (1 - eta) / 4;
@@ -10,8 +10,8 @@ std::vector<double> Quad::FF(double ksi, double eta, double zeta) {
 	return FF;
 }
 
-Eigen::MatrixXd Quad::gradFF(double ksi, double eta, double zeta) {
-	Eigen::MatrixXd gradFF = Eigen::MatrixXd::Zero(2, 4);
+Eigen::MatrixXcd Quad::gradFF(double ksi, double eta, double zeta) {
+	Eigen::MatrixXcd gradFF = Eigen::MatrixXcd::Zero(2, 4);
 	double h = 0.01;
 	for (int i = 0; i < 4; i++) {
 		gradFF(KSI, i) = (FF(ksi + h, eta)[i] - FF(ksi - h, eta)[i]) / (2 * h);
@@ -20,9 +20,9 @@ Eigen::MatrixXd Quad::gradFF(double ksi, double eta, double zeta) {
 	return gradFF;
 }
 
-Eigen::MatrixXd Quad::J(double ksi, double eta, double zeta) {
-	Eigen::MatrixXd J = Eigen::MatrixXd::Zero(2, 2);
-
+Eigen::MatrixXcd Quad::J(double ksi, double eta, double zeta) {
+	Eigen::MatrixXcd J = Eigen::MatrixXcd::Zero(2, 2);
+	
 	for (int i = 0; i < 4; i++) {
 		J(0, 0) += gradFF(ksi, eta)(KSI, i) * x[i];
 		J(0, 1) += gradFF(ksi, eta)(KSI, i) * y[i];
@@ -44,12 +44,12 @@ double Quad::weight(LocVar var, int i) {
 	return 1.0;
 }
 
-Eigen::MatrixXd  Quad::B(double ksi, double eta, double zeta) {
-	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(3, 8);
-	Eigen::Matrix2d invJ;
+Eigen::MatrixXcd Quad::B(double ksi, double eta, double zeta) {
+	Eigen::MatrixXcd B = Eigen::MatrixXcd::Zero(3, 8);
+	Eigen::Matrix2cd invJ;
 	invJ = J(ksi, eta).inverse();
-	Eigen::MatrixXd dN = invJ * gradFF(ksi, eta);
-
+	Eigen::MatrixXcd dN = invJ * gradFF(ksi, eta);
+	
 	for (int i = 0; i < 4; i++) {
 		B(0, 2 * i) = dN(X, i);
 		B(1, 2 * i + 1) = dN(Y, i);
@@ -112,14 +112,14 @@ std::pair<int, int> Quad::edge_to_node(int edge) {
 		throw runtime_error("Error: wrong edge");
 }
 
-Eigen::MatrixXd Quad::localK() {
+Eigen::MatrixXcd Quad::localK() {
 
-	Eigen::MatrixXd k = Eigen::MatrixXd::Zero(8, 8);
-
+	Eigen::MatrixXcd k = Eigen::MatrixXcd::Zero(8, 8);
+	
 	for (int gp = 0; gp < 4; gp++) {
 		double ksi = gaussPoint(KSI, gp);
 		double eta = gaussPoint(ETA, gp);
-
+	
 		k += weight(KSI, gp) * weight(ETA, gp) * B(ksi, eta).transpose() * D * B(ksi, eta) * std::abs(J(ksi, eta).determinant());
 	}
 	return k;
@@ -148,7 +148,7 @@ Eigen::MatrixXd Quad::localC() {
 				double ksi = gaussPoint(KSI, gp);
 				double eta = gaussPoint(ETA, gp);
 
-				c(i, j) += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * FF(ksi, eta)[j] * std::abs(J(ksi, eta).determinant());
+				c(i, j) += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i].real() * FF(ksi, eta)[j].real() * std::abs(J(ksi, eta).determinant());
 			}
 	return c;
 }
@@ -162,16 +162,16 @@ std::vector<double> Quad::localR(std::vector<double> value) {
 			double ksi = gaussPoint(KSI, gp);
 			double eta = gaussPoint(ETA, gp);
 
-			R[i] += value[i] * weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * std::abs(J(ksi, eta).determinant());
+			R[i] += value[i] * weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i].real() * std::abs(J(ksi, eta).determinant());
 		}
 	return R;
 }
 
-Eigen::MatrixXd Quad::localM() {
+Eigen::MatrixXcd Quad::localM() {
 	if (density == 0.0)
 		throw runtime_error("Error: density is zero in element " + to_string(id));
 
-	Eigen::MatrixXd m = Eigen::MatrixXd::Zero(8, 8);
+	Eigen::MatrixXcd m = Eigen::MatrixXcd::Zero(8, 8);
 
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
@@ -196,20 +196,20 @@ std::vector<double> Quad::coordFF(double x0, double y0, double z0) {
 		F(0) = 0;
 		F(1) = 0;
 		for (int j = 0; j < 4; j++) {
-			F(0) += FF(ksi0, eta0)[j] * x[j];
-			F(1) += FF(ksi0, eta0)[j] * y[j];
+			F(0) += FF(ksi0, eta0)[j].real() * x[j];
+			F(1) += FF(ksi0, eta0)[j].real() * y[j];
 		}
 
 		F(0) -= x0;
 		F(1) -= y0;
 
-		Eigen::Vector2d delta;
+		Eigen::Vector2cd delta;
 		delta = -1 * (J(ksi0, eta0).transpose()).inverse() * F;
 
-		ksi0 += delta(0);
-		eta0 += delta(1);
+		ksi0 += delta(0).real();
+		eta0 += delta(1).real();
 
-		if (std::hypot(delta(0), delta(1)) < 1e-8 || std::hypot(F(0), F(1)) < 1e-8)
+		if (std::hypot(delta(0).real(), delta(1).real()) < 1e-8 || std::hypot(F(0), F(1)) < 1e-8)
 			break;
 	}
 
@@ -218,20 +218,15 @@ std::vector<double> Quad::coordFF(double x0, double y0, double z0) {
 }
 
 double Quad::Volume() {
-	double S = 0;
-
+	std::complex<double> S = 0;
+	
 	for (int i = 0; i < 4; i++)
 		for (int gp = 0; gp < 4; gp++) {
 			double ksi = gaussPoint(KSI, gp);
 			double eta = gaussPoint(ETA, gp);
-
+	
 			S += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * std::abs(J(ksi, eta).determinant());
 		}
-
-	return S;
+	
+	return S.real();
 }
-
-//double quadInfN(double ksi, double eta, std::vector <double> a) {
-//	return ((1 + eta) * (-ksi / (1 - ksi) * a[0] + (1 + ksi / (1 - ksi)) * a[1]) + (1 - eta) * (-ksi / (1 - ksi) * a[2] + (1 + ksi / (1 - ksi)) * a[3])) / 2;
-//}
-// 0 - x_C, 1 - x_Q, 2 - x_C1, 3 - x_Q1

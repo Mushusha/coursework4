@@ -30,16 +30,16 @@ public:
 	}
 	virtual ~Quad() = default;
 
-	Eigen::MatrixXd localK() override;
+	Eigen::MatrixXcd localK() override;
 	std::vector <double> localF() override;
-	Eigen::MatrixXd B(double ksi = 0, double eta = 0, double zeta = 0) override;
-	std::vector<double> FF(double ksi, double eta, double zeta = 0) override;
+	Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
+	std::vector<std::complex<double>> FF(double ksi, double eta, double zeta = 0) override;
 
 	bool pointInElem(std::vector<double> point) override;
 
 	Eigen::MatrixXd localC() override;
 	std::vector <double> localR(std::vector<double> value) override;
-	Eigen::MatrixXd localM() override;
+	Eigen::MatrixXcd localM() override;
 
 	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 	double gaussPoint(LocVar var, int i) override;
@@ -47,8 +47,8 @@ public:
 	double Volume() final;
 
 protected:
-	Eigen::MatrixXd gradFF(double ksi, double eta, double zeta = 0) override;
-	Eigen::MatrixXd J(double ksi, double eta, double zeta = 0) override;
+	Eigen::MatrixXcd gradFF(double ksi, double eta, double zeta = 0) override;
+	Eigen::MatrixXcd J(double ksi, double eta, double zeta = 0) override;
 
 	void set_pressure(int edge, double value) override;
 private:
@@ -82,9 +82,9 @@ public:
 	bool is_dyn;
 	double omega;
 
-	std::vector<double> FF(double ksi, double eta, double zeta = 0) final;
-	double gaussPoint(LocVar var, int i) override;
-	double weight(LocVar var, int i) override;
+	std::vector<std::complex<double>> FF(double ksi, double eta, double zeta = 0) final;
+	double gaussPoint(LocVar var, int i) final;
+	double weight(LocVar var, int i) final;
 
 private:
 	double A;

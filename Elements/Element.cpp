@@ -94,7 +94,7 @@ double Element::get_coord(int loc_node, int comp) {
 	}
 }
 
-double Element::Jac(double ksi, double eta, double zeta) {
+std::complex<double> Element::Jac(double ksi, double eta, double zeta) {
 	return J(ksi, eta, zeta).determinant();
 }
 

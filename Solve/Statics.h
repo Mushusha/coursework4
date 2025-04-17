@@ -23,4 +23,5 @@ public:
 
 private:
 	void calcDisp() final;
+    void toReal();
 };

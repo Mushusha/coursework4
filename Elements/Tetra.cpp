@@ -14,8 +14,8 @@ Eigen::MatrixXd Tetra::C() {
 	return C;
 }
 
-Eigen::MatrixXd Tetra::B(double ksi, double eta, double zeta) {
-	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6, 12);
+Eigen::MatrixXcd Tetra::B(double ksi, double eta, double zeta) {
+	Eigen::MatrixXcd B = Eigen::MatrixXd::Zero(6, 12);
 	Eigen::Matrix4d coef;
 	Eigen::Matrix3d a, b, c, d;
 	for (int i = 0; i < 4; i++) {
@@ -61,7 +61,7 @@ bool Tetra::pointInElem(std::vector<double> point) {
 	return false;
 }
 
-Eigen::MatrixXd Tetra::localK() {
+Eigen::MatrixXcd Tetra::localK() {
 	return B().transpose() * D * B() * C().determinant() / 6;
 }
 
@@ -77,8 +77,8 @@ std::vector<double> Tetra::localR(std::vector<double> value) {
 	return std::vector<double>();
 }
 
-Eigen::MatrixXd Tetra::localM() {
-	return Eigen::MatrixXd();
+Eigen::MatrixXcd Tetra::localM() {
+	return Eigen::MatrixXcd();
 }
 
 std::vector<double> Tetra::coordFF(double x0, double y0, double z0) {
@@ -89,16 +89,16 @@ double Tetra::Volume() {
 	return 0.0;
 }
 
-std::vector<double> Tetra::FF(double ksi, double eta, double zeta) {
-	return std::vector<double>();
+std::vector<std::complex<double>> Tetra::FF(double ksi, double eta, double zeta) {
+	return std::vector<std::complex<double>>();
 }
 
-Eigen::MatrixXd Tetra::gradFF(double ksi, double eta, double zeta) {
-	return Eigen::MatrixXd();
+Eigen::MatrixXcd Tetra::gradFF(double ksi, double eta, double zeta) {
+	return Eigen::MatrixXcd();
 }
 
-Eigen::MatrixXd Tetra::J(double ksi, double eta, double zeta) {
-	return Eigen::MatrixXd();
+Eigen::MatrixXcd Tetra::J(double ksi, double eta, double zeta) {
+	return Eigen::MatrixXcd();
 }
 
 double Tetra::gaussPoint(LocVar var, int i) {

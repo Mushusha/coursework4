@@ -1,8 +1,8 @@
 #include "Hex.h"
 
 
-std::vector<double> Hex::FF(double ksi, double eta, double zeta) {
-	std::vector<double> FF;
+std::vector<std::complex<double>> Hex::FF(double ksi, double eta, double zeta) {
+	std::vector<std::complex<double>> FF;
 	FF[0] = (1 - ksi) * (1 - eta) * (1 - zeta) / 8;
 	FF[1] = (1 + ksi) * (1 - eta) * (1 - zeta) / 8;
 	FF[2] = (1 + ksi) * (1 + eta) * (1 - zeta) / 8;
@@ -14,8 +14,8 @@ std::vector<double> Hex::FF(double ksi, double eta, double zeta) {
 	return FF;
 }
 
-Eigen::MatrixXd Hex::gradFF(double ksi, double eta, double zeta) {
-	Eigen::MatrixXd gradFF;
+Eigen::MatrixXcd Hex::gradFF(double ksi, double eta, double zeta) {
+	Eigen::MatrixXcd gradFF;
 	//for (int i = 0; i < 8; i++) {
 	//	gradFF[KSI][i] = (FF(ksi + h, eta, zeta)[i] - FF(ksi - h, eta, zeta)[i]) / (2 * h);
 	//	gradFF[ETA][i] = (FF(ksi, eta + h, zeta)[i] - FF(ksi, eta - h, zeta)[i]) / (2 * h);
@@ -24,8 +24,8 @@ Eigen::MatrixXd Hex::gradFF(double ksi, double eta, double zeta) {
 	return gradFF;
 }
 
-Eigen::MatrixXd Hex::J(double ksi, double eta, double zeta) {
-	Eigen::Matrix3d J;
+Eigen::MatrixXcd Hex::J(double ksi, double eta, double zeta) {
+	Eigen::Matrix3cd J;
 	double h = 0.01;
 	for (int i = 0; i < 8; i++) {
 		//J(0, 0) = gradFF(ksi, eta, zeta)[KSI][i] * x[i];
@@ -53,9 +53,9 @@ double Hex::weight(LocVar var, int i) {
 	return 0.0;
 }
 
-Eigen::MatrixXd Hex::B(double ksi, double eta, double zeta) {
-	Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6, 24);
-	Eigen::Matrix3d invJ;
+Eigen::MatrixXcd Hex::B(double ksi, double eta, double zeta) {
+	Eigen::MatrixXcd B = Eigen::MatrixXcd::Zero(6, 24);
+	Eigen::Matrix3cd invJ;
 	invJ = J(ksi, eta, zeta).inverse();
 	double h = 0.01;
 	for (int i = 0; i < 8; i++) {
@@ -79,8 +79,8 @@ bool Hex::pointInElem(std::vector<double> point) {
 void Hex::set_pressure(int edge, double value) {
 }
 
-Eigen::MatrixXd Hex::localK() {
-	Eigen::MatrixXd k = Eigen::MatrixXd::Zero(24, 24);
+Eigen::MatrixXcd Hex::localK() {
+	Eigen::MatrixXcd k = Eigen::MatrixXd::Zero(24, 24);
 	std::vector <double> ksi = { 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774, 0.5774 };
 	std::vector <double> eta = { 0.5774, 0.5774, -0.5774, -0.5774, 0.5774, 0.5774, -0.5774, -0.5774 };
 	std::vector <double> zeta = { 0.5774, 0.5774, 0.5774, 0.5774, -0.5774, -0.5774, -0.5774, -0.5774 };
@@ -102,8 +102,8 @@ std::vector<double> Hex::localR(std::vector<double> value) {
 	return std::vector<double>();
 }
 
-Eigen::MatrixXd Hex::localM() {
-	return Eigen::MatrixXd();
+Eigen::MatrixXcd Hex::localM() {
+	return Eigen::MatrixXcd();
 }
 
 std::vector<double> Hex::coordFF(double x0, double y0, double z0) {

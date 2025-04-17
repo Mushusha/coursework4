@@ -1,19 +1,19 @@
 #include "MathMV.h"
 
-void printMatrix(Eigen::SparseMatrix<double>& A) {
+void printMatrix(Eigen::SparseMatrix<std::complex<double>>& A) {
 	for (int i = 0; i < A.innerSize(); i++)
 		for (int j = 0; j < A.outerSize(); j++)
 			if (A.coeffRef(i, j) != 0.0)
 				std::cout << i << " " << j << "\t" << A.coeffRef(i, j) << " " << std::endl;
 }
 
-void printVector(Eigen::SparseVector<double>& B) {
+void printVector(Eigen::SparseVector<std::complex<double>>& B) {
 	for (int i = 0; i < B.size(); i++)
 		if (B.coeffRef(i) != 0.0)
 			std::cout << i << "\t" << B.coeffRef(i) << std::endl;
 }
 
-void printVector(Eigen::VectorX <double>& B) {
+void printVector(Eigen::VectorX <std::complex<double>>& B) {
 	for (int i = 0; i < B.size(); i++)
 		if (B(i) != 0.0)
 			std::cout << i / 2 + 1 << "\t" << i % 2 << "\t" << B(i) << std::endl;

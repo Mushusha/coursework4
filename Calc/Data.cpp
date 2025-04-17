@@ -186,6 +186,8 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 	//		}
 	//	}
 	//}
+
+	num_inf_elems = 0;
 	if (parser->nodesets.size() == 0)
 		return;
 
@@ -217,10 +219,12 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 			this->nodes.push_back(std::make_shared<Node>(elem_nodes[3], coords3));
 		}
 		if (parser->settings.analisys_type == "dynamic") {
+			num_inf_elems++; // complex
 			dynamic_cast<infQuad*>(elem.get())->is_dyn = true;
-			dynamic_cast<infQuad*>(elem.get())->omega = 10; // change
+			dynamic_cast<infQuad*>(elem.get())->omega = 0; // change
 		}
 		n++;
+		num_inf_elems++;
 	}
 }
 

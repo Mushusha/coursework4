@@ -22,10 +22,10 @@ public:
 	virtual ~Dynamics() = default;
 
 private:
-	Eigen::SparseMatrix <double> M; 
+	Eigen::SparseMatrix <std::complex<double>> M;
 	//Eigen::SparseMatrix <double> C;
-	Eigen::VectorX <double> V;
-	Eigen::VectorX <double> A;
+	Eigen::VectorX <std::complex<double>> V;
+	Eigen::VectorX <std::complex<double>> A;
 
 	void fillGlobalM();
 	void updateM();
@@ -42,9 +42,9 @@ private:
 	Eigen::VectorX <double> V_0;
 	Eigen::VectorX <double> A_0;
 
-	void U_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::VectorXd A_prev);
-	void V_curr(Eigen::VectorXd V_prev, Eigen::VectorXd A_prev);
-	void A_curr(Eigen::VectorXd U_prev, Eigen::VectorXd V_prev, Eigen::VectorXd A_prev);
+	void U_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev);
+	void V_curr(Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev);
+	void A_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev);
 
 	void calcDisp() final;
 };

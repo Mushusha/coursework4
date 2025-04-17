@@ -19,7 +19,9 @@ void Interpolation::solve() {
 			if (calc_data.get_elem(i)->pointInElem(points[p])) {
 				//values[p] = elements[i]->results[0][type][comp];
 				std::vector<double> Coord = calc_data.get_elem(i)->coordFF(points[p][0], points[p][1]); // dim == 3
-				std::vector<double> N = calc_data.get_elem(i)->FF(Coord[0], Coord[1]);
+				std::vector<std::complex<double>> cN = calc_data.get_elem(i)->FF(Coord[0], Coord[1]);
+				std::vector<double> N;
+				std::transform(cN.begin(), cN.end(), N.begin(), [](std::complex<double> a) { return a.real(); });
 				for (int node = 0; node < calc_data.get_elem(i)->nodes_count(); node++)
 					for (int comp = 0; comp < numComp(type, calc_data.dim); comp++)
 						if (isTensor(type))

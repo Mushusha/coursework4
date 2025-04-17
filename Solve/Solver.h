@@ -23,10 +23,10 @@ public:
 protected:
 	Data calc_data;
 
-	Eigen::SparseMatrix <double> K;
-	Eigen::SparseVector <double> F;
+	Eigen::SparseMatrix <std::complex<double>> K;
+	Eigen::SparseVector <std::complex<double>> F;
 
-	Eigen::VectorX <double> U; // displacement
+	Eigen::VectorX <std::complex<double>> U; // displacement
 
 	void fillGlobalF(int n = 0);
 
