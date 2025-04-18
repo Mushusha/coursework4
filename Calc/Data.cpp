@@ -7,6 +7,8 @@ Data::Data(const Data& other)
 	damping(other.damping),
 	max_time(other.max_time),
 	max_iter(other.max_iter),
+	omega(other.omega),
+	Amp(other.Amp),
 	elements(other.elements),
 	nodes(other.nodes) {
 }
@@ -18,6 +20,8 @@ Data& Data::operator=(const Data& other) {
 		damping = other.damping;
 		max_time = other.max_time;
 		max_iter = other.max_iter;
+		omega = other.omega;
+		Amp = other.Amp;
 		elements = other.elements;
 		nodes = other.nodes;
 	}
@@ -30,6 +34,8 @@ Data::Data(Data&& other) noexcept
 	damping(std::exchange(other.damping, 0)),
 	max_time(std::exchange(other.max_time, 0)),
 	max_iter(std::exchange(other.max_iter, 0)),
+	omega(std::exchange(other.omega, 0)),
+	Amp(std::exchange(other.Amp, 0)),
 	elements(std::move(other.elements)),
 	nodes(std::move(other.nodes)) {
 }
@@ -41,6 +47,8 @@ Data& Data::operator=(Data&& other) noexcept {
 		damping = std::exchange(other.damping, 0);
 		max_time = std::exchange(other.max_time, 0);
 		max_iter = std::exchange(other.max_iter, 0);
+		omega = std::exchange(other.omega, 0);
+		Amp = std::exchange(other.Amp, 0);
 		elements = std::move(other.elements);
 		nodes = std::move(other.nodes);
 	}
@@ -60,6 +68,8 @@ Data::Data(std::shared_ptr <const Parser> parser) {
 	damping = parser->settings.d;
 	max_time = parser->settings.max_time;
 	max_iter = parser->settings.max_iter;
+	omega = 10; // parser->
+	Amp = 1e+08;
 
 	create_nodes(parser);
 	create_elements(parser);
@@ -221,7 +231,7 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 		if (parser->settings.analisys_type == "dynamic") {
 			num_inf_elems++; // complex
 			dynamic_cast<infQuad*>(elem.get())->is_dyn = true;
-			dynamic_cast<infQuad*>(elem.get())->omega = 0; // change
+			dynamic_cast<infQuad*>(elem.get())->omega = omega;
 		}
 		n++;
 		num_inf_elems++;

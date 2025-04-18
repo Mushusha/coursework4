@@ -35,6 +35,8 @@ public:
 	double max_time;
 	int max_iter;
 	int num_inf_elems;
+	double omega;
+	double Amp;
 	  
 private:
 	Data() = default;

@@ -90,7 +90,7 @@ Eigen::MatrixXcd Hex::localK() {
 	return k;
 }
 
-std::vector<double> Hex::localF() {
+std::vector<double> Hex::localF(double mult) {
 	return std::vector<double>();
 }
 

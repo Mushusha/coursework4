@@ -30,7 +30,7 @@ public:
 	virtual ~Element() = default;
 
 	virtual Eigen::MatrixXcd localK() = 0; // <NODES * DIM, NODES * DIM>
-	virtual std::vector <double> localF() = 0;
+	virtual std::vector <double> localF(double mult = 1) = 0;
 	virtual Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
 	virtual std::vector <std::complex<double>> FF(double ksi, double eta, double zeta = 0) = 0;
 

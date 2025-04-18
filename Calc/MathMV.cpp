@@ -24,6 +24,17 @@ double line(std::vector<double> A, std::vector<double> B, std::vector<double> X)
 	return (X[1] - A[1]) * (B[0] - A[0]) - (X[0] - A[0]) * (B[1] - A[1]);
 }
 
+double berlage(double omega, double A, double time) {
+	double pi = 3.14159265358979323;
+	double omega0 = 2 * pi * omega;
+	double omega1 = omega0 / sqrt(3);
+	double mult = A * pow(omega1, 2) * exp(-omega1 * time) / 4;
+	double term1 = sin(omega0 * time) * (-1 * pow(time, 2) / omega1 + time / pow(omega1, 2) + 1 / pow(omega1, 3));
+	double term2 = cos(omega0 * time) * (pow(time, 2) / omega1 + time / pow(omega1, 2));
+
+	return mult * (term1 - sqrt(3) * term2);
+}
+
 //void KirshError(std::string filename, double P, double R) {
 //	logger& log = logger::log();
 //	log.print("Start calculate Kirsh error");

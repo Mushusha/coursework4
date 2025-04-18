@@ -63,14 +63,15 @@ Eigen::MatrixXcd Tri::localK() {
 	return B().transpose() * D * B() * std::abs(C().determinant() / 2);
 }
 
-std::vector<double> Tri::localF() {
+std::vector<double> Tri::localF(double mult) {
 	std::vector<double> F;
 	F.resize(6);
+
 	// l.first.first - edge, l.first.second - comp, l.second - value
 	for (auto const& l: load) {
 		std::pair<int, int> node = edge_to_node(l.first.first);
-		F[2 * node.first + l.first.second] += l.second * len_edge(l.first.first) / 2;
-		F[2 * node.second + l.first.second] += l.second * len_edge(l.first.first) / 2;
+		F[2 * node.first + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
+		F[2 * node.second + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
 	}
 	return F;
 }

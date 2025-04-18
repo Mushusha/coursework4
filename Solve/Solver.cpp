@@ -71,7 +71,7 @@ void Solver::fillGlobalK() {
 	log.print("End filling stiffness matrix");
 }
 
-void Solver::fillGlobalF(int n) {
+void Solver::fillGlobalF(double mult) {
 	logger& log = logger::log();
 	log.print("Start filling right vector");
 
@@ -81,13 +81,13 @@ void Solver::fillGlobalF(int n) {
 	
 	F.resize(dim * nodes_count);
 	for (int i = 0; i < elems_count; i++) {
-		std::vector<double> loc_f = calc_data.get_elem(i)->localF();
+		std::vector<double> loc_f = calc_data.get_elem(i)->localF(mult);
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
 			F.coeffRef(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim) += loc_f[j];
 	}
 	for (int i = 0; i < calc_data.nodes_count(); i++)
 		for (auto pair : calc_data.get_node(i)->load)
-			F.coeffRef(dim * i + pair.first) += pair.second;
+			F.coeffRef(dim * i + pair.first) += mult * pair.second;
 
 	log.print("End filling right vector");
 }

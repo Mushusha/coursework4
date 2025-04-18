@@ -31,7 +31,7 @@ public:
 	virtual ~Quad() = default;
 
 	Eigen::MatrixXcd localK() override;
-	std::vector <double> localF() override;
+	std::vector <double> localF(double mult = 1) override;
 	Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
 	std::vector<std::complex<double>> FF(double ksi, double eta, double zeta = 0) override;
 

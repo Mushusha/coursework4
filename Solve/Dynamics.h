@@ -5,7 +5,7 @@
 class Dynamics : public Solver { // explicit
 public:
 	Dynamics(Data& data);
-	Dynamics(const Dynamics& other) : Solver(other) {}
+	Dynamics(const Dynamics& other) : Solver(other) {} // add 
 	Dynamics& operator=(const Dynamics& other) {
 		if (this != &other) {
 			Solver::operator=(other);
@@ -35,6 +35,9 @@ private:
 	double delta_t;
 	double alpha;
 	int iter_count;
+
+	double omega;
+	double Amp;
 
 	void calcDelta_t(Data& data);
 

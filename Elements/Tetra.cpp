@@ -65,7 +65,7 @@ Eigen::MatrixXcd Tetra::localK() {
 	return B().transpose() * D * B() * C().determinant() / 6;
 }
 
-std::vector<double> Tetra::localF() {
+std::vector<double> Tetra::localF(double mult) {
 	return std::vector<double>();
 }
 

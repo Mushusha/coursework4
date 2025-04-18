@@ -125,7 +125,7 @@ Eigen::MatrixXcd Quad::localK() {
 	return k;
 }
 
-std::vector<double> Quad::localF() {
+std::vector<double> Quad::localF(double mult) {
 	std::vector<double> F;
 	F.resize(8);
 
@@ -133,8 +133,8 @@ std::vector<double> Quad::localF() {
 	if (load.size() != 0)
 		for (auto const& l : load) {
 			std::pair<int, int> node = edge_to_node(l.first.first);
-			F[2 * node.first + l.first.second] += l.second * len_edge(l.first.first) / 2;
-			F[2 * node.second + l.first.second] += l.second * len_edge(l.first.first) / 2;
+			F[2 * node.first + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
+			F[2 * node.second + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
 		}
 	return F;
 }

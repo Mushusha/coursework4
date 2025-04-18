@@ -28,7 +28,7 @@ protected:
 
 	Eigen::VectorX <std::complex<double>> U; // displacement
 
-	void fillGlobalF(int n = 0);
+	void fillGlobalF(double mult = 1);
 
 	void addToGlobalK(int first_index, int second_index, double value);
 	void addToGlobalF(int index, double value);

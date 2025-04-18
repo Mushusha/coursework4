@@ -26,3 +26,5 @@ void meshConvergence(std::string name1, std::string name2, std::string name3);
 
 void field_name(std::string& filename, int type, int comp, int dim);
 int output_fields(int type, int dim);
+
+double berlage(double omega, double A, double time);

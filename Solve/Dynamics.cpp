@@ -9,6 +9,9 @@ Dynamics::Dynamics(Data& data) : Solver(data) {
 	beta1 = 0.5;
 	alpha = data.damping;
 
+	Amp = data.Amp;
+	omega = data.omega;
+
 	U_0.resize(data.dim * data.nodes_count());
 	U_0.setZero();
 	V_0.resize(data.dim * data.nodes_count());
@@ -72,7 +75,7 @@ void Dynamics::calcDelta_t(Data& data) {
 		v_max = (v_p > v_max) ? v_p : v_max;
 	}
 	delta_t = 0.8 * h_min / v_max;
-	delta_t = 0.001 / 8;
+	delta_t = 0.00684882 / 10;
 }
 
 void Dynamics::U_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev) {
@@ -101,7 +104,7 @@ void Dynamics::calcDisp() {
 	Eigen::VectorXcd A_prev = A_0;
 
 	for (int i = 0; i < iter_count; i++) {
-		fillGlobalF(i);
+		fillGlobalF(berlage(omega, Amp, delta_t *  i));
 
 		A_curr(U_prev, V_prev, A_prev);
 		V_curr(V_prev, A_prev);
@@ -125,13 +128,13 @@ void Dynamics::calcDisp() {
 	file.open("disp_y.txt");
 	for (int i = 0; i < 1618 * 2; i++)
 		if (i % 2 == 1)
-			file << U(i) << std::endl;
+			file << U(i).real() << std::endl;
 	file.close();
 	std::ofstream file1;
 	file1.open("disp_x.txt");
 	for (int i = 0; i < 1618 * 2; i++)
 		if (i % 2 == 0)
-			file1 << U(i) << std::endl;
+			file1 << U(i).real() << std::endl;
 	file1.close();
 
 	A_curr(U_prev, V_prev, A_prev);

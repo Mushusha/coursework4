@@ -11,13 +11,12 @@ std::vector<std::complex<double>> infQuad::FF(double ksi, double eta, double zet
 	 if (is_dyn) {
 		 double pi = 3.14159265358979323;
 		 double v_p = std::sqrt((Young * Poisson / ((1 + Poisson) * (1 - 2 * Poisson)) + Young / (2 * (1 + Poisson))) / density);
-		 A = v_p / (2 * pi * omega);
-		 double Young;
+		 A = v_p / omega;
 		 k = 2 * pi / A;
 
 		 std::complex<double> i(0, 1);
 		 double den = 1.0 - ksi;
-		 std::complex<double> mult = sqrt(2.0 / den) * exp(k * A * i/ 2.0) * sin(k * A * i/ den);
+		 std::complex<double> mult = sqrt(2.0 / den) * exp(k * A * i / 2.0) * exp(k * A * i / den);
 
 		 std::transform(FF.begin(), FF.end(), FF.begin(), [&mult](std::complex<double> a) { return a * mult; });
 	 }
