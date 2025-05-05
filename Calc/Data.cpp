@@ -2,7 +2,6 @@
 
 Data::Data(const Data& other)
 	: dim(other.dim),
-	out_stress(other.out_stress),
 	analisys_type(other.analisys_type),
 	damping(other.damping),
 	max_time(other.max_time),
@@ -15,7 +14,6 @@ Data::Data(const Data& other)
 Data& Data::operator=(const Data& other) {
 	if (this != &other) {
 		dim = other.dim;
-		out_stress = other.out_stress;
 		analisys_type = other.analisys_type;
 		damping = other.damping;
 		max_time = other.max_time;
@@ -29,7 +27,6 @@ Data& Data::operator=(const Data& other) {
 }
 Data::Data(Data&& other) noexcept
 	: dim(std::exchange(other.dim, 0)),
-	out_stress(std::move(other.out_stress)),
 	analisys_type(std::exchange(other.analisys_type, 0)),
 	damping(std::exchange(other.damping, 0)),
 	max_time(std::exchange(other.max_time, 0)),
@@ -42,7 +39,6 @@ Data::Data(Data&& other) noexcept
 Data& Data::operator=(Data&& other) noexcept {
 	if (this != &other) {
 		dim = std::exchange(other.dim, 0);
-		out_stress = std::move(other.out_stress);
 		analisys_type = std::exchange(other.analisys_type, 0);
 		damping = std::exchange(other.damping, 0);
 		max_time = std::exchange(other.max_time, 0);
@@ -86,6 +82,7 @@ void Data::create_nodes(std::shared_ptr <const Parser> parser) {
 		std::array <double, 3> coords;
 		for (int j = 0; j < 3; j++)
 			coords[j] = parser->mesh.nodes_coord[3 * i + j];
+
 		this->nodes.push_back(std::make_shared<Node>(parser->mesh.node_id[i], coords));
 	}
 }
@@ -158,8 +155,8 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 	//		else
 	//			edge = std::make_pair(inf[2 * j + 1], 0);
 	//
-	//		edge.first = this->elements[inf[2 * j]]->get_nodes(edge.first);
-	//		edge.second = this->elements[inf[2 * j]]->get_nodes(edge.second);
+	//		edge.first = this->elements[inf[2 * j]]->get_node(edge.first);
+	//		edge.second = this->elements[inf[2 * j]]->get_node(edge.second);
 	//
 	//		int n = this->nodes.size();
 	//		std::vector<int> elem_nodes = { static_cast<int>(parser->nodesets[0].apply_to[inf_node]), n + 1, n + 2, static_cast<int>(parser->nodesets[0].apply_to[inf_node] + 1) };

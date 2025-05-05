@@ -84,7 +84,7 @@ void Element::set_constants(double E, double nu, double rho) {
 	density = rho;
 }
 
-double Element::get_coord(int loc_node, int comp) {
+double Element::get_coord(int loc_node, int comp) const {
 	if (comp == 0) return x[loc_node];
 	else if (comp == 1) return y[loc_node];
 	else if (comp == 2) return z[loc_node];

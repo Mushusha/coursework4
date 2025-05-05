@@ -5,7 +5,7 @@ Dynamics::Dynamics(Data& data) : Solver(data) {
 	updateM();
 	// ...
 	calcDelta_t(data);
-	iter_count = std::min(static_cast<int>(data.max_time / delta_t), data.max_iter);
+	iter_count = data.max_time / delta_t;//std::min(static_cast<int>(data.max_time / delta_t), data.max_iter);
 	beta1 = 0.5;
 	alpha = data.damping;
 
@@ -33,7 +33,7 @@ void Dynamics::fillGlobalM() {
 		Eigen::MatrixXcd loc_m = calc_data.get_elem(i)->localM();
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
 			for (int k = 0; k < calc_data.get_elem(i)->nodes_count() * dim; k++) {
-				Eigen::Triplet <std::complex<double>> trpl(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim, dim * (calc_data.get_elem(i)->get_nodes(k / dim) - 1) + k % dim, loc_m(j, k));
+				Eigen::Triplet <std::complex<double>> trpl(dim * (calc_data.get_elem(i)->get_node(j / dim) - 1) + j % dim, dim * (calc_data.get_elem(i)->get_node(k / dim) - 1) + k % dim, loc_m(j, k));
 				tripl_vec.push_back(trpl);
 			}
 	}
@@ -75,7 +75,7 @@ void Dynamics::calcDelta_t(Data& data) {
 		v_max = (v_p > v_max) ? v_p : v_max;
 	}
 	delta_t = 0.8 * h_min / v_max;
-	delta_t = 0.00684882 / 10;
+	delta_t = 0.00721869 / 800;
 }
 
 void Dynamics::U_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev) {
@@ -104,38 +104,16 @@ void Dynamics::calcDisp() {
 	Eigen::VectorXcd A_prev = A_0;
 
 	for (int i = 0; i < iter_count; i++) {
-		fillGlobalF(berlage(omega, Amp, delta_t *  i));
+		fillGlobalF(-1 * berlage(omega, Amp, delta_t *  i));
 
 		A_curr(U_prev, V_prev, A_prev);
 		V_curr(V_prev, A_prev);
 		U_curr(U_prev, V_prev, A_prev);
-		
-		//printVector(A);
-		//std::cout << "-----------------------    A   ----------------------" << std::endl;
-		//printVector(V);
-		//std::cout << "-----------------------    V   ----------------------" << std::endl;
-		//printVector(U);
-		//std::cout << "-----------------------    U   ----------------------" << std::endl;
-		//std::cout << "-----------------------    " << i << "   ----------------------" << std::endl;
-
 
 		A_prev = A;
 		V_prev = V;
 		U_prev = U;
 	}
-	//printVector(U);
-	std::ofstream file;
-	file.open("disp_y.txt");
-	for (int i = 0; i < 1618 * 2; i++)
-		if (i % 2 == 1)
-			file << U(i).real() << std::endl;
-	file.close();
-	std::ofstream file1;
-	file1.open("disp_x.txt");
-	for (int i = 0; i < 1618 * 2; i++)
-		if (i % 2 == 0)
-			file1 << U(i).real() << std::endl;
-	file1.close();
 
 	A_curr(U_prev, V_prev, A_prev);
 	V_curr(V_prev, A_prev);

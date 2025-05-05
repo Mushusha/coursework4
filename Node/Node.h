@@ -17,7 +17,6 @@ private:
 	double x;
 	double y;
 	double z;
-	std::map <ResType, std::vector <double>> results; // agreed tensor
 
 public:
 	Node(int id, std::array<double, 3> coords);
@@ -29,12 +28,13 @@ public:
 
 	std::map <int, double> load;
 	std::map <int, double> constraints; // first - component, second - value
+	std::map <ResType, std::vector <double>> results; // agreed tensor
+
 	void set_constraints(int comp, double value); // need ??
 	void set_result(double value, ResType type);
 
 	int getID() { return id; }
-	double getX() { return x; }
-	double getY() { return y; }
-	double getZ() { return z; }
-	double get_result(ResType type, int comp) { return results[type][comp]; }
+	double getX() const { return x; }
+	double getY() const { return y; }
+	double getZ() const { return z; }
 };

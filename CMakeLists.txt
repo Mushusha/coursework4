@@ -1,18 +1,33 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
+set(CMAKE_TOOLCHAIN_FILE "C:/Users/mushu/vcpkg/scripts/buildsystems/vcpkg.cmake")
 project(cw)
 
+set(GLEW_DIR "C:/Users/mushu/vcpkg/installed/x64-windows/share/glew")
+
+set(VTK_NO_AUTO_FIND_GLEW ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "Vcpkg target triplet")
+set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/eigen-3.4.0")
+set(VTK_DIR "C:/Users/mushu/vcpkg/packages/vtk_x64-windows/share/vtk")
+
+find_package(VTK CONFIG REQUIRED)
+find_package(GLEW CONFIG REQUIRED)
+
 source_group(Calc FILES 
 Calc/main.cpp
+Calc/Calc.h
+Calc/Calc.cpp
 Calc/Data.h
 Calc/Data.cpp
 Calc/MathMV.h
 Calc/MathMV.cpp
-Calc/Node.h
-Calc/Node.cpp
 Calc/Enums.h)
+
+source_group(Node FILES
+Node/Node.h
+Node/Node.cpp)
 
 source_group(Elements FILES 
 Elements/Element.h
@@ -46,7 +61,9 @@ Smoothing/Interpolation.cpp)
 
 source_group(Output FILES 
 Output/Output.h
-Output/Output.cpp)
+Output/Output.cpp
+Output/VTUWriter.h
+Output/VTUWriter.cpp)
 
 source_group(Parser FILES 
 Parser/Parser.h
@@ -57,18 +74,18 @@ Tests/Tests.h
 Tests/Tests.cpp
 Tests/log1.h)
 
-
-set(EIGEN3_INCLUDE_DIR "eigen-3.4.0")
-
 add_executable(Core
     Calc/main.cpp
+    Calc/Calc.h
+    Calc/Calc.cpp
     Calc/Data.h
     Calc/Data.cpp
     Calc/MathMV.h
     Calc/MathMV.cpp
-    Calc/Node.h
-    Calc/Node.cpp
     Calc/Enums.h
+
+    Node/Node.h
+    Node/Node.cpp
 
     Elements/Element.h
     Elements/Element.cpp
@@ -93,10 +110,11 @@ add_executable(Core
     Smoothing/Smoothing.cpp
     Smoothing/Interpolation.h
     Smoothing/Interpolation.cpp
-    Smoothing/Fabric.h
 
     Output/Output.h
     Output/Output.cpp
+    Output/VTUWriter.h
+    Output/VTUWriter.cpp
 
     Parser/Parser.h
     Parser/Parser.cpp
@@ -104,6 +122,13 @@ add_executable(Core
     Tests/Tests.h
     Tests/Tests.cpp
     Tests/log1.h
+)
+
+target_link_libraries(Core PRIVATE 
+    VTK::CommonCore
+    VTK::CommonDataModel
+    VTK::IOXML
+    GLEW::GLEW
 )
 
 target_include_directories(Core PRIVATE
@@ -115,4 +140,3 @@ target_include_directories(Core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${EIGEN3_INCLUDE_DIR}
 )
-

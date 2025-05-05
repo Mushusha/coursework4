@@ -45,6 +45,7 @@ private:
 	void fillConstraints();
 
 	void dispToElem();
+	void dispToNode();
 	void calcStrain();
 	void calcStress();
 };

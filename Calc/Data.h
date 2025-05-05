@@ -1,10 +1,9 @@
 #pragma once
 
 #include "Parser.h"
-#include "MathMV.h"
 #include "log1.h"
 #include "Enums.h"
-#include "Node.h"
+#include "Node/Node.h"
 #include "Element.h"
 #include "Tri.h"
 #include "Quad.h"
@@ -26,10 +25,11 @@ public:
 	const int nodes_count() const { return nodes.size(); }
 	const int elements_count() const { return elements.size(); }
 
+	std::vector<shared_ptr<Element>> get_elements() { return elements; }
+	std::vector<shared_ptr<Node>> get_nodes() { return nodes; }
+
 	int dim;
 	std::string analisys_type;
-
-	std::vector<std::vector<double>> out_stress;
 
 	double damping;
 	double max_time;

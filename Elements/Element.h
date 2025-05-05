@@ -17,7 +17,7 @@
 
 #include "Parser.h"
 #include "Enums.h"
-#include "Node.h"
+#include "Node/Node.h"
 #include "log1.h"
 
 class Element {
@@ -48,13 +48,16 @@ public:
 	void set_load(int type, int edge, std::array<double, 6> value); // nodes
 	void set_constants(double E, double nu, double rho);
 
-	int get_nodes(int i) { return nodes[i]; }
-	int nodes_count() { return nodes.size(); }
-	double get_coord(int loc_node, int comp);
+	int get_node(int i) const { return nodes[i]; }
+	std::vector<int> get_node() const { return nodes; }
+	int nodes_count() const { return nodes.size(); }
+	double get_coord(int loc_node, int comp) const;
+	int get_id() const { return id; }
+	ElemType get_type() const { return type; }
 
-	double get_E() { return Young; }
-	double get_nu() { return Poisson; }
-	double get_rho() { return density; }
+	double get_E() const { return Young; }
+	double get_nu() const { return Poisson; }
+	double get_rho() const { return density; }
 	
 	std::complex<double> Jac(double ksi, double eta, double zeta = 0);
 	virtual double gaussPoint(LocVar var, int i) = 0;

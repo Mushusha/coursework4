@@ -90,10 +90,10 @@ double eps = 10e-06;
 //    //    k = data.getElem(elem)->localK();
 //    //    for (int i = 0; i < 3; i++)
 //    //        for (int j = 0; j < 3; j++) {
-//    //            expectedGlobK(2 * data.getElem(elem)->get_nodes(i) - 2, 2 * data.getElem(elem)->get_nodes(j) - 2) += k(2 * i, 2 * j);
-//    //            expectedGlobK(2 * data.getElem(elem)->get_nodes(i) - 1, 2 * data.getElem(elem)->get_nodes(j) - 2) += k(2 * i + 1, 2 * j);
-//    //            expectedGlobK(2 * data.getElem(elem)->get_nodes(i) - 2, 2 * data.getElem(elem)->get_nodes(j) - 1) += k(2 * i, 2 * j + 1);
-//    //            expectedGlobK(2 * data.getElem(elem)->get_nodes(i) - 1, 2 * data.getElem(elem)->get_nodes(j) - 1) += k(2 * i + 1, 2 * j + 1);
+//    //            expectedGlobK(2 * data.getElem(elem)->get_node(i) - 2, 2 * data.getElem(elem)->get_node(j) - 2) += k(2 * i, 2 * j);
+//    //            expectedGlobK(2 * data.getElem(elem)->get_node(i) - 1, 2 * data.getElem(elem)->get_node(j) - 2) += k(2 * i + 1, 2 * j);
+//    //            expectedGlobK(2 * data.getElem(elem)->get_node(i) - 2, 2 * data.getElem(elem)->get_node(j) - 1) += k(2 * i, 2 * j + 1);
+//    //            expectedGlobK(2 * data.getElem(elem)->get_node(i) - 1, 2 * data.getElem(elem)->get_node(j) - 1) += k(2 * i + 1, 2 * j + 1);
 //    //        }
 //    //}
 //

@@ -41,6 +41,7 @@ void Solver::solve() {
 
 	calcDisp();
 	dispToElem();
+	dispToNode();
 	calcStrain();
 	calcStress();
 
@@ -61,8 +62,8 @@ void Solver::fillGlobalK() {
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
 			for (int k = 0; k < calc_data.get_elem(i)->nodes_count() * dim; k++) {
 	
-				Eigen::Triplet <std::complex<double>> trpl(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim, 
-											 dim * (calc_data.get_elem(i)->get_nodes(k / dim) - 1) + k % dim, loc_k(j, k));
+				Eigen::Triplet <std::complex<double>> trpl(dim * (calc_data.get_elem(i)->get_node(j / dim) - 1) + j % dim, 
+											 dim * (calc_data.get_elem(i)->get_node(k / dim) - 1) + k % dim, loc_k(j, k));
 				tripl_vec.push_back(trpl);
 			}
 	}
@@ -83,7 +84,7 @@ void Solver::fillGlobalF(double mult) {
 	for (int i = 0; i < elems_count; i++) {
 		std::vector<double> loc_f = calc_data.get_elem(i)->localF(mult);
 		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
-			F.coeffRef(dim * (calc_data.get_elem(i)->get_nodes(j / dim) - 1) + j % dim) += loc_f[j];
+			F.coeffRef(dim * (calc_data.get_elem(i)->get_node(j / dim) - 1) + j % dim) += loc_f[j];
 	}
 	for (int i = 0; i < calc_data.nodes_count(); i++)
 		for (auto pair : calc_data.get_node(i)->load)
@@ -139,18 +140,25 @@ void Solver::dispToElem() {
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
 			//elements[elem]->results[node][DISPLACEMENT].resize(dim);
 	
-			//elements[elem]->results[node][DISPLACEMENT][X] = U(dim * (elements[elem]->get_nodes(node) - 1));
-			//elements[elem]->results[node][DISPLACEMENT][Y] = U(dim * (elements[elem]->get_nodes(node) - 1) + 1);
+			//elements[elem]->results[node][DISPLACEMENT][X] = U(dim * (elements[elem]->get_node(node) - 1));
+			//elements[elem]->results[node][DISPLACEMENT][Y] = U(dim * (elements[elem]->get_node(node) - 1) + 1);
 			//if (dim == 3)
-			//	elements[elem]->results[node][DISPLACEMENT][Z] = U(dim * (elements[elem]->get_nodes(node) - 1) + 2);
+			//	elements[elem]->results[node][DISPLACEMENT][Z] = U(dim * (elements[elem]->get_node(node) - 1) + 2);
 	
 			calc_data.get_elem(elem)->displacements.resize(dim * calc_data.get_elem(elem)->nodes_count());
-			calc_data.get_elem(elem)->displacements[dim * node] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1)).real();
-			calc_data.get_elem(elem)->displacements[dim * node + 1] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1) + 1).real();
+			calc_data.get_elem(elem)->displacements[dim * node] = U(dim * (calc_data.get_elem(elem)->get_node(node) - 1)).real();
+			calc_data.get_elem(elem)->displacements[dim * node + 1] = U(dim * (calc_data.get_elem(elem)->get_node(node) - 1) + 1).real();
 			if (dim == 3)
-				calc_data.get_elem(elem)->displacements[dim * node + 2] = U(dim * (calc_data.get_elem(elem)->get_nodes(node) - 1) + 2).real();
+				calc_data.get_elem(elem)->displacements[dim * node + 2] = U(dim * (calc_data.get_elem(elem)->get_node(node) - 1) + 2).real();
 		}
 	}
+}
+
+void Solver::dispToNode() {
+	for (int node = 0; node < calc_data.nodes_count(); node++)
+		for (int i = 0; i < calc_data.dim; i++)
+			calc_data.get_node(node)->set_result(U(calc_data.dim * node + i).real(), DISPLACEMENT);
+
 }
 
 void Solver::calcStrain() {
