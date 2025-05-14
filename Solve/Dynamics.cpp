@@ -5,7 +5,11 @@ Dynamics::Dynamics(Data& data) : Solver(data) {
 	updateM();
 	// ...
 	calcDelta_t(data);
-	iter_count = data.max_time / delta_t;//std::min(static_cast<int>(data.max_time / delta_t), data.max_iter);
+
+	filename = data.filename;
+
+	iter_count = data.max_time / delta_t; //std::min(static_cast<int>(data.max_time / delta_t), data.max_iter);
+	iter_res_output = data.iter_res_output;
 	beta1 = 0.5;
 	alpha = data.damping;
 
@@ -75,7 +79,7 @@ void Dynamics::calcDelta_t(Data& data) {
 		v_max = (v_p > v_max) ? v_p : v_max;
 	}
 	delta_t = 0.8 * h_min / v_max;
-	delta_t = 0.00721869 / 800;
+	delta_t = 0.00099157 / 2;
 }
 
 void Dynamics::U_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev) {
@@ -94,8 +98,15 @@ void Dynamics::A_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::V
 
 	A.resize(A_0.size());
 	A.setZero();
-	for (int i = 0; i < A.size(); i++)
+	//for (int i = 0; i < A.size(); i++)
+	//	A(i) = F1(i) / M1.coeffRef(i, i);
+
+	std::vector<int> ind(A.size());
+	std::iota(ind.begin(), ind.end(), 0);
+	
+	std::for_each(std::execution::par, ind.begin(), ind.end(), [&](int i) {
 		A(i) = F1(i) / M1.coeffRef(i, i);
+	});
 }
 
 void Dynamics::calcDisp() {
@@ -104,8 +115,8 @@ void Dynamics::calcDisp() {
 	Eigen::VectorXcd A_prev = A_0;
 
 	for (int i = 0; i < iter_count; i++) {
-		fillGlobalF(-1 * berlage(omega, Amp, delta_t *  i));
-
+		fillGlobalF(berlage(omega, Amp, delta_t *  i));
+		
 		A_curr(U_prev, V_prev, A_prev);
 		V_curr(V_prev, A_prev);
 		U_curr(U_prev, V_prev, A_prev);
@@ -113,8 +124,14 @@ void Dynamics::calcDisp() {
 		A_prev = A;
 		V_prev = V;
 		U_prev = U;
-	}
 
+		if (i % iter_res_output == 0) {
+			dispToNode();
+
+			VTUWriter vtu(calc_data.get_elements(), calc_data.get_nodes()); // change
+			vtu.write(filename + "_" + std::to_string(i / iter_res_output) + ".vtu"); // in directory
+		}
+	}
 	A_curr(U_prev, V_prev, A_prev);
 	V_curr(V_prev, A_prev);
 	U_curr(U_prev, V_prev, A_prev);

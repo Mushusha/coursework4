@@ -1,6 +1,6 @@
 #include "Smoothing.h"
 
-Smoothing::Smoothing(Data& data, ResType type)
+Smoothing::Smoothing(Data& data, std::vector<ResType> type)
 	: calc_data(data), type(type) {
 	fillGlobalC();
 }
@@ -65,23 +65,23 @@ void Smoothing::fillGlobalR(ResType type, int comp) {
 void Smoothing::solve() {
 	logger& log = logger::log();
 	log.print("Start smoothing");
-	
-	for (int comp = 0; comp < numComp(type, calc_data.dim); comp++) {
-		fillGlobalR(type, comp);
+	for (auto t : type) {
+		for (int comp = 0; comp < numComp(t, calc_data.dim); comp++) {
+			fillGlobalR(t, comp);
 
-		Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
-		solver.compute(C);
+			Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+			solver.compute(C);
 
-		if (solver.info() != Eigen::Success)
-			throw runtime_error("Error in C");
+			if (solver.info() != Eigen::Success)
+				throw runtime_error("Error in C");
 
-		Eigen::MatrixXd Result;
-		Result = solver.solve(R);
+			Eigen::MatrixXd Result;
+			Result = solver.solve(R);
 
-		for (int i = 0; i < calc_data.nodes_count(); i++) {
-			calc_data.get_node(i)->set_result(Result(i), type);
+			for (int i = 0; i < calc_data.nodes_count(); i++) {
+				calc_data.get_node(i)->set_result(Result(i), t);
+			}
 		}
 	}
-
 	log.print("End smoothing");
 }

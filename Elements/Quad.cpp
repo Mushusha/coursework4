@@ -173,19 +173,19 @@ Eigen::MatrixXcd Quad::localM() {
 
 	Eigen::MatrixXcd m = Eigen::MatrixXcd::Zero(8, 8);
 
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-			if ((i + j) % 2 == 1)
-				m(i, j) = 0;
-			else
-				for (int gp = 0; gp < 4; gp++) {
-					double ksi = gaussPoint(KSI, gp);
-					double eta = gaussPoint(ETA, gp);
+	for (size_t gp = 0; gp < 4; gp++) {
+		double ksi = gaussPoint(KSI, gp);
+		double eta = gaussPoint(ETA, gp);
 
-					m(2 * i, 2 * j) += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * FF(ksi, eta)[j] * std::abs(J(ksi, eta).determinant());
-					
-					m(2 * i + 1, 2 * j + 1) += m(2 * i, 2 * j);
-				}
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++) {
+				complex<double> M_ij = weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * FF(ksi, eta)[j] * std::abs(J(ksi, eta).determinant());
+
+					m(2 * i, 2 * j) += M_ij;
+					m(2 * i + 1, 2 * j + 1) += M_ij;
+			}
+	}
+
 	return density * m;
 }
 

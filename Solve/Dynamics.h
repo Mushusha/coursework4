@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Solver.h"
+#include "Output/VTUWriter.h"
 
 class Dynamics : public Solver { // explicit
 public:
@@ -31,10 +32,13 @@ private:
 	void updateM();
 	// void fillGlobalC();
 
+	std::string filename;
+
 	double beta1;
 	double delta_t;
 	double alpha;
 	int iter_count;
+	int iter_res_output;
 
 	double omega;
 	double Amp;

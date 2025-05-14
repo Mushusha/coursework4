@@ -81,14 +81,27 @@ void Solver::fillGlobalF(double mult) {
 	int dim = calc_data.dim;
 	
 	F.resize(dim * nodes_count);
-	for (int i = 0; i < elems_count; i++) {
-		std::vector<double> loc_f = calc_data.get_elem(i)->localF(mult);
-		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
-			F.coeffRef(dim * (calc_data.get_elem(i)->get_node(j / dim) - 1) + j % dim) += loc_f[j];
+
+	if (calc_data.analisys_type == "statics")
+		for (int i = 0; i < elems_count; i++) {
+			std::vector<double> loc_f = calc_data.get_elem(i)->localF(mult);
+			for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
+				F.coeffRef(dim * (calc_data.get_elem(i)->get_node(j / dim) - 1) + j % dim) += loc_f[j];
+		}
+	else {
+		//for (int i = 0; i < calc_data.nodes_count(); i++)
+		//	for (auto pair : calc_data.get_node(i)->load)
+		//		F.coeffRef(dim * i + pair.first) += mult * pair.second;
+
+		std::vector<size_t> ind(calc_data.nodes_count());
+		std::iota(ind.begin(), ind.end(), 0);
+		
+		std::for_each(std::execution::par, ind.begin(), ind.end(), [&](size_t i) {
+			for (auto pair : calc_data.get_node(i)->load) {
+				F.coeffRef(dim * i + pair.first) += mult * pair.second;
+			}
+		});
 	}
-	for (int i = 0; i < calc_data.nodes_count(); i++)
-		for (auto pair : calc_data.get_node(i)->load)
-			F.coeffRef(dim * i + pair.first) += mult * pair.second;
 
 	log.print("End filling right vector");
 }
@@ -155,10 +168,11 @@ void Solver::dispToElem() {
 }
 
 void Solver::dispToNode() {
-	for (int node = 0; node < calc_data.nodes_count(); node++)
+	for (int node = 0; node < calc_data.nodes_count(); node++) {
+		calc_data.get_node(node)->results[DISPLACEMENT].clear();
 		for (int i = 0; i < calc_data.dim; i++)
 			calc_data.get_node(node)->set_result(U(calc_data.dim * node + i).real(), DISPLACEMENT);
-
+	}
 }
 
 void Solver::calcStrain() {

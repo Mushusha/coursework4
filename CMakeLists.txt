@@ -14,6 +14,7 @@ set(VTK_DIR "C:/Users/mushu/vcpkg/packages/vtk_x64-windows/share/vtk")
 
 find_package(VTK CONFIG REQUIRED)
 find_package(GLEW CONFIG REQUIRED)
+find_package(pugixml REQUIRED)
 
 source_group(Calc FILES 
 Calc/main.cpp
@@ -62,6 +63,8 @@ Smoothing/Interpolation.cpp)
 source_group(Output FILES 
 Output/Output.h
 Output/Output.cpp
+Output/VTUWriter.h
+Output/VTUWriter.cpp
 Output/VTUWriter.h
 Output/VTUWriter.cpp)
 
@@ -115,6 +118,8 @@ add_executable(Core
     Output/Output.cpp
     Output/VTUWriter.h
     Output/VTUWriter.cpp
+    Output/PVDWriter.h
+    Output/PVDWriter.cpp
 
     Parser/Parser.h
     Parser/Parser.cpp
@@ -129,6 +134,7 @@ target_link_libraries(Core PRIVATE
     VTK::CommonDataModel
     VTK::IOXML
     GLEW::GLEW
+    pugixml::pugixml
 )
 
 target_include_directories(Core PRIVATE

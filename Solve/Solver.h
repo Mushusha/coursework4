@@ -1,5 +1,9 @@
 #pragma once
 
+#include <execution>
+#include <algorithm>
+#include <vector>
+
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
 #include "Eigen/SparseCholesky"
@@ -34,6 +38,7 @@ protected:
 	void addToGlobalF(int index, double value);
 
 	void zeroDiagonalCheck();
+	void dispToNode();
 
 	virtual void calcDisp() = 0;
 
@@ -45,7 +50,6 @@ private:
 	void fillConstraints();
 
 	void dispToElem();
-	void dispToNode();
 	void calcStrain();
 	void calcStress();
 };

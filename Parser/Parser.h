@@ -112,6 +112,7 @@ struct settings {
 	void read(json settings);
 	double max_time;
 	int max_iter;
+	int iter_res_output;
 	double d;
 };
 
@@ -129,7 +130,9 @@ public:
 	settings settings;
 	void read(string filename);
 
+	std::string get_filename() const { return filename; }
+
 private:
-	string filename;
+	std::string filename;
 };
 #pragma once

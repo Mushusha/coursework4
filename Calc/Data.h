@@ -31,10 +31,15 @@ public:
 	int dim;
 	std::string analisys_type;
 
+	std::string filename;
+
 	double damping;
 	double max_time;
 	int max_iter;
+	int iter_res_output;
+
 	int num_inf_elems;
+
 	double omega;
 	double Amp;
 	  

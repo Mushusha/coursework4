@@ -7,6 +7,7 @@
 #include "Smoothing/Interpolation.h"
 #include "Output/Output.h"
 #include "Output/VTUWriter.h"
+#include "Output/PVDWriter.h"
 #include "Fabric.h"
 
 class Calculate {

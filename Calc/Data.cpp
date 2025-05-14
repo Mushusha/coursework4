@@ -2,10 +2,12 @@
 
 Data::Data(const Data& other)
 	: dim(other.dim),
+	filename(other.filename),
 	analisys_type(other.analisys_type),
 	damping(other.damping),
 	max_time(other.max_time),
 	max_iter(other.max_iter),
+	iter_res_output(other.iter_res_output),
 	omega(other.omega),
 	Amp(other.Amp),
 	elements(other.elements),
@@ -14,10 +16,12 @@ Data::Data(const Data& other)
 Data& Data::operator=(const Data& other) {
 	if (this != &other) {
 		dim = other.dim;
+		filename = other.filename;
 		analisys_type = other.analisys_type;
 		damping = other.damping;
 		max_time = other.max_time;
 		max_iter = other.max_iter;
+		iter_res_output = other.iter_res_output;
 		omega = other.omega;
 		Amp = other.Amp;
 		elements = other.elements;
@@ -27,10 +31,12 @@ Data& Data::operator=(const Data& other) {
 }
 Data::Data(Data&& other) noexcept
 	: dim(std::exchange(other.dim, 0)),
+	filename(std::move(other.filename)),
 	analisys_type(std::exchange(other.analisys_type, 0)),
 	damping(std::exchange(other.damping, 0)),
 	max_time(std::exchange(other.max_time, 0)),
 	max_iter(std::exchange(other.max_iter, 0)),
+	iter_res_output(std::exchange(other.iter_res_output, 0)),
 	omega(std::exchange(other.omega, 0)),
 	Amp(std::exchange(other.Amp, 0)),
 	elements(std::move(other.elements)),
@@ -39,10 +45,12 @@ Data::Data(Data&& other) noexcept
 Data& Data::operator=(Data&& other) noexcept {
 	if (this != &other) {
 		dim = std::exchange(other.dim, 0);
+		filename = std::move(other.filename);
 		analisys_type = std::exchange(other.analisys_type, 0);
 		damping = std::exchange(other.damping, 0);
 		max_time = std::exchange(other.max_time, 0);
 		max_iter = std::exchange(other.max_iter, 0);
+		iter_res_output = std::exchange(other.iter_res_output, 0);
 		omega = std::exchange(other.omega, 0);
 		Amp = std::exchange(other.Amp, 0);
 		elements = std::move(other.elements);
@@ -60,10 +68,13 @@ Data::Data(std::shared_ptr <const Parser> parser) {
 	else
 		this->dim = 3;
 
+	filename = parser->get_filename();
+
 	analisys_type = parser->settings.analisys_type;
 	damping = parser->settings.d;
 	max_time = parser->settings.max_time;
 	max_iter = parser->settings.max_iter;
+	iter_res_output = parser->settings.iter_res_output;
 	omega = 10; // parser->
 	Amp = 1e+08;
 
