@@ -12,16 +12,12 @@ void Calculate::Solve() {
 	Smoothing stress(data, { STRESS });
 	stress.solve();
 
-	//Smoothing strain(data, { STRAIN, STRESS });
-	//strain.solve();
-
 	VTUWriter writer(data.get_elements(), data.get_nodes());
-	writer.write(file + ".vtu");
+	writer.write(file + ".vtu"); // in dir
 
     try { // change
         std::vector<fs::path> vtu_files;
 
-        // Собираем все VTU файлы в директории
         for (const auto& entry : fs::directory_iterator(std::filesystem::current_path())) {
             if (entry.path().extension() == ".vtu") {
                 vtu_files.push_back(entry.path());

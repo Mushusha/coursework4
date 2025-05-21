@@ -8,7 +8,7 @@ Dynamics::Dynamics(Data& data) : Solver(data) {
 
 	filename = data.filename;
 
-	iter_count = data.max_time / delta_t; //std::min(static_cast<int>(data.max_time / delta_t), data.max_iter);
+	iter_count = std::min(static_cast<int>(data.max_time / delta_t), data.max_iter);
 	iter_res_output = data.iter_res_output;
 	beta1 = 0.5;
 	alpha = data.damping;
@@ -69,7 +69,7 @@ void Dynamics::updateM() {
 }
 
 void Dynamics::calcDelta_t(Data& data) {
-	double h_min = data.get_elem(0)->Volume();
+	double h_min = data.get_elem(0)->Volume(); // len
 	double v_max = 0;
 	for (int i = 0; i < data.elements_count() - data.num_inf_elems; i++) {
 		h_min = (h_min > data.get_elem(i)->Volume()) ? data.get_elem(i)->Volume() : h_min;
@@ -79,7 +79,6 @@ void Dynamics::calcDelta_t(Data& data) {
 		v_max = (v_p > v_max) ? v_p : v_max;
 	}
 	delta_t = 0.8 * h_min / v_max;
-	delta_t = 0.00099157 / 2;
 }
 
 void Dynamics::U_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev) {
