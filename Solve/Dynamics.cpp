@@ -109,6 +109,9 @@ void Dynamics::A_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::V
 }
 
 void Dynamics::calcDisp() {
+	std::filesystem::create_directory(filename);
+	std::string full_path = (std::filesystem::path(filename) / filename).string();
+
 	Eigen::VectorXcd U_prev = U_0;
 	Eigen::VectorXcd V_prev = V_0;
 	Eigen::VectorXcd A_prev = A_0;
@@ -124,11 +127,12 @@ void Dynamics::calcDisp() {
 		V_prev = V;
 		U_prev = U;
 
+
 		if (i % iter_res_output == 0) {
 			dispToNode();
 
-			VTUWriter vtu(calc_data.get_elements(), calc_data.get_nodes()); // change
-			vtu.write(filename + "_" + std::to_string(i / iter_res_output) + ".vtu"); // in directory
+			VTUWriter vtu(calc_data.get_elements(), calc_data.get_nodes());
+			vtu.write(full_path + "_" + std::to_string(i / iter_res_output) + ".vtu");
 		}
 	}
 	A_curr(U_prev, V_prev, A_prev);

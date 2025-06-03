@@ -15,6 +15,7 @@ set(VTK_DIR "C:/Users/mushu/vcpkg/packages/vtk_x64-windows/share/vtk")
 find_package(VTK CONFIG REQUIRED)
 find_package(GLEW CONFIG REQUIRED)
 find_package(pugixml REQUIRED)
+find_package(GTest REQUIRED) 
 
 source_group(Calc FILES 
 Calc/main.cpp
@@ -65,8 +66,8 @@ Output/Output.h
 Output/Output.cpp
 Output/VTUWriter.h
 Output/VTUWriter.cpp
-Output/VTUWriter.h
-Output/VTUWriter.cpp)
+Output/PVDWriter.h
+Output/PVDWriter.cpp)
 
 source_group(Parser FILES 
 Parser/Parser.h
@@ -135,6 +136,8 @@ target_link_libraries(Core PRIVATE
     VTK::IOXML
     GLEW::GLEW
     pugixml::pugixml
+    GTest::GTest
+    GTest::Main
 )
 
 target_include_directories(Core PRIVATE

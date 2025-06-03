@@ -13,10 +13,12 @@ void Calculate::Solve() {
 	stress.solve();
 
 	VTUWriter writer(data.get_elements(), data.get_nodes());
-	writer.write(file + ".vtu"); // in dir
+	writer.write(file + ".vtu");
 
     try { // change
         std::vector<fs::path> vtu_files;
+        std::filesystem::create_directory(file);
+        std::string full_path = (std::filesystem::path(file) / file).string();
 
         for (const auto& entry : fs::directory_iterator(std::filesystem::current_path())) {
             if (entry.path().extension() == ".vtu") {
@@ -36,7 +38,7 @@ void Calculate::Solve() {
                       return a.time < b.time;
                   });
 
-        create_pvd_file(timesteps, file + ".pvd");
+        create_pvd_file(timesteps, full_path + ".pvd");
     }
     catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

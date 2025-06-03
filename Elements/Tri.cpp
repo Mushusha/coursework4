@@ -112,7 +112,7 @@ std::vector<double> Tri::coordFF(double x0, double y0, double z0) {
 }
 
 double Tri::Volume() {
-	return C().determinant();
+	return C().determinant() / 2;
 }
 
 std::vector<std::complex<double>> Tri::FF(double ksi, double eta, double zeta) {
