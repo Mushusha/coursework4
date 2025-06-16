@@ -53,14 +53,3 @@ protected:
 private:
 	Eigen::MatrixXd C();
 };
-
-//class tetraInfElement : public Tetra {
-//public:
-//	tetraInfElement() {};
-//	virtual ~tetraInfElement() = default;
-//	/*
-//	dim = 3;
-//	numNodes = 4;
-//	tetraLocK();
-//	*/
-//};

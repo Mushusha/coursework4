@@ -228,7 +228,7 @@ void restraints::read(json restraints) {
 	for (size_t i = 0; i < restraints["data"].size(); i++) {
 		std::string s_data = restraints["data"][i];
 		base64_decode(s_data);
-		this->data[i] = ReadDouble(s_data, i);
+		this->data[i] = ReadDouble(s_data, 0);
 	}
 
 	for (size_t i = 0; i < restraints["flag"].size(); i++)

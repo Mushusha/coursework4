@@ -70,15 +70,33 @@ std::vector<double> Tetra::localF(double mult) {
 }
 
 Eigen::MatrixXd Tetra::localC() {
-	return Eigen::MatrixXd();
+	Eigen::MatrixXd c(4, 4);
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			c(i, j) = (i == j) ? (std::abs(C().determinant() / 60)) : std::abs((C().determinant() / 120));
+	return c;
 }
 
 std::vector<double> Tetra::localR(std::vector<double> value) {
-	return std::vector<double>();
+	std::vector<double> R;
+	R.resize(4);
+	for (int i = 0; i < 4; i++)
+		R[i] = value[i] * std::abs(C().determinant() / 24);
+	return R;
 }
 
 Eigen::MatrixXcd Tetra::localM() {
-	return Eigen::MatrixXcd();
+	if (density == 0.0)
+		throw runtime_error("Error: density is zero in element " + to_string(id));
+
+	Eigen::MatrixXd m(12, 12);
+	for (int i = 0; i < 12; i++)
+		for (int j = 0; j < 12; j++)
+			if ((i + j) % 2 == 1)
+				m(i, j) = 0;
+			else
+				m(i, j) = (i == j) ? (std::abs(C().determinant() / 60)) : std::abs((C().determinant() / 120));
+	return density * m;
 }
 
 std::vector<double> Tetra::coordFF(double x0, double y0, double z0) {
@@ -86,11 +104,16 @@ std::vector<double> Tetra::coordFF(double x0, double y0, double z0) {
 }
 
 double Tetra::Volume() {
-	return 0.0;
+	return C().determinant() / 6;
 }
 
 std::vector<std::complex<double>> Tetra::FF(double ksi, double eta, double zeta) {
-	return std::vector<std::complex<double>>();
+	std::vector<std::complex<double>> FF;
+	FF.resize(4);
+	Eigen::Vector4cd f = { 1, ksi, eta, zeta };
+	Eigen::Vector4cd ff = f.transpose() * C().inverse();
+	FF = { ff(0), ff(1), ff(2), ff(3)};
+	return FF;
 }
 
 Eigen::MatrixXcd Tetra::gradFF(double ksi, double eta, double zeta) {
@@ -110,4 +133,18 @@ double Tetra::weight(LocVar var, int i) {
 }
 
 void Tetra::set_pressure(int edge, double value) {
+	//std::pair<int, int> node = edge_to_node(edge);
+	//std::array<double, 2> comp;
+	//comp[0] = -y[node.first] + y[node.second];
+	//comp[1] = x[node.first] - x[node.second];
+
+	//if ((x[node.first] - x[node.second]) * (y[node.first] - y[3 - node.first - node.second]) -
+	//	(y[node.first] - y[node.second]) * (x[node.first] - x[3 - node.first - node.second]) < 0)
+	//	for (auto& i : comp)
+	//		i *= -1;
+
+	//for (int i = 0; i < 2; i++) {
+	//	std::pair <int, int> pair(edge, i);
+	//	load.insert({ pair, -value * comp[i] / len_edge(edge) });
+	//}
 }

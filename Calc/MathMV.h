@@ -14,9 +14,9 @@
 
 // MV - matrix vector
 
-void printMatrix(Eigen::SparseMatrix<std::complex<double>>& A);
-void printVector(Eigen::SparseVector<std::complex<double>>& B);
-void printVector(Eigen::VectorX <std::complex<double>>& B);
+void print(Eigen::SparseMatrix<std::complex<double>>& A);
+void print(Eigen::SparseVector<std::complex<double>>& B);
+void print(Eigen::VectorX <std::complex<double>>& B);
 void productMV(Eigen::MatrixXd A, std::vector<double> b, std::vector<double>& c);
 double line(std::vector<double> a, std::vector<double> b, std::vector<double> x);
 void output_points(std::vector<double> start, std::vector<double> end, int count, std::vector<std::vector<double>>& points);

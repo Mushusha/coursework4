@@ -313,17 +313,27 @@ void Data::create_D(std::shared_ptr <const Parser> parser) {
 			double Poisson = this->elements[i]->get_nu();
 			double Young = this->elements[i]->get_E();
 
-			this->elements[i]->D = Eigen::MatrixXd::Zero(6, 6);
-			for (int i = 0; i < 6; i++)
-				for (int j = 0; j < 3; j++) {
-					if (i == j && i < 3)
-						this->elements[i]->D(i, j) = 1;
-					if (i != j && i < 3)
-						this->elements[i]->D(i, j) = Poisson / (1 - Poisson);
-					if (i >= 3)
-						this->elements[i]->D(i, i) = (1 - 2 * Poisson) / (2 * (1 - Poisson));
-				}
+			double factor = Young * (1 - Poisson) / ((1 + Poisson) * (1 - 2 * Poisson));
 
-			this->elements[i]->D *= Young * (1 - Poisson) / ((1 + Poisson) * (1 - 2 * Poisson));
+			this->elements[i]->D = Eigen::MatrixXd::Zero(6, 6);
+
+			this->elements[i]->D(0, 0) = 1.0;
+			this->elements[i]->D(0, 1) = Poisson / (1 - Poisson);
+			this->elements[i]->D(0, 2) = Poisson / (1 - Poisson);
+
+			this->elements[i]->D(1, 1) = 1.0;
+			this->elements[i]->D(1, 2) = Poisson / (1 - Poisson);
+
+			this->elements[i]->D(2, 2) = 1.0;
+
+			this->elements[i]->D(3, 3) = (1 - 2 * Poisson) / (2 * (1 - Poisson));
+			this->elements[i]->D(4, 4) = (1 - 2 * Poisson) / (2 * (1 - Poisson));
+			this->elements[i]->D(5, 5) = (1 - 2 * Poisson) / (2 * (1 - Poisson));
+
+			this->elements[i]->D *= factor;
+
+			for (int j = 0; j < 6; j++)
+				for (int k = j + 1; k < 6; k++)
+					this->elements[i]->D(k, j) = this->elements[i]->D(j, k);
 		}
 }

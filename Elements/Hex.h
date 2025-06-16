@@ -51,15 +51,3 @@ protected:
 
 	void set_pressure(int edge, double value);
 };
-
-//class hexaInfElement : public Hex {
-//public:
-//	hexaInfElement() {};
-//	virtual ~hexaInfElement() = default;
-//	/*
-//	dim = 3;
-//	numNodes = 8;
-//	quadLocK(hexaInfN);
-//	*/
-//};
-
