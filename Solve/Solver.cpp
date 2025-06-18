@@ -83,7 +83,6 @@ void Solver::fillGlobalF(double mult) {
 
 	F.resize(dim * nodes_count);
 
-
 	for (int i = 0; i < elems_count; i++) {
 		std::vector<double> loc_f = calc_data.get_elem(i)->localF(mult);
 		if (loc_f.size() != 0)
@@ -97,7 +96,7 @@ void Solver::fillGlobalF(double mult) {
 
 	std::vector<size_t> ind(calc_data.nodes_count());
 	std::iota(ind.begin(), ind.end(), 0);
-
+	
 	std::for_each(std::execution::par, ind.begin(), ind.end(), [&](size_t i) {
 		for (auto pair : calc_data.get_node(i)->load) {
 			F.coeffRef(dim * i + pair.first) += mult * pair.second;

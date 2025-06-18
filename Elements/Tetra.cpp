@@ -17,44 +17,43 @@ Eigen::MatrixXd Tetra::C() {
 Eigen::MatrixXcd Tetra::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd B = Eigen::MatrixXd::Zero(6, 12);
 	Eigen::Matrix4d coef;
-	Eigen::Matrix3d a, b, c, d;
+	Eigen::Matrix3d b, c, d;
+
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 3; j++) {
-			a(j, 0) = x[(i + j + 1) % 4];
-			a(j, 1) = y[(i + j + 1) % 4];
-			a(j, 2) = z[(i + j + 1) % 4];
-	
+			int ind = (i + j + 1) % 4;
+
 			b(j, 0) = 1;
-			b(j, 1) = y[(i + j + 1) % 4];
-			b(j, 2) = z[(i + j + 1) % 4];
-	
-			c(j, 0) = x[(i + j + 1) % 4];
+			b(j, 1) = y[ind];
+			b(j, 2) = z[ind];
+
+			c(j, 0) = x[ind];
 			c(j, 1) = 1;
-			c(j, 2) = z[(i + j + 1) % 4];
-	
-			d(j, 0) = x[(i + j + 1) % 4];
-			d(j, 1) = y[(i + j + 1) % 4];
+			c(j, 2) = z[ind];
+
+			d(j, 0) = x[ind];
+			d(j, 1) = y[ind];
 			d(j, 2) = 1;
 		}
-		coef(0, i) = a.determinant();
-		coef(1, i) = -1 * b.determinant();
-		coef(2, i) = -1 * c.determinant();
-		coef(3, i) = -1 * d.determinant();
+		int mult = (i % 2 == 0) ? -1 : 1;
+		coef(1, i) = mult * b.determinant();
+		coef(2, i) = mult * c.determinant();
+		coef(3, i) = mult * d.determinant();
 	}
 
 	for (int i = 0; i < 4; i++) {
-		B(0, i * 3) = coef(i, 1);
-		B(1, i * 3 + 1) = coef(i, 2);
-		B(2, i * 3 + 2) = coef(i, 3);
-		B(3, i * 3) = coef(i, 2);
-		B(3, i * 3 + 1) = coef(i, 1);
-		B(4, i * 3 + 1) = coef(i, 3);
-		B(4, i * 3 + 2) = coef(i, 2);
-		B(5, i * 3) = coef(i, 3);
-		B(5, i * 3 + 2) = coef(i, 1);
+		B(0, i * 3) = coef(1, i);
+		B(1, i * 3 + 1) = coef(2, i);
+		B(2, i * 3 + 2) = coef(3, i);
+		B(3, i * 3) = coef(2, i);
+		B(3, i * 3 + 1) = coef(1, i);
+		B(4, i * 3 + 1) = coef(3, i);
+		B(4, i * 3 + 2) = coef(2, i);
+		B(5, i * 3) = coef(3, i);
+		B(5, i * 3 + 2) = coef(1, i);
 	}
 
-	return B / (6 * C().determinant());
+	return B / C().determinant();
 }
 
 bool Tetra::pointInElem(std::vector<double> point) {

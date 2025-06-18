@@ -100,7 +100,7 @@ struct restraints {
 	std::vector<lint> apply_to;
 	int size;
 	int cs;
-	double data[6];
+	double data[3];
 	int flag[6];
 	void read(json restraints);
 };

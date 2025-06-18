@@ -204,7 +204,7 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 	//		}
 	//	}
 	//}
-
+	return;
 	num_inf_elems = 0;
 	if (parser->nodesets.size() == 0)
 		return;
@@ -256,7 +256,7 @@ void Data::create_constraints(std::shared_ptr <const Parser> parser) {
 	for (int id = 0; id < parser->restraints.size(); id++) {
 		auto& restraints = parser->restraints[id];
 		for (int node = 0; node < restraints.size; node++)
-			for (int i = 0; i < 6; i++)
+			for (int i = 0; i < 3; i++)
 				if (restraints.flag[i])
 					nodes[restraints.apply_to[node] - 1]->set_constraints(i, restraints.data[i]);
 	}

@@ -225,7 +225,7 @@ void restraints::read(json restraints) {
 	for (size_t i = 0; i < this->apply_to.size(); i++)
 		this->apply_to[i] = ReadInt(s_apply_to, i);
 
-	for (size_t i = 0; i < restraints["data"].size(); i++) {
+	for (size_t i = 0; i < 3/*restraints["data"].size()*/; i++) {
 		std::string s_data = restraints["data"][i];
 		base64_decode(s_data);
 		this->data[i] = ReadDouble(s_data, 0);
