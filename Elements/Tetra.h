@@ -52,4 +52,7 @@ protected:
 
 private:
 	Eigen::MatrixXd C();
+	std::array<int, 3> edge_to_node(int edge);
+	std::array<double, 3> normal(int edge);
+	double area_edge(int edge);
 };

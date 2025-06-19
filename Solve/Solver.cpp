@@ -102,7 +102,6 @@ void Solver::fillGlobalF(double mult) {
 			F.coeffRef(dim * i + pair.first) += mult * pair.second;
 		}
 	});
-
 	log.print("End filling right vector");
 }
 

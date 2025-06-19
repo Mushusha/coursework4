@@ -65,7 +65,17 @@ Eigen::MatrixXcd Tetra::localK() {
 }
 
 std::vector<double> Tetra::localF(double mult) {
-	return std::vector<double>();
+	std::vector<double> F;
+	F.resize(12);
+
+	// l.first.first - edge, l.first.second - comp, l.second - value
+	for (auto const& l : load) {
+		std::array<int, 3> node = edge_to_node(l.first.first);
+		F[3 * node[0] + l.first.second] += mult * l.second / 3;
+		F[3 * node[1] + l.first.second] += mult * l.second / 3;
+		F[3 * node[2] + l.first.second] += mult * l.second / 3;
+	}
+	return F;
 }
 
 Eigen::MatrixXd Tetra::localC() {
@@ -131,19 +141,58 @@ double Tetra::weight(LocVar var, int i) {
 	return 0.0;
 }
 
+std::array<int, 3> Tetra::edge_to_node(int edge) {
+	switch (edge) {
+	case 0:
+		return { 0, 2, 3 };
+	case 1:
+		return { 2, 3, 1 };
+	case 2:
+		return { 0, 1, 3 };
+	case 3:
+		return { 1, 0, 2 };
+	default:
+		throw runtime_error("Error: wrong edge");
+	}
+}
+
+std::array<double, 3> Tetra::normal(int edge) {
+	std::array<int, 3> node = edge_to_node(edge);
+
+	double v1x = x[node[1]] - x[node[0]];
+	double v1y = y[node[1]] - y[node[0]];
+	double v1z = z[node[1]] - z[node[0]];
+
+	double v2x = x[node[2]] - x[node[0]];
+	double v2y = y[node[2]] - y[node[0]];
+	double v2z = z[node[2]] - z[node[0]];
+
+	double nx = v1y * v2z - v1z * v2y;
+	double ny = v1z * v2x - v1x * v2z;
+	double nz = v1x * v2y - v1y * v2x;
+
+	return { nx, ny, nz };
+}
+
+double Tetra::area_edge(int edge) {
+	std::array<double, 3> n = normal(edge);
+	return std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]) / 2;
+}
+
 void Tetra::set_pressure(int edge, double value) {
-	//std::pair<int, int> node = edge_to_node(edge);
-	//std::array<double, 2> comp;
-	//comp[0] = -y[node.first] + y[node.second];
-	//comp[1] = x[node.first] - x[node.second];
+	std::array<int, 3> node = edge_to_node(edge);
+	std::array<double, 3> comp;
 
-	//if ((x[node.first] - x[node.second]) * (y[node.first] - y[3 - node.first - node.second]) -
-	//	(y[node.first] - y[node.second]) * (x[node.first] - x[3 - node.first - node.second]) < 0)
-	//	for (auto& i : comp)
-	//		i *= -1;
+	double area = area_edge(edge);
 
-	//for (int i = 0; i < 2; i++) {
-	//	std::pair <int, int> pair(edge, i);
-	//	load.insert({ pair, -value * comp[i] / len_edge(edge) });
-	//}
+	std::array<double, 3> n = normal(edge);
+	double len_norm = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+
+	for (auto& i : n)
+		i /= len_norm;
+	
+	for (int i = 0; i < 3; i++) {
+		std::pair <int, int> pair(edge, i);
+		load.insert({ pair, -value * n[i] * area });
+	}
 }
