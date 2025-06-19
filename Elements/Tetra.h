@@ -28,21 +28,24 @@ public:
 	}
 	virtual ~Tetra() = default;
 
+	std::vector <std::complex<double>> FF(double ksi, double eta, double zeta) override;
+	Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
+
 	Eigen::MatrixXcd localK() override;
 	std::vector <double> localF(double mult = 1) override;
-	Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
-	std::vector <std::complex<double>> FF(double ksi, double eta, double zeta) override;
 
-	bool pointInElem(std::vector<double> point) override;
+	std::vector<int> edge_to_node(int edge) final;
 
 	Eigen::MatrixXd localC() override;
 	std::vector <double> localR(std::vector<double> value) override;
 	Eigen::MatrixXcd localM() override;
 
-	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 	double gaussPoint(LocVar var, int i) override;
 	double weight(LocVar var, int i) override;
 	double Volume() final;
+
+	bool pointInElem(std::vector<double> point) override;
+	std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 
 protected:
 	Eigen::MatrixXcd gradFF(double ksi, double eta, double zeta) override;
@@ -52,7 +55,7 @@ protected:
 
 private:
 	Eigen::MatrixXd C();
-	std::array<int, 3> edge_to_node(int edge);
+
 	std::array<double, 3> normal(int edge);
 	double area_edge(int edge);
 };

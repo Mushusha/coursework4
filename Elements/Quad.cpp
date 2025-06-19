@@ -32,18 +32,6 @@ Eigen::MatrixXcd Quad::J(double ksi, double eta, double zeta) {
 	return J;
 }
 
-double Quad::gaussPoint(LocVar var, int i) {
-	std::vector<std::vector<double>> gp = { { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 },
-										  { -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 },
-										  { 0.0, 0.0, 0.0, 0.0 } };
-
-	return gp[static_cast<int>(var)][i];
-}
-
-double Quad::weight(LocVar var, int i) {
-	return 1.0;
-}
-
 Eigen::MatrixXcd Quad::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd B = Eigen::MatrixXcd::Zero(3, 8);
 	Eigen::Matrix2cd invJ;
@@ -59,66 +47,13 @@ Eigen::MatrixXcd Quad::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
-bool Quad::pointInElem(std::vector<double> point) {
-	bool answer = true;
-	for (int i = 0; i < 4; i++) {
-		std::vector<double> a{ x[i], y[i] };
-		std::vector<double> b{ x[(i + 1) % 4], y[(i + 1) % 4] };
-		std::vector<double> c{ x[(i + 2) % 4], y[(i + 2) % 4] };
-		std::vector<double> d{ x[(i + 3) % 4], y[(i + 3) % 4] };
-
-		if (a == point || b == point || c == point || d == point)
-			return true;
-		if ((line(a, b, point) >= 0 && line(b, c, point) >= 0) &&
-			(line(c, d, point) >= 0 && line(d, a, point) >= 0))
-			answer &= true;
-		else if ((line(a, b, point) <= 0 && line(b, c, point) <= 0) &&
-			(line(c, d, point) <= 0 && line(d, a, point) <= 0))
-			answer &= true;
-		else
-			return false;
-	}
-	return answer;
-}
-
-void Quad::set_pressure(int edge, double value) {
-	std::pair<int, int> node = edge_to_node(edge);
-	std::array<double, 2> comp;
-	comp[0] = -y[node.first] + y[node.second];
-	comp[1] = x[node.first] - x[node.second];
-
-	if ((x[node.first] - x[node.second]) * (y[node.first] - y[(edge + 2) % 4]) -
-		(y[node.first] - y[node.second]) * (x[node.first] - x[(edge + 2) % 4]) < 0)
-		for (auto& i : comp)
-			i *= -1;
-
-	for (int i = 0; i < 2; i++) {
-		std::pair <int, int> pair(edge, i);
-		load.insert({ pair, -value * comp[i] / len_edge(edge) });
-	}
-}
-
-double Quad::len_edge(int edge) {
-	std::pair<int, int> coords = edge_to_node(edge);
-	return std::sqrt(std::pow((x[coords.first] - x[coords.second]), 2) + std::pow((y[coords.first] - y[coords.second]), 2));
-}
-
-std::pair<int, int> Quad::edge_to_node(int edge) {
-	if (edge != 3)
-		return std::pair<int, int>(edge, edge + 1);
-	else if (edge == 3)
-		return std::pair<int, int>(edge, 0);
-	else
-		throw runtime_error("Error: wrong edge");
-}
-
 Eigen::MatrixXcd Quad::localK() {
 	Eigen::MatrixXcd k = Eigen::MatrixXcd::Zero(8, 8);
-	
+
 	for (int gp = 0; gp < 4; gp++) {
 		double ksi = gaussPoint(KSI, gp);
 		double eta = gaussPoint(ETA, gp);
-	
+
 		k += weight(KSI, gp) * weight(ETA, gp) * B(ksi, eta).transpose() * D * B(ksi, eta) * std::abs(J(ksi, eta).determinant());
 	}
 	return k;
@@ -131,9 +66,9 @@ std::vector<double> Quad::localF(double mult) {
 	// l.first.first - edge, l.first.second - comp, l.second - value
 	if (load.size() != 0)
 		for (auto const& l : load) {
-			std::pair<int, int> node = edge_to_node(l.first.first);
-			F[2 * node.first + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
-			F[2 * node.second + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
+			std::vector<int> node = edge_to_node(l.first.first);
+			F[2 * node[0] + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
+			F[2 * node[1] + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
 		}
 	return F;
 }
@@ -180,12 +115,91 @@ Eigen::MatrixXcd Quad::localM() {
 			for (int j = 0; j < 4; j++) {
 				complex<double> M_ij = weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * FF(ksi, eta)[j] * std::abs(J(ksi, eta).determinant());
 
-					m(2 * i, 2 * j) += M_ij;
-					m(2 * i + 1, 2 * j + 1) += M_ij;
+				m(2 * i, 2 * j) += M_ij;
+				m(2 * i + 1, 2 * j + 1) += M_ij;
 			}
 	}
 
 	return density * m;
+}
+
+std::vector<int> Quad::edge_to_node(int edge) {
+	if (edge != 3)
+		return { edge, edge + 1 };
+	else if (edge == 3)
+		return { edge, 0 };
+	else
+		throw runtime_error("Error: wrong edge");
+}
+
+double Quad::len_edge(int edge) {
+	std::vector<int> coords = edge_to_node(edge);
+	return std::sqrt(std::pow((x[coords[0]] - x[coords[1]]), 2) + std::pow((y[coords[0]] - y[coords[1]]), 2));
+}
+
+void Quad::set_pressure(int edge, double value) {
+	std::vector<int> node = edge_to_node(edge);
+	std::array<double, 2> comp;
+	comp[0] = -y[node[0]] + y[node[1]];
+	comp[1] = x[node[0]] - x[node[1]];
+
+	if ((x[node[0]] - x[node[1]]) * (y[node[0]] - y[(edge + 2) % 4]) -
+		(y[node[0]] - y[node[1]]) * (x[node[0]] - x[(edge + 2) % 4]) < 0)
+		for (auto& i : comp)
+			i *= -1;
+
+	for (int i = 0; i < 2; i++) {
+		std::pair <int, int> pair(edge, i);
+		load.insert({ pair, -value * comp[i] / len_edge(edge) });
+	}
+}
+
+double Quad::gaussPoint(LocVar var, int i) {
+	std::vector<std::vector<double>> gp = { { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 },
+										  { -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 },
+										  { 0.0, 0.0, 0.0, 0.0 } };
+
+	return gp[static_cast<int>(var)][i];
+}
+
+double Quad::weight(LocVar var, int i) {
+	return 1.0;
+}
+
+double Quad::Volume() {
+	std::complex<double> S = 0;
+
+	for (int i = 0; i < 4; i++)
+		for (int gp = 0; gp < 4; gp++) {
+			double ksi = gaussPoint(KSI, gp);
+			double eta = gaussPoint(ETA, gp);
+
+			S += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * std::abs(J(ksi, eta).determinant());
+		}
+
+	return S.real();
+}
+
+bool Quad::pointInElem(std::vector<double> point) {
+	bool answer = true;
+	for (int i = 0; i < 4; i++) {
+		std::vector<double> a{ x[i], y[i] };
+		std::vector<double> b{ x[(i + 1) % 4], y[(i + 1) % 4] };
+		std::vector<double> c{ x[(i + 2) % 4], y[(i + 2) % 4] };
+		std::vector<double> d{ x[(i + 3) % 4], y[(i + 3) % 4] };
+
+		if (a == point || b == point || c == point || d == point)
+			return true;
+		if ((line(a, b, point) >= 0 && line(b, c, point) >= 0) &&
+			(line(c, d, point) >= 0 && line(d, a, point) >= 0))
+			answer &= true;
+		else if ((line(a, b, point) <= 0 && line(b, c, point) <= 0) &&
+			(line(c, d, point) <= 0 && line(d, a, point) <= 0))
+			answer &= true;
+		else
+			return false;
+	}
+	return answer;
 }
 
 std::vector<double> Quad::coordFF(double x0, double y0, double z0) {
@@ -214,18 +228,4 @@ std::vector<double> Quad::coordFF(double x0, double y0, double z0) {
 
 	std::vector<double> coord = { ksi0, eta0 };
 	return coord;
-}
-
-double Quad::Volume() {
-	std::complex<double> S = 0;
-	
-	for (int i = 0; i < 4; i++)
-		for (int gp = 0; gp < 4; gp++) {
-			double ksi = gaussPoint(KSI, gp);
-			double eta = gaussPoint(ETA, gp);
-	
-			S += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * std::abs(J(ksi, eta).determinant());
-		}
-	
-	return S.real();
 }

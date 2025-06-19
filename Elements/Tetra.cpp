@@ -56,10 +56,6 @@ Eigen::MatrixXcd Tetra::B(double ksi, double eta, double zeta) {
 	return B / C().determinant();
 }
 
-bool Tetra::pointInElem(std::vector<double> point) {
-	return false;
-}
-
 Eigen::MatrixXcd Tetra::localK() {
 	return B().transpose() * D * B() * C().determinant() / 6;
 }
@@ -108,14 +104,6 @@ Eigen::MatrixXcd Tetra::localM() {
 	return density * m;
 }
 
-std::vector<double> Tetra::coordFF(double x0, double y0, double z0) {
-	return std::vector<double>();
-}
-
-double Tetra::Volume() {
-	return C().determinant() / 6;
-}
-
 std::vector<std::complex<double>> Tetra::FF(double ksi, double eta, double zeta) {
 	std::vector<std::complex<double>> FF;
 	FF.resize(4);
@@ -125,23 +113,11 @@ std::vector<std::complex<double>> Tetra::FF(double ksi, double eta, double zeta)
 	return FF;
 }
 
-Eigen::MatrixXcd Tetra::gradFF(double ksi, double eta, double zeta) {
-	return Eigen::MatrixXcd();
+double Tetra::Volume() {
+	return C().determinant() / 6;
 }
 
-Eigen::MatrixXcd Tetra::J(double ksi, double eta, double zeta) {
-	return Eigen::MatrixXcd();
-}
-
-double Tetra::gaussPoint(LocVar var, int i) {
-	return 0.0;
-}
-
-double Tetra::weight(LocVar var, int i) {
-	return 0.0;
-}
-
-std::array<int, 3> Tetra::edge_to_node(int edge) {
+std::vector<int> Tetra::edge_to_node(int edge) {
 	switch (edge) {
 	case 0:
 		return { 0, 2, 3 };
@@ -196,3 +172,28 @@ void Tetra::set_pressure(int edge, double value) {
 		load.insert({ pair, -value * n[i] * area });
 	}
 }
+
+Eigen::MatrixXcd Tetra::gradFF(double ksi, double eta, double zeta) {
+	return Eigen::MatrixXcd();
+}
+
+Eigen::MatrixXcd Tetra::J(double ksi, double eta, double zeta) {
+	return Eigen::MatrixXcd();
+}
+
+double Tetra::gaussPoint(LocVar var, int i) {
+	return 0.0;
+}
+
+double Tetra::weight(LocVar var, int i) {
+	return 0.0;
+}
+
+bool Tetra::pointInElem(std::vector<double> point) {
+	return false;
+}
+
+std::vector<double> Tetra::coordFF(double x0, double y0, double z0) {
+	return std::vector<double>();
+}
+

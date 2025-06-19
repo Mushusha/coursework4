@@ -43,19 +43,6 @@ Eigen::MatrixXcd Hex::J(double ksi, double eta, double zeta) {
 	return J;
 }
 
-double Hex::gaussPoint(LocVar var, int i) {
-	std::vector<std::vector<double>> gp =
-		{ { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 },
-		{ -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 },
-		{ -0.57735026918926, -0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926 } };
-
-	return gp[static_cast<int>(var)][i];
-}
-
-double Hex::weight(LocVar var, int i) {
-	return 1.0;
-}
-
 Eigen::MatrixXcd Hex::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd B = Eigen::MatrixXcd::Zero(6, 24);
 	Eigen::Matrix3cd invJ;
@@ -74,27 +61,6 @@ Eigen::MatrixXcd Hex::B(double ksi, double eta, double zeta) {
 		B(5, 3 * i + 2) = dN(X, i);
 	}
 	return B;
-}
-
-bool Hex::pointInElem(std::vector<double> point) {
-	return false;
-}
-
-void Hex::set_pressure(int edge, double value) {
-	//std::pair<int, int> node = edge_to_node(edge);
-	//std::array<double, 2> comp;
-	//comp[0] = -y[node.first] + y[node.second];
-	//comp[1] = x[node.first] - x[node.second];
-
-	//if ((x[node.first] - x[node.second]) * (y[node.first] - y[(edge + 2) % 4]) -
-	//	(y[node.first] - y[node.second]) * (x[node.first] - x[(edge + 2) % 4]) < 0)
-	//	for (auto& i : comp)
-	//		i *= -1;
-
-	//for (int i = 0; i < 2; i++) {
-	//	std::pair <int, int> pair(edge, i);
-	//	load.insert({ pair, -value * comp[i] / len_edge(edge) });
-	//}
 }
 
 Eigen::MatrixXcd Hex::localK() {
@@ -184,8 +150,40 @@ Eigen::MatrixXcd Hex::localM() {
 	return density * m;
 }
 
-std::vector<double> Hex::coordFF(double x0, double y0, double z0) {
-	return std::vector<double>();
+std::vector<int> Hex::edge_to_node(int edge) {
+	switch (edge) {
+	case 0:
+		return { 1, 0, 3, 2 };
+	case 1:
+		return { 0, 1, 5, 4 };
+	case 2:
+		return { 1, 2, 6, 5 };
+	case 3:
+		return { 2, 3, 7, 6 };
+	case 4:
+		return { 3, 0, 4, 7 };
+	case 5:
+		return { 4, 5, 6, 7 };
+	default:
+		throw runtime_error("Error: wrong edge");
+	}
+}
+
+void Hex::set_pressure(int edge, double value) {
+	//std::pair<int, int> node = edge_to_node(edge);
+	//std::array<double, 2> comp;
+	//comp[0] = -y[node.first] + y[node.second];
+	//comp[1] = x[node.first] - x[node.second];
+	//
+	//if ((x[node.first] - x[node.second]) * (y[node.first] - y[(edge + 2) % 4]) -
+	//	(y[node.first] - y[node.second]) * (x[node.first] - x[(edge + 2) % 4]) < 0)
+	//	for (auto& i : comp)
+	//		i *= -1;
+	//
+	//for (int i = 0; i < 2; i++) {
+	//	std::pair <int, int> pair(edge, i);
+	//	load.insert({ pair, -value * comp[i] / len_edge(edge) });
+	//}
 }
 
 double Hex::Volume() {
@@ -204,21 +202,23 @@ double Hex::Volume() {
 	return S.real();
 }
 
-std::array<int, 4> Hex::edge_to_node(int edge) {
-	switch (edge) {
-	case 0:
-		return { 1, 0, 3, 2 };
-	case 1:
-		return { 0, 1, 5, 4 };
-	case 2:
-		return { 1, 2, 6, 5 };
-	case 3:
-		return { 2, 3, 7, 6 };
-	case 4:
-		return { 3, 0, 4, 7 };
-	case 5:
-		return { 4, 5, 6, 7 };
-	default:
-		throw runtime_error("Error: wrong edge");
-	}
+double Hex::gaussPoint(LocVar var, int i) {
+	std::vector<std::vector<double>> gp =
+	{ { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 },
+	{ -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 },
+	{ -0.57735026918926, -0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926 } };
+
+	return gp[static_cast<int>(var)][i];
+}
+
+double Hex::weight(LocVar var, int i) {
+	return 1.0;
+}
+
+bool Hex::pointInElem(std::vector<double> point) {
+	return false;
+}
+
+std::vector<double> Hex::coordFF(double x0, double y0, double z0) {
+	return std::vector<double>();
 }

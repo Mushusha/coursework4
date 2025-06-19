@@ -29,18 +29,22 @@ public:
 	Element& operator=(Element&& other) noexcept; 
 	virtual ~Element() = default;
 
+	virtual std::vector <std::complex<double>> FF(double ksi, double eta, double zeta = 0) = 0;
+	virtual Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
+
 	virtual Eigen::MatrixXcd localK() = 0; // <NODES * DIM, NODES * DIM>
 	virtual std::vector <double> localF(double mult = 1) = 0;
-	virtual Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) = 0;
-	virtual std::vector <std::complex<double>> FF(double ksi, double eta, double zeta = 0) = 0;
-
-	virtual bool pointInElem(std::vector<double> point) = 0;
 
 	virtual Eigen::MatrixXd localC() = 0; // agreed resultants
 	virtual std::vector <double> localR(std::vector<double> value) = 0;
 	virtual Eigen::MatrixXcd localM() = 0;
 
-	virtual std::vector<double> coordFF(double x0, double y0, double z0 = 0) = 0;
+	std::complex<double> Jac(double ksi, double eta, double zeta = 0);
+	virtual double gaussPoint(LocVar var, int i) = 0;
+	virtual double weight(LocVar var, int i) = 0;
+	virtual double Volume() = 0;
+
+	virtual std::vector<int> edge_to_node(int edge) = 0;
 
 	Eigen::MatrixXd D;
 
@@ -59,13 +63,12 @@ public:
 	double get_nu() const { return Poisson; }
 	double get_rho() const { return density; }
 	
-	std::complex<double> Jac(double ksi, double eta, double zeta = 0);
-	virtual double gaussPoint(LocVar var, int i) = 0;
-	virtual double weight(LocVar var, int i) = 0;
-	virtual double Volume() = 0;
-	
 	std::vector<std::map <ResType, Eigen::VectorXcd>> results; // [i] - node; [j] - field; [k] - comp // tensor
 	Eigen::VectorXd displacements;
+
+	// for interpolation
+	virtual bool pointInElem(std::vector<double> point) = 0;
+	virtual std::vector<double> coordFF(double x0, double y0, double z0 = 0) = 0;
 
 protected:
 	Element() = default;

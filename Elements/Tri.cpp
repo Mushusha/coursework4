@@ -13,20 +13,6 @@ Eigen::MatrixXd Tri::C() {
 	return C;
 }
 
-std::pair<int, int> Tri::edge_to_node(int edge) {
-	if (edge != 2)
-		return std::pair<int, int>(edge, edge + 1);
-	else if (edge == 2)
-		return std::pair<int, int>(edge, 0);
-	else
-		throw runtime_error("Error: wrong edge");
-}
-
-double Tri::len_edge(int edge) {
-	std::pair<int, int> coords = edge_to_node(edge);
-	return std::sqrt(std::pow((x[coords.first] - x[coords.second]), 2) + std::pow((y[coords.first] - y[coords.second]), 2));
-}
-
 Eigen::MatrixXcd Tri::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd B(3, 6);
 	for (int i = 0; i < 3; i++) {
@@ -41,24 +27,6 @@ Eigen::MatrixXcd Tri::B(double ksi, double eta, double zeta) {
 	return B;
 }
 
-bool Tri::pointInElem(std::vector<double> point) {
-	bool answer = true;
-	for (int i = 0; i < 3; i++) {
-		std::vector<double> a{ x[i], y[i] };
-		std::vector<double> b{ x[(i + 1) % 3], y[(i + 1) % 3] };
-		std::vector<double> c{ x[(i + 2) % 3], y[(i + 2) % 3] };
-		if (a == point || b == point || c == point)
-			return true;
-		if (line(a, b, c) <= 0 && line(a, b, point) <= 0)
-			answer &= true;
-		else if (line(a, b, c) >= 0 && line(a, b, point) >= 0)
-			answer &= true;
-		else
-			return false;
-	}
-	return answer;
-}
-
 Eigen::MatrixXcd Tri::localK() {
 	return B().transpose() * D * B() * std::abs(C().determinant() / 2);
 }
@@ -69,9 +37,9 @@ std::vector<double> Tri::localF(double mult) {
 
 	// l.first.first - edge, l.first.second - comp, l.second - value
 	for (auto const& l: load) {
-		std::pair<int, int> node = edge_to_node(l.first.first);
-		F[2 * node.first + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
-		F[2 * node.second + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
+		std::vector<int> node = edge_to_node(l.first.first);
+		F[2 * node[0] + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
+		F[2 * node[1] + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
 	}
 	return F;
 }
@@ -106,15 +74,6 @@ Eigen::MatrixXcd Tri::localM() {
 	return density * m;
 }
 
-std::vector<double> Tri::coordFF(double x0, double y0, double z0) {
-	std::vector<double> coord = { x0, y0 };
-	return coord;
-}
-
-double Tri::Volume() {
-	return C().determinant() / 2;
-}
-
 std::vector<std::complex<double>> Tri::FF(double ksi, double eta, double zeta) {
 	std::vector<std::complex<double>> FF;
 	FF.resize(3);
@@ -132,15 +91,48 @@ std::vector<std::complex<double>> Tri::FF(double ksi, double eta, double zeta) {
 	return FF;
 }
 
+double Tri::Volume() {
+	return C().determinant() / 2;
+}
+
+std::vector<int> Tri::edge_to_node(int edge) {
+	if (edge != 2)
+		return { edge, edge + 1 };
+	else if (edge == 2)
+		return { edge, 0 };
+	else
+		throw runtime_error("Error: wrong edge");
+}
+
+double Tri::len_edge(int edge) {
+	std::vector<int> coords = edge_to_node(edge);
+	return std::sqrt(std::pow((x[coords[0]] - x[coords[1]]), 2) + std::pow((y[coords[0]] - y[coords[1]]), 2));
+}
+
+void Tri::set_pressure(int edge, double value) {
+	std::vector<int> node = edge_to_node(edge);
+	std::array<double, 2> comp;
+	comp[0] = -y[node[0]] + y[node[1]];
+	comp[1] = x[node[0]] - x[node[1]];
+
+	if ((x[node[0]] - x[node[1]]) * (y[node[0]] - y[3 - node[0] - node[1]]) -
+		(y[node[0]] - y[node[1]) * (x[node[0]] - x[3 - node[0] - node[1]]) < 0)
+		for (auto& i : comp)
+			i *= -1;
+	
+	for (int i = 0; i < 2; i++) {
+		std::pair <int, int> pair(edge, i);
+		load.insert({ pair, -value * comp[i] / len_edge(edge)});
+	}
+}
+
+// TRI don't need
 Eigen::MatrixXcd Tri::gradFF(double ksi, double eta, double zeta) {
 	return Eigen::MatrixXd();
 }
 
 Eigen::MatrixXcd Tri::J(double ksi, double eta, double zeta) {
-	Eigen::MatrixXd j = Eigen::MatrixXd::Zero(2, 2);
-	j(0, 0) = 1;
-	j(1, 1) = 1;
-	return j;
+	return Eigen::MatrixXcd();
 }
 
 double Tri::gaussPoint(LocVar var, int i) {
@@ -151,19 +143,25 @@ double Tri::weight(LocVar var, int i) {
 	return 0.0;
 }
 
-void Tri::set_pressure(int edge, double value) {
-	std::pair<int, int> node = edge_to_node(edge);
-	std::array<double, 2> comp;
-	comp[0] = -y[node.first] + y[node.second];
-	comp[1] = x[node.first] - x[node.second];
+std::vector<double> Tri::coordFF(double x0, double y0, double z0) {
+	std::vector<double> coord = { x0, y0 };
+	return coord;
+}
 
-	if ((x[node.first] - x[node.second]) * (y[node.first] - y[3 - node.first - node.second]) -
-		(y[node.first] - y[node.second]) * (x[node.first] - x[3 - node.first - node.second]) < 0)
-		for (auto& i : comp)
-			i *= -1;
-	
-	for (int i = 0; i < 2; i++) {
-		std::pair <int, int> pair(edge, i);
-		load.insert({ pair, -value * comp[i] / len_edge(edge)});
+bool Tri::pointInElem(std::vector<double> point) {
+	bool answer = true;
+	for (int i = 0; i < 3; i++) {
+		std::vector<double> a{ x[i], y[i] };
+		std::vector<double> b{ x[(i + 1) % 3], y[(i + 1) % 3] };
+		std::vector<double> c{ x[(i + 2) % 3], y[(i + 2) % 3] };
+		if (a == point || b == point || c == point)
+			return true;
+		if (line(a, b, c) <= 0 && line(a, b, point) <= 0)
+			answer &= true;
+		else if (line(a, b, c) >= 0 && line(a, b, point) >= 0)
+			answer &= true;
+		else
+			return false;
 	}
+	return answer;
 }

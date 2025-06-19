@@ -2,6 +2,8 @@
 
 #include "Calc/Data.h"
 
+// DISABLED BECAUSE ADDED VTK WRITER
+
 class Interpolation {
 public:
 	Interpolation() = default;
