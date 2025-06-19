@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+#include "Enums.h"
+
 using namespace std;
 using json = nlohmann::json;
 typedef long long int  lint;

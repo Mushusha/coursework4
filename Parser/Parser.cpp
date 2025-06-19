@@ -204,13 +204,21 @@ void mesh::read(json mesh) {
 	}
 }
 uint8_t mesh::count_nodes(uint8_t elem_t) {
-	switch (elem_t)
-	{
-	case 10:
+	switch (elem_t) {
+	case TRI:
 		return 3;
 		break;
-	default:
+	case QUAD:
 		return 4;
+		break;
+	case TETRA:
+		return 4;
+		break;
+	case HEX:
+		return 8;
+		break;
+	default:
+		throw runtime_error("Error: wrong element type");
 	}
 }
 

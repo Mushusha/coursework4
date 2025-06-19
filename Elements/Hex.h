@@ -50,4 +50,7 @@ protected:
 	Eigen::MatrixXcd J(double ksi, double eta, double zeta) override;
 
 	void set_pressure(int edge, double value);
+
+private:
+	std::array<int, 4> edge_to_node(int edge);
 };

@@ -113,7 +113,6 @@ std::pair<int, int> Quad::edge_to_node(int edge) {
 }
 
 Eigen::MatrixXcd Quad::localK() {
-
 	Eigen::MatrixXcd k = Eigen::MatrixXcd::Zero(8, 8);
 	
 	for (int gp = 0; gp < 4; gp++) {
