@@ -37,4 +37,5 @@ public:
 	double getX() const { return x; }
 	double getY() const { return y; }
 	double getZ() const { return z; }
+	double getCoord(int i) const;
 };

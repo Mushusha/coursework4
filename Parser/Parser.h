@@ -97,6 +97,14 @@ struct mesh {
 	void read(json mesh);
 };
 
+struct infinite {
+	std::vector<lint> apply_to;
+	size_t size;
+	int point;
+
+	void read(json infinite);
+};
+
 struct restraints {
 	int id;
 	std::vector<lint> apply_to;
@@ -128,6 +136,7 @@ public:
 	std::vector<nodesets> nodesets;
 	std::vector<sidesets> sidesets;
 	mesh mesh;
+	std::vector<infinite> infinite;
 	std::vector<restraints> restraints;
 	settings settings;
 	void read(string filename);

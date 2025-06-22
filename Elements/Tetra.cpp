@@ -66,7 +66,7 @@ std::vector<double> Tetra::localF(double mult) {
 
 	// l.first.first - edge, l.first.second - comp, l.second - value
 	for (auto const& l : load) {
-		std::array<int, 3> node = edge_to_node(l.first.first);
+		std::vector<int> node = edge_to_node(l.first.first);
 		F[3 * node[0] + l.first.second] += mult * l.second / 3;
 		F[3 * node[1] + l.first.second] += mult * l.second / 3;
 		F[3 * node[2] + l.first.second] += mult * l.second / 3;
@@ -133,7 +133,7 @@ std::vector<int> Tetra::edge_to_node(int edge) {
 }
 
 std::array<double, 3> Tetra::normal(int edge) {
-	std::array<int, 3> node = edge_to_node(edge);
+	std::vector<int> node = edge_to_node(edge);
 
 	double v1x = x[node[1]] - x[node[0]];
 	double v1y = y[node[1]] - y[node[0]];
@@ -156,7 +156,7 @@ double Tetra::area_edge(int edge) {
 }
 
 void Tetra::set_pressure(int edge, double value) {
-	std::array<int, 3> node = edge_to_node(edge);
+	std::vector<int> node = edge_to_node(edge);
 	std::array<double, 3> comp;
 
 	double area = area_edge(edge);

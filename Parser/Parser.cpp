@@ -96,8 +96,6 @@ void load::read(json load) {
 	//this->cs = load["cs"];
 	this->type = load["type"];
 	this->size = load["apply_to_size"];
-	if (load.contains("inf"))
-		this->inf = load["inf"];
 
 	this->apply_to.resize(2 * this->size);
 	std::string apply_to_s = load["apply_to"];
@@ -126,10 +124,6 @@ void sidesets::read(json sidesets) {
 	this->id = sidesets["id"];
 	this->size = sidesets["apply_to_size"];
 	this->apply_to.resize(2 * this->size);
-	if (sidesets.contains("load"))
-		this->load = sidesets["load"];
-	else
-		this->load = -1;
 	std::string apply_to_s = sidesets["apply_to"];
 	base64_decode(apply_to_s);
 	for (size_t i = 0; i < this->apply_to.size(); i++)
@@ -203,6 +197,19 @@ void mesh::read(json mesh) {
 		}
 	}
 }
+void infinite::read(json infinite) {
+	this->point = infinite["point"];
+	this->size = infinite["apply_to_size"];
+	std::map<int, int> map_node_inf;
+
+	apply_to.resize(2 * this->size);
+
+	std::string apply_to_s = infinite["apply_to"];
+	base64_decode(apply_to_s);
+	for (size_t i = 0; i < this->apply_to.size(); i++)
+		this->apply_to[i] = ReadInt(apply_to_s, i);
+}
+
 uint8_t mesh::count_nodes(uint8_t elem_t) {
 	switch (elem_t) {
 	case TRI:
@@ -261,45 +268,50 @@ void Parser::read(string name) {
 	std::ifstream fc_file(this->filename + ".fc", std::ios::in);
 	if (!fc_file)
 		throw std::runtime_error("cannot open fc file: " + this->filename);
-           	auto _root = nlohmann::json::parse(fc_file);
+	auto _root = nlohmann::json::parse(fc_file);
 	fc_file.close();
 
 	this->block.resize(_root["blocks"].size());
 	for (int i = 0; i < this->block.size(); i++) {
 		this->block[i].read(_root["blocks"][i]);
 	}
-	
+
 	this->coordinate.resize(_root["coordinate_systems"].size());
 	for (auto i = 0; i < this->coordinate.size(); i++) {
 		this->coordinate[i].read(_root["coordinate_systems"][i]);
 	}
-	
+
 	this->load.resize(_root["loads"].size());
 	for (int i = 0; i < this->load.size(); i++) {
 		this->load[i].read(_root["loads"][i]);
 	}
-	
+
 	this->nodesets.resize(_root["sets"]["nodesets"].size());
 	for (int i = 0; i < this->nodesets.size(); i++) {
 		this->nodesets[i].read(_root["sets"]["nodesets"][i]);
 	}
-	
+
 	this->sidesets.resize(_root["sets"]["sidesets"].size());
 	for (int i = 0; i < this->sidesets.size(); i++) {
 		this->sidesets[i].read(_root["sets"]["sidesets"][i]);
 	}
-	
+
 	this->material.resize(_root["materials"].size());
 	for (int i = 0; i < this->material.size(); i++) {
 		this->material[i].read(_root["materials"][i]);
 	}
-	
+
 	this->mesh.read(_root["mesh"]);
-	
+
+	this->infinite.resize(_root["infinite"]["side"].size());
+	for (int i = 0; i < this->infinite.size(); i++) {
+		this->infinite[i].read(_root["infinite"]["side"][i]);
+	}
+
 	this->restraints.resize(_root["restraints"].size());
 	for (int i = 0; i < this->restraints.size(); i++) {
 		this->restraints[i].read(_root["restraints"][i]);
 	}
-	
+
 	this->settings.read(_root["settings"]);
 }

@@ -150,98 +150,56 @@ void Data::create_elements(std::shared_ptr <const Parser> parser) {
 }
 
 void Data::create_infelements(std::shared_ptr <const Parser> parser) {
-	// if 2D
-
-	//int inf_node = 0;
-	//for (int i = 0; i < parser->sidesets.size(); i++) {
-	//	for (int j = 0; j < parser->sidesets[i].size; j++) {
-	//		auto inf = parser->sidesets[i].apply_to;
-	//
-	//		//std::pair<double, double> C1(this->nodes[parser->nodesets[0].apply_to[inf_node]]->getX(), this->nodes[parser->nodesets[0].apply_to[inf_node]]->getY()); // nodesets[0] ??? 
-	//		//std::pair<double, double> C2(this->nodes[parser->nodesets[0].apply_to[inf_node + 1]]->getX(), this->nodes[parser->nodesets[0].apply_to[inf_node + 1]]->getY());
-	//
-	//		std::pair<int, int> edge;
-	//		if (inf[2 * j + 1] != this->elements[inf[2 * j]]->nodes_count() - 1)
-	//			edge = std::make_pair(inf[2 * j + 1], inf[2 * j + 1] + 1);
-	//		else
-	//			edge = std::make_pair(inf[2 * j + 1], 0);
-	//
-	//		edge.first = this->elements[inf[2 * j]]->get_node(edge.first);
-	//		edge.second = this->elements[inf[2 * j]]->get_node(edge.second);
-	//
-	//		int n = this->nodes.size();
-	//		std::vector<int> elem_nodes = { static_cast<int>(parser->nodesets[0].apply_to[inf_node]), n + 1, n + 2, static_cast<int>(parser->nodesets[0].apply_to[inf_node] + 1) };
-	//
-	//		std::vector<double> x, y, z = { 0, 0, 0, 0 };
-	//
-	//		x.push_back(this->nodes[edge.first - 1]->getX() * 2 - C1.first);
-	//		x.push_back(C1.first);
-	//		x.push_back(C2.first);
-	//		x.push_back(this->nodes[edge.second - 1]->getX() * 2 - C2.first);
-	//
-	//		y.push_back(this->nodes[edge.first - 1]->getY() * 2 - C1.second);
-	//		y.push_back(C1.second);
-	//		y.push_back(C2.second);
-	//		y.push_back(this->nodes[edge.second - 1]->getY() * 2 - C2.second);
-	//
-	//		std::shared_ptr<Element> elem = std::make_shared<infQuad>(infQuad(this->elements.size(), INFQUAD, elem_nodes));
-	//		elem->set_coords(x, y, z);
-	//		this->elements.push_back(elem);
-	//
-	//		if (parser->settings.analisys_type == "dynamic") {
-	//			dynamic_cast<infQuad*>(elem.get())->is_dyn = true;
-	//			dynamic_cast<infQuad*>(elem.get())->omega = 10;
-	//		}
-	//		inf_node++;
-	//		for (int k = 2; k < 4; k++) {
-	//			std::array <double, 3> coords = { x[k], y[k], z[k] };
-	//			this->nodes.push_back(make_shared<Node>(elem_nodes[k], coords));
-	//		}
-	//
-	//		if (parser->sidesets[i].load != -1) { // type == PRESSURE
-	//			auto& load = parser->load[parser->sidesets[i].load];
-	//			elements[this->elements.size() - 1]->set_load(load.type, 3, load.data);
-	//		}
-	//	}
-	//}
-	return;
 	num_inf_elems = 0;
-	if (parser->nodesets.size() == 0)
-		return;
+	const auto inf = parser->infinite[0];
 
-	int n = this->nodes.size() + 1;
-	// nodeset 0 - C, C1
-	// nodeset 1 - Q, Q1
-	for (int i = 0; i < parser->nodesets[0].apply_to.size() - 1; i++) {
-		std::vector<int> elem_nodes = { n, static_cast<int>(parser->nodesets[1].apply_to[i]), static_cast<int>(parser->nodesets[1].apply_to[i + 1]), n + 1 };
-		std::vector<double> x1, y1, z1 = { 0, 0, 0, 0 };
+	std::map<int, int> map_node_inf;
+	std::map<int, std::array<int, 3>> node_coords; // [i] - num node, [j] - x | y | z
 
-		x1.push_back(2 * this->nodes[static_cast<int>(parser->nodesets[0].apply_to[i] - 1)]->getX() - this->nodes[elem_nodes[1]]->getX());
-		x1.push_back(this->nodes[elem_nodes[1] - 1]->getX());
-		x1.push_back(this->nodes[elem_nodes[2] - 1]->getX());
-		x1.push_back(2 * this->nodes[static_cast<int>(parser->nodesets[0].apply_to[i + 1] - 1)]->getX() - this->nodes[elem_nodes[2]]->getX());
+	for (int i = 0; i < inf.size; i++) {
+		const int elem = inf.apply_to[2 * i];
+		const int side = inf.apply_to[2 * i + 1];
 
-		y1.push_back(2 * this->nodes[static_cast<int>(parser->nodesets[0].apply_to[i] - 1)]->getY() - this->nodes[elem_nodes[1]]->getY());
-		y1.push_back(this->nodes[elem_nodes[1] - 1]->getY());
-		y1.push_back(this->nodes[elem_nodes[2] - 1]->getY());
-		y1.push_back(2 * this->nodes[static_cast<int>(parser->nodesets[0].apply_to[i + 1] - 1)]->getY() - this->nodes[elem_nodes[2]]->getY());
+		int num_nodes;
+		std::vector<int> side_nodes = this->elements[elem - 1]->edge_to_node(side);
+		std::vector<int> new_nodes;
 
-		std::shared_ptr<Element> elem = std::make_shared<infQuad>(infQuad(this->elements.size(), INFQUAD, elem_nodes));
-		elem->set_coords(x1, y1, z1);
-		this->elements.push_back(elem);
+		for (int& node : side_nodes) {
+			int glob_node = this->elements[elem - 1]->get_node(node);
 
-		std::array <double, 3> coords0 = { x1[0], y1[0], z1[0] };
-		this->nodes.push_back(std::make_shared<Node>(elem_nodes[0], coords0));
-		if (i == parser->nodesets[0].apply_to.size() - 2) {
-			std::array <double, 3> coords3 = { x1[3], y1[3], z1[3] };
-			this->nodes.push_back(std::make_shared<Node>(elem_nodes[3], coords3));
+			if (map_node_inf.find(glob_node) == map_node_inf.end()) {
+				map_node_inf[glob_node] = nodes.size() + 1;
+				std::array <double, 3> coords;
+				for (int i = 0; i < 3; i++)
+					coords[i] = 2 * this->nodes[glob_node - 1]->getCoord(i) + this->nodes[inf.point - 1]->getCoord(i);
+
+				this->nodes.push_back(std::make_shared<Node>(map_node_inf.at(glob_node), coords));
+			}
+
+			new_nodes.push_back(glob_node);
+			new_nodes.push_back(map_node_inf.find(glob_node)->second);
 		}
+
+		// ONLY INFQUAD
+		std::vector<int> inf_elem_nodes = { new_nodes[0], new_nodes[1], new_nodes[3], new_nodes[2] };
+
+		std::vector<double> x1, y1, z1;
+		for (auto& node : inf_elem_nodes) {
+			x1.push_back(this->nodes[node - 1]->getX());
+			y1.push_back(this->nodes[node - 1]->getY());
+			z1.push_back(this->nodes[node - 1]->getZ());
+		}
+
+		std::shared_ptr<Element> new_elem = std::make_shared<infQuad>(infQuad(this->elements.size(), INFQUAD, inf_elem_nodes));
+		new_elem->set_coords(x1, y1, z1);
+		this->elements.push_back(new_elem);
+
 		if (parser->settings.analisys_type == "dynamic") {
 			num_inf_elems++; // complex
-			dynamic_cast<infQuad*>(elem.get())->is_dyn = true;
-			dynamic_cast<infQuad*>(elem.get())->omega = omega;
+			dynamic_cast<infQuad*>(new_elem.get())->is_dyn = true;
+			dynamic_cast<infQuad*>(new_elem.get())->omega = omega;
 		}
-		n++;
+
 		num_inf_elems++;
 	}
 }

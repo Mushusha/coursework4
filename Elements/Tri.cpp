@@ -116,7 +116,7 @@ void Tri::set_pressure(int edge, double value) {
 	comp[1] = x[node[0]] - x[node[1]];
 
 	if ((x[node[0]] - x[node[1]]) * (y[node[0]] - y[3 - node[0] - node[1]]) -
-		(y[node[0]] - y[node[1]) * (x[node[0]] - x[3 - node[0] - node[1]]) < 0)
+		(y[node[0]] - y[node[1]]) * (x[node[0]] - x[3 - node[0] - node[1]]) < 0)
 		for (auto& i : comp)
 			i *= -1;
 	

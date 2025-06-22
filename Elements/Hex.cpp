@@ -84,7 +84,7 @@ std::vector<double> Hex::localF(double mult) {
 	// l.first.first - edge, l.first.second - comp, l.second - value
 	if (load.size() != 0)
 		for (auto const& l : load) {
-			std::array<int, 4> node = edge_to_node(l.first.first);
+			std::vector<int> node = edge_to_node(l.first.first);
 			F[2 * node[0] + l.first.second] += mult * l.second / 4;
 			F[2 * node[1] + l.first.second] += mult * l.second / 4;
 			F[2 * node[2] + l.first.second] += mult * l.second / 4;
