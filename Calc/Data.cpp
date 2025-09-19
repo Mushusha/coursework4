@@ -151,6 +151,10 @@ void Data::create_elements(std::shared_ptr <const Parser> parser) {
 
 void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 	num_inf_elems = 0;
+
+	if (parser->infinite.size() == 0)
+		return;
+
 	const auto inf = parser->infinite[0];
 
 	std::map<int, int> map_node_inf;

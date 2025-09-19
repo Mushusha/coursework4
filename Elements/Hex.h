@@ -53,4 +53,6 @@ protected:
 	Eigen::MatrixXcd J(double ksi, double eta, double zeta) override;
 
 	void set_pressure(int edge, double value);
+	std::array<double, 3> normal(int edge);
+	double area_edge(int edge);
 };

@@ -10,6 +10,7 @@ int main(int argc, char* argv[]) {
 	log.print("Start program");
 
 	if (argv[1]) {
+		log.print(argv[1]);
 		Calculate solve(argv[1]);
 		solve.Solve();
 	}

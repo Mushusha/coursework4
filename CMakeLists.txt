@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
-set(CMAKE_TOOLCHAIN_FILE "C:/Users/mushu/vcpkg/scripts/buildsystems/vcpkg.cmake")
+set(CMAKE_TOOLCHAIN_FILE "C:/Users/mushusha/vcpkg/scripts/buildsystems/vcpkg.cmake")
 project(cw)
 
-set(GLEW_DIR "C:/Users/mushu/vcpkg/installed/x64-windows/share/glew")
+set(GLEW_DIR "C:/Users/mushusha/vcpkg/installed/x64-windows/share/glew")
 
 set(VTK_NO_AUTO_FIND_GLEW ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "Vcpkg target triplet")
 set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/eigen-3.4.0")
-set(VTK_DIR "C:/Users/mushu/vcpkg/packages/vtk_x64-windows/share/vtk")
+set(VTK_DIR "C:/Users/mushusha/vcpkg/packages/vtk_x64-windows/share/vtk")
 
 find_package(VTK CONFIG REQUIRED)
 find_package(GLEW CONFIG REQUIRED)

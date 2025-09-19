@@ -67,9 +67,8 @@ std::vector<double> Tetra::localF(double mult) {
 	// l.first.first - edge, l.first.second - comp, l.second - value
 	for (auto const& l : load) {
 		std::vector<int> node = edge_to_node(l.first.first);
-		F[3 * node[0] + l.first.second] += mult * l.second / 3;
-		F[3 * node[1] + l.first.second] += mult * l.second / 3;
-		F[3 * node[2] + l.first.second] += mult * l.second / 3;
+		for (int i = 0; i < 4; i++)
+			F[3 * node[i] + l.first.second] += mult * l.second / 3;
 	}
 	return F;
 }

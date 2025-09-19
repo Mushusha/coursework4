@@ -85,10 +85,8 @@ std::vector<double> Hex::localF(double mult) {
 	if (load.size() != 0)
 		for (auto const& l : load) {
 			std::vector<int> node = edge_to_node(l.first.first);
-			F[2 * node[0] + l.first.second] += mult * l.second / 4;
-			F[2 * node[1] + l.first.second] += mult * l.second / 4;
-			F[2 * node[2] + l.first.second] += mult * l.second / 4;
-			F[2 * node[3] + l.first.second] += mult * l.second / 4;
+			for (int i = 0; i < 4; i++)
+				F[3 * node[i] + l.first.second] += mult * l.second / 4;
 		}
 	return F;
 }
@@ -169,21 +167,61 @@ std::vector<int> Hex::edge_to_node(int edge) {
 	}
 }
 
+std::array<double, 3> Hex::normal(int edge) {
+	std::vector<int> nodes = edge_to_node(edge);
+
+	std::array<double, 3> p1 = { x[nodes[0]], y[nodes[0]], z[nodes[0]] };
+	std::array<double, 3> p2 = { x[nodes[1]], y[nodes[1]], z[nodes[1]] };
+	std::array<double, 3> p3 = { x[nodes[2]], y[nodes[2]], z[nodes[2]] };
+
+	std::array<double, 3> v1 = { p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2] };
+	std::array<double, 3> v2 = { p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2] };
+
+	std::array<double, 3> normal = {
+		v1[1] * v2[2] - v1[2] * v2[1],
+		v1[2] * v2[0] - v1[0] * v2[2],
+		v1[0] * v2[1] - v1[1] * v2[0]
+	};
+
+	return normal;
+}
+
+double Hex::area_edge(int edge) {
+	std::vector<int> nodes = edge_to_node(edge);
+
+	std::array<double, 3> p1 = { x[nodes[0]], y[nodes[0]], z[nodes[0]] };
+	std::array<double, 3> p2 = { x[nodes[1]], y[nodes[1]], z[nodes[1]] };
+	std::array<double, 3> p3 = { x[nodes[2]], y[nodes[2]], z[nodes[2]] };
+
+	std::array<double, 3> v1 = { p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2] };
+	std::array<double, 3> v2 = { p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2] };
+
+	std::array<double, 3> cross = {
+		v1[1] * v2[2] - v1[2] * v2[1],
+		v1[2] * v2[0] - v1[0] * v2[2],
+		v1[0] * v2[1] - v1[1] * v2[0]
+	};
+
+	double area = std::sqrt(cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2]);
+
+	return area;
+}
+
 void Hex::set_pressure(int edge, double value) {
-	//std::pair<int, int> node = edge_to_node(edge);
-	//std::array<double, 2> comp;
-	//comp[0] = -y[node.first] + y[node.second];
-	//comp[1] = x[node.first] - x[node.second];
-	//
-	//if ((x[node.first] - x[node.second]) * (y[node.first] - y[(edge + 2) % 4]) -
-	//	(y[node.first] - y[node.second]) * (x[node.first] - x[(edge + 2) % 4]) < 0)
-	//	for (auto& i : comp)
-	//		i *= -1;
-	//
-	//for (int i = 0; i < 2; i++) {
-	//	std::pair <int, int> pair(edge, i);
-	//	load.insert({ pair, -value * comp[i] / len_edge(edge) });
-	//}
+	std::vector<int> nodes = edge_to_node(edge);
+
+	std::array<double, 3> n = normal(edge);
+	double len_norm = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+
+	for (auto& component : n)
+		component /= len_norm;
+
+	double area = area_edge(edge);
+
+	for (int i = 0; i < 3; i++) {
+		std::pair <int, int> pair(edge, i);
+		load.insert({ pair, -value * n[i] * area });
+	}
 }
 
 double Hex::Volume() {

@@ -67,8 +67,8 @@ std::vector<double> Quad::localF(double mult) {
 	if (load.size() != 0)
 		for (auto const& l : load) {
 			std::vector<int> node = edge_to_node(l.first.first);
-			F[2 * node[0] + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
-			F[2 * node[1] + l.first.second] += mult * l.second * len_edge(l.first.first) / 2;
+			F[2 * node[0] + l.first.second] += mult * l.second / 2;
+			F[2 * node[1] + l.first.second] += mult * l.second / 2;
 		}
 	return F;
 }
@@ -150,7 +150,7 @@ void Quad::set_pressure(int edge, double value) {
 
 	for (int i = 0; i < 2; i++) {
 		std::pair <int, int> pair(edge, i);
-		load.insert({ pair, -value * comp[i] / len_edge(edge) });
+		load.insert({ pair, -value * comp[i] });
 	}
 }
 
