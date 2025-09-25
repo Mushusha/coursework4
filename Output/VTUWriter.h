@@ -18,6 +18,8 @@
 #include <vtkQuad.h>
 #include <vtkTetra.h>
 #include <vtkHexahedron.h>
+#include <vtkWedge.h>
+#include <vtkPyramid.h>
 #include <vtkVertex.h>
 
 #include "Elements/Element.h"

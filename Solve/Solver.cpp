@@ -179,7 +179,7 @@ void Solver::calcStrain() {
 		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
 			calc_data.get_elem(elem)->results[node][STRAIN] = calc_data.get_elem(elem)->
 				B(calc_data.get_elem(elem)->gaussPoint(KSI, node), calc_data.get_elem(elem)->gaussPoint(ETA, node),
-				  calc_data.get_elem(elem)->gaussPoint(ZETA, node)) * calc_data.get_elem(elem)->displacements;
+					calc_data.get_elem(elem)->gaussPoint(ZETA, node)) * calc_data.get_elem(elem)->displacements;
 		}
 	}
 	logger& log = logger::log();

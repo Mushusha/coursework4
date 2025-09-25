@@ -42,7 +42,11 @@ Elements/InfQuad.cpp
 Elements/Tetra.h
 Elements/Tetra.cpp
 Elements/Hex.h
-Elements/Hex.cpp)
+Elements/Hex.cpp
+Elements/Wedge.h
+Elements/Wedge.cpp
+Elements/Pyr.h
+Elements/Pyr.cpp)
 
 source_group(Solve FILES 
 Solve/Solver.h
@@ -102,6 +106,10 @@ add_executable(Core
     Elements/Tetra.cpp
     Elements/Hex.h
     Elements/Hex.cpp
+    Elements/Wedge.h
+    Elements/Wedge.cpp
+    Elements/Pyr.h
+    Elements/Pyr.cpp
 
     Solve/Solver.h
     Solve/Solver.cpp

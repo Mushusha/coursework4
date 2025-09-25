@@ -53,6 +53,12 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
         case ElemType::HEX:
             cell = vtkSmartPointer<vtkHexahedron>::New();
             break;
+        case ElemType::WEDGE:
+            cell = vtkSmartPointer<vtkWedge>::New();
+            break;
+        case ElemType::PYR:
+            cell = vtkSmartPointer<vtkPyramid>::New();
+            break;
         default:
             return nullptr;
     }

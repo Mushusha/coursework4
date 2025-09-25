@@ -9,6 +9,8 @@
 #include "Quad.h"
 #include "Tetra.h"
 #include "Hex.h"
+#include "Wedge.h"
+//#include "Pyr.h"
 
 
 class Data {

@@ -3,7 +3,7 @@
 #include <map>
 #include <string>
 
-enum ElemType { TRI = 10, QUAD = 12, TETRA = 1, HEX = 3, WERGE = 6, PYR = 8, INFQUAD = 14 };
+enum ElemType { TRI = 10, QUAD = 12, TETRA = 1, HEX = 3, WEDGE = 6, PYR = 8, INFQUAD = 14 };
 enum LoadType { PRESSURE = 3, NODEFORCE = 5, BERLAGE = 20 };
 enum LocVar { KSI, ETA, ZETA };
 enum GlobVar { X, Y, Z };
@@ -16,6 +16,31 @@ namespace Comp2D {
 }
 
 enum ResType { STRAIN, STRESS, DISPLACEMENT, VELOCITY, ACCELERATION, COUNT };
+
+inline constexpr int count_nodes(ElemType elem_t) {
+	switch (elem_t) {
+	case TRI:
+		return 3;
+		break;
+	case QUAD:
+		return 4;
+		break;
+	case TETRA:
+		return 4;
+		break;
+	case HEX:
+		return 8;
+		break;
+	case WEDGE:
+		return 6;
+		break;
+	case PYR:
+		return 5;
+		break;
+	default:
+		throw std::runtime_error("Error: wrong element type");
+	}
+}
 
 inline bool isTensor(ResType type) {
 	if (type == STRAIN ||

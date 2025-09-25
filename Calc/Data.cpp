@@ -105,41 +105,51 @@ void Data::create_elements(std::shared_ptr <const Parser> parser) {
 		std::shared_ptr<Element> elem;
 		switch (parser->mesh.elem_types[i]) {
 			case TRI:
-				elem_nodes.resize(3);
-				for (int j = 0; j < 3; j++)
+				elem_nodes.resize(count_nodes(TRI));
+				for (int j = 0; j < elem_nodes.size(); j++)
 					elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
-				node_tmp += 3;
 				elem = std::make_shared<Tri>(Tri(parser->mesh.elem_id[i], TRI, elem_nodes));
 				break;
 			case QUAD:
-				elem_nodes.resize(4);
-				for (int j = 0; j < 4; j++)
+				elem_nodes.resize(count_nodes(QUAD));
+				for (int j = 0; j < elem_nodes.size(); j++)
 					elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
-				node_tmp += 4;
 				elem = std::make_shared<Quad>(Quad(parser->mesh.elem_id[i], QUAD, elem_nodes));
 				break;
 			case TETRA:
-				elem_nodes.resize(4);
-				for (int j = 0; j < 4; j++)
+				elem_nodes.resize(count_nodes(TETRA));
+				for (int j = 0; j < elem_nodes.size(); j++)
 					elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
-				node_tmp += 4;
 				elem = std::make_shared<Tetra>(Tetra(parser->mesh.elem_id[i], TETRA, elem_nodes));
 				break;
 			case HEX:
-				elem_nodes.resize(8);
-				for (int j = 0; j < 8; j++)
+				elem_nodes.resize(count_nodes(HEX));
+				for (int j = 0; j < elem_nodes.size(); j++)
 					elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
-				node_tmp += 8;
 				elem = std::make_shared<Hex>(Hex(parser->mesh.elem_id[i], HEX, elem_nodes));
 				break;
+			case WEDGE:
+				elem_nodes.resize(count_nodes(WEDGE));
+				for (int j = 0; j < elem_nodes.size(); j++)
+					elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
+				elem = std::make_shared<Wedge>(Wedge(parser->mesh.elem_id[i], WEDGE, elem_nodes));
+				break;
+			//case PYR:
+			//	elem_nodes.resize(count_nodes(PYR));
+			//	for (int j = 0; j < elem_nodes.size(); j++)
+			//		elem_nodes[j] = parser->mesh.elem_nodes[node_tmp + j];
+			//	elem = std::make_shared<Pyr>(Pyr(parser->mesh.elem_id[i], PYR, elem_nodes));
+			//	break;
 			default:
 				throw runtime_error("Error: incorrect element " + to_string(i) +
 									" type: " + to_string(parser->mesh.elem_types[i]));
 				break;
 		}
+		node_tmp += elem_nodes.size();
+
 		std::vector<double> x, y, z;
 		for (int j = 0; j < elem_nodes.size(); j++) {
-			x.push_back(parser->mesh.nodes_coord[3 * (elem_nodes[j] - 1)]);
+			x.push_back(parser->mesh.nodes_coord[3 * (elem_nodes[j] - 1) + 0]);
 			y.push_back(parser->mesh.nodes_coord[3 * (elem_nodes[j] - 1) + 1]);
 			z.push_back(parser->mesh.nodes_coord[3 * (elem_nodes[j] - 1) + 2]); // may be Nodes 
 		}

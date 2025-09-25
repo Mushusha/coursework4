@@ -224,6 +224,12 @@ uint8_t mesh::count_nodes(uint8_t elem_t) {
 	case HEX:
 		return 8;
 		break;
+	case WEDGE:
+		return 6;
+		break;
+	case PYR:
+		return 5;
+		break;
 	default:
 		throw runtime_error("Error: wrong element type");
 	}
