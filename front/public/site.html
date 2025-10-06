@@ -1,0 +1,2119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FEM calculate</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .upload-section, .info-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+            .upload-area:hover {
+                border-color: rgba(255, 255, 255, 0.8);
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #FF512F, #F09819);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            display: inline-block;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+
+            .btn:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+            }
+
+            .btn:active {
+                transform: translateY(1px);
+            }
+
+            .btn:disabled {
+                background: #666;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #1a2a6c, #b21f1f);
+        }
+
+        .visualization-section {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            height: 500px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #model-container {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid #fff;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .file-info {
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info-item {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .info-label {
+            font-weight: bold;
+        }
+
+        .info-value {
+            opacity: 0.9;
+        }
+
+        .controls-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .color-picker {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .slider {
+            width: 100px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+            .toggle-switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+            .toggle-slider:before {
+                position: absolute;
+                content: "";
+                height: 16px;
+                width: 16px;
+                left: 4px;
+                bottom: 4px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+            }
+
+        input:checked + .toggle-slider {
+            background-color: #2196F3;
+        }
+
+            input:checked + .toggle-slider:before {
+                transform: translateX(26px);
+            }
+
+        .stats-panel {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .export-section {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .server-status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            font-size: 0.9rem;
+        }
+
+        .status-connected {
+            color: #4CAF50;
+        }
+
+        .status-disconnected {
+            color: #f44336;
+        }
+
+        .results-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            grid-column: 1 / -1;
+        }
+
+        .results-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+            .results-controls select {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 4px;
+                color: white;
+                padding: 5px;
+                min-width: 120px;
+            }
+
+            .results-controls option {
+                background: #2a2a2a;
+                color: white;
+            }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        /* Стили для Colorbar */
+        #colorbar-container {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 30px;
+            height: 220px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 5px;
+            padding: 10px 5px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 1000;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        #colorbar {
+            width: 20px;
+            height: 180px;
+            border-radius: 3px;
+        }
+
+        #colorbar-labels {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 180px;
+            color: white;
+            font-size: 10px;
+            text-align: center;
+            width: 100%;
+        }
+
+        #colorbar-min, #colorbar-max {
+            color: #fff;
+            font-size: 10px;
+            text-shadow: 0 0 3px #000;
+            font-weight: bold;
+        }
+
+        .export-section {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        #download-vtu-btn {
+            background: linear-gradient(45deg, #1a2a6c, #b21f1f);
+        }
+
+        #download-vtu-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>FEM calculate</h1>
+        </header>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <h2>Загрузка файла</h2>
+                <div class="upload-area" id="drop-area">
+                    <div class="upload-icon">📁</div>
+                    <p>Перетащите файл .fc сюда или нажмите для выбора</p>
+                    <input type="file" id="file-input" accept=".fc,.txt" style="display: none;">
+                    <button class="btn" id="select-file-btn">Выбрать файл</button>
+                </div>
+
+                <div class="file-info" id="file-info">
+                    <p>Файл не выбран</p>
+                </div>
+
+                <button class="btn" id="visualize-btn" disabled>Построить модель</button>
+                <button class="btn btn-secondary" id="reset-btn" disabled>Сбросить</button>
+
+                <div class="export-section">
+                    <button class="btn btn-secondary" id="screenshot-btn" disabled>Сделать скриншот</button>
+                    <button class="btn" id="send-data-btn" disabled>Посчитать</button>
+                </div>
+
+                <div class="server-status" id="server-status">
+                    Статус сервера: <span class="status-disconnected">Не подключен</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2>Информация о модели</h2>
+                <div id="model-info">
+                    <p>Загрузите файл для просмотра информации о модели</p>
+                </div>
+
+                <div class="controls-panel">
+                    <div class="control-group">
+                        <span class="control-label">Цвет модели:</span>
+                        <input type="color" id="model-color" class="color-picker" value="#00a8ff">
+                    </div>
+
+                    <div class="control-group">
+                        <span class="control-label">Прозрачность:</span>
+                        <input type="range" id="opacity-slider" class="slider" min="0.1" max="1" step="0.1" value="0.9">
+                    </div>
+
+                    <div class="control-group">
+                        <span class="control-label">Цвет каркаса:</span>
+                        <input type="color" id="wireframe-color" class="color-picker" value="#000000">
+                    </div>
+
+                    <div class="control-group">
+                        <span class="control-label">Оси координат:</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="axes-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="control-group">
+                        <span class="control-label">Режим отображения:</span>
+                        <div class="control-row">
+                            <button class="btn" id="solid-btn">Сплошной</button>
+                            <button class="btn" id="wireframe-btn">Каркас</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-panel" id="stats-panel">
+                    <p>Статистика будет отображена после построения модели</p>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h2>Результаты анализа</h2>
+                <div class="results-controls">
+                    <div class="control-group">
+                        <span class="control-label">Отображать:</span>
+                        <select id="results-type">
+                            <option value="none">Нет</option>
+                            <option value="displacement">Перемещения</option>
+                            <option value="stress">Напряжения</option>
+                            <option value="strain">Деформации</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <span class="control-label">Цветовая схема:</span>
+                        <select id="color-scheme">
+                            <option value="jet">Jet</option>
+                            <option value="hot">Hot</option>
+                            <option value="cool">Cool</option>
+                            <option value="rainbow">Rainbow</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <span class="control-label">Компонента:</span>
+                        <select id="component-select">
+                            <option value="magnitude">Модуль</option>
+                            <option value="x">X</option>
+                            <option value="y">Y</option>
+                            <option value="z">Z</option>
+                            <option value="xy">XY</option>
+                            <option value="yz">YZ</option>
+                            <option value="zx">ZX</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="results-info" class="file-info">
+                    <p>Результаты не загружены</p>
+                </div>
+                <div class="export-section">
+                    <button class="btn" id="load-results-btn">Загрузить результаты</button>
+                    <button class="btn btn-secondary" id="download-vtu-btn" disabled>Скачать .vtu файл</button>
+                </div>
+            </div>
+
+            <div class="visualization-section">
+                <h2>3D визуализация</h2>
+                <div id="model-container"></div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Построение модели...</p>
+                </div>
+
+                <!-- Colorbar container -->
+                <div id="colorbar-container">
+                    <canvas id="colorbar"></canvas>
+                    <div id="colorbar-labels">
+                        <span id="colorbar-max">max</span>
+                        <span id="colorbar-min">min</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>FEMCalc &copy; 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        // Элементы DOM
+        const fileInput = document.getElementById('file-input');
+        const selectFileBtn = document.getElementById('select-file-btn');
+        const dropArea = document.getElementById('drop-area');
+        const visualizeBtn = document.getElementById('visualize-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const screenshotBtn = document.getElementById('screenshot-btn');
+        const sendDataBtn = document.getElementById('send-data-btn');
+        const fileInfo = document.getElementById('file-info');
+        const modelInfo = document.getElementById('model-info');
+        const modelContainer = document.getElementById('model-container');
+        const loading = document.getElementById('loading');
+        const statsPanel = document.getElementById('stats-panel');
+        const serverStatus = document.getElementById('server-status');
+
+        // Элементы управления
+        const modelColor = document.getElementById('model-color');
+        const opacitySlider = document.getElementById('opacity-slider');
+        const wireframeColor = document.getElementById('wireframe-color');
+        const axesToggle = document.getElementById('axes-toggle');
+        const solidBtn = document.getElementById('solid-btn');
+        const wireframeBtn = document.getElementById('wireframe-btn');
+
+        // Элементы результатов
+        const resultsType = document.getElementById('results-type');
+        const colorScheme = document.getElementById('color-scheme');
+        const componentSelect = document.getElementById('component-select');
+        const loadResultsBtn = document.getElementById('load-results-btn');
+        const resultsInfo = document.getElementById('results-info');
+
+        let currentFile = null;
+        let currentFileData = null;
+        let scene, camera, renderer, controls;
+        let geometry, mesh;
+        let currentMesh = null;
+        let internalWireframe = null;
+        let axesHelper = null;
+        let internalEdgesData = null;
+        let positionsData = null;
+        let numNodesData = null;
+        let isServerConnected = false;
+        let resultsData = null;
+
+        // Инициализация 3D сцены
+        function initScene() {
+            console.log('Инициализация 3D сцены...');
+
+            // Создание сцены
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            // Создание камеры
+            camera = new THREE.PerspectiveCamera(75, modelContainer.clientWidth / modelContainer.clientHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            // Создание рендерера
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(modelContainer.clientWidth, modelContainer.clientHeight);
+            modelContainer.appendChild(renderer.domElement);
+
+            // Добавление контролов для вращения камеры
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Добавление освещения
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+
+            // Добавление осей координат
+            axesHelper = new THREE.AxesHelper(2);
+            scene.add(axesHelper);
+
+            // Анимация
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // Обработка изменения размера окна
+            window.addEventListener('resize', () => {
+                camera.aspect = modelContainer.clientWidth / modelContainer.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(modelContainer.clientWidth, modelContainer.clientHeight);
+            });
+
+            // Инициализация colorbar canvas
+            const colorbarCanvas = document.getElementById('colorbar');
+            if (colorbarCanvas) {
+                colorbarCanvas.width = 20;
+                colorbarCanvas.height = 180;
+            }
+
+            console.log('3D сцена инициализирована');
+        }
+
+        // Функции для Colorbar
+        function createColorbar(minVal, maxVal, colorScheme = 'jet') {
+            const colorbarContainer = document.getElementById('colorbar-container');
+            const colorbar = document.getElementById('colorbar');
+            const colorbarMin = document.getElementById('colorbar-min');
+            const colorbarMax = document.getElementById('colorbar-max');
+
+            if (!colorbar || !colorbarContainer) return;
+
+            // Показываем colorbar
+            colorbarContainer.style.display = 'flex';
+
+            // Обновляем метки
+            colorbarMin.textContent = minVal.toExponential(2);
+            colorbarMax.textContent = maxVal.toExponential(2);
+
+            // Создаем canvas для градиента
+            const ctx = colorbar.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, colorbar.height);
+
+            // Настраиваем градиент в зависимости от цветовой схемы
+            switch (colorScheme) {
+                case 'jet':
+                    gradient.addColorStop(0, '#00008f');
+                    gradient.addColorStop(0.35, '#0000ff');
+                    gradient.addColorStop(0.5, '#00ffff');
+                    gradient.addColorStop(0.65, '#ffff00');
+                    gradient.addColorStop(1, '#ff0000');
+                    break;
+                case 'hot':
+                    gradient.addColorStop(0, '#000000');
+                    gradient.addColorStop(0.3, '#ff0000');
+                    gradient.addColorStop(0.6, '#ffff00');
+                    gradient.addColorStop(1, '#ffffff');
+                    break;
+                case 'cool':
+                    gradient.addColorStop(0, '#00ffff');
+                    gradient.addColorStop(1, '#ff00ff');
+                    break;
+                case 'rainbow':
+                    gradient.addColorStop(0, '#ff0000');
+                    gradient.addColorStop(0.17, '#ffff00');
+                    gradient.addColorStop(0.33, '#00ff00');
+                    gradient.addColorStop(0.5, '#00ffff');
+                    gradient.addColorStop(0.67, '#0000ff');
+                    gradient.addColorStop(0.83, '#ff00ff');
+                    gradient.addColorStop(1, '#ff0000');
+                    break;
+                default:
+                    gradient.addColorStop(0, '#0000ff');
+                    gradient.addColorStop(1, '#ff0000');
+            }
+
+            // Очищаем и рисуем градиент
+            ctx.clearRect(0, 0, colorbar.width, colorbar.height);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, colorbar.width, colorbar.height);
+
+            // Добавляем рамку
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0, 0, colorbar.width, colorbar.height);
+        }
+
+        function hideColorbar() {
+            const colorbarContainer = document.getElementById('colorbar-container');
+            if (colorbarContainer) {
+                colorbarContainer.style.display = 'none';
+            }
+        }
+
+        function getColorForValue(value, minVal, maxVal, colorScheme = 'jet') {
+            if (minVal === maxVal) return [0.5, 0.5, 0.5];
+
+            const normalized = (value - minVal) / (maxVal - minVal);
+
+            switch (colorScheme) {
+                case 'jet':
+                    return jetColorMap(normalized);
+                case 'hot':
+                    return hotColorMap(normalized);
+                case 'cool':
+                    return coolColorMap(normalized);
+                case 'rainbow':
+                    return rainbowColorMap(normalized);
+                default:
+                    return jetColorMap(normalized);
+            }
+        }
+
+        // Цветовые карты
+        function jetColorMap(t) {
+            if (t < 0.125) return [0, 0, 0.5 + 0.5 * (t / 0.125)];
+            if (t < 0.375) return [0, (t - 0.125) / 0.25, 1];
+            if (t < 0.625) return [(t - 0.375) / 0.25, 1, 1 - (t - 0.375) / 0.25];
+            if (t < 0.875) return [1, 1 - (t - 0.625) / 0.25, 0];
+            return [1 - 0.5 * ((t - 0.875) / 0.125), 0, 0];
+        }
+
+        function hotColorMap(t) {
+            if (t < 0.4) return [t / 0.4, 0, 0];
+            if (t < 0.8) return [1, (t - 0.4) / 0.4, 0];
+            return [1, 1, (t - 0.8) / 0.2];
+        }
+
+        function coolColorMap(t) {
+            return [t, 1 - t, 1];
+        }
+
+        function rainbowColorMap(t) {
+            const r = Math.sin(2 * Math.PI * t + 0) * 0.5 + 0.5;
+            const g = Math.sin(2 * Math.PI * t + 2) * 0.5 + 0.5;
+            const b = Math.sin(2 * Math.PI * t + 4) * 0.5 + 0.5;
+            return [r, g, b];
+        }
+
+        // Обработка выбора файла
+        selectFileBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Обработка drag and drop
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+            dropArea.style.background = 'rgba(255, 255, 255, 0.1)';
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+            dropArea.style.background = 'transparent';
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+            dropArea.style.background = 'transparent';
+
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Обработка файла
+        function handleFile(file) {
+            if (!file.name.match(/\.(fc|txt)$/)) {
+                alert('Пожалуйста, выберите файл с расширением .fc или .txt');
+                return;
+            }
+
+            currentFile = file;
+
+            // Обновление информации о файле
+            fileInfo.innerHTML = `
+        <div class="info-item">
+            <span class="info-label">Имя файла:</span>
+            <span class="info-value">${file.name}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Размер:</span>
+            <span class="info-value">${(file.size / 1024).toFixed(2)} KB</span>
+        </div>
+    `;
+
+            // Активация кнопок
+            visualizeBtn.disabled = false;
+            resetBtn.disabled = false;
+            sendDataBtn.disabled = !isServerConnected;
+
+            // Чтение и парсинг файла
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const fileContent = e.target.result;
+                    currentFileData = JSON.parse(fileContent);
+
+                    // Добавляем оригинальное имя файла в данные
+                    if (!currentFileData.header) {
+                        currentFileData.header = {};
+                    }
+                    currentFileData.header.original_filename = file.name.replace(/\.fc$/, '').replace(/\.txt$/, '');
+
+                    // Обновление информации о модели
+                    updateModelInfo(currentFileData);
+                } catch (error) {
+                    console.error('Ошибка при парсинге файла:', error);
+                    modelInfo.innerHTML = '<p style="color: #ff6b6b;">Ошибка при чтении файла. Убедитесь, что файл имеет правильный формат JSON.</p>';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Обновление информации о модели
+        function updateModelInfo(data) {
+            let infoHTML = '';
+
+            if (data.header) {
+                infoHTML += `
+                        <div class="info-item">
+                            <span class="info-label">Описание:</span>
+                            <span class="info-value">${data.header.description}</span>
+                        </div>
+                    `;
+            }
+
+            if (data.materials && data.materials.length > 0) {
+                infoHTML += `
+                        <div class="info-item">
+                            <span class="info-label">Материал:</span>
+                            <span class="info-value">${data.materials[0].name || 'Не указан'}</span>
+                        </div>
+                    `;
+            }
+
+            if (data.settings) {
+                infoHTML += `
+                        <div class="info-item">
+                            <span class="info-label">Тип анализа:</span>
+                            <span class="info-value">${data.settings.type}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Размерность:</span>
+                            <span class="info-value">${data.settings.dimensions}</span>
+                        </div>
+                    `;
+            }
+
+            modelInfo.innerHTML = infoHTML || '<p>Информация о модели недоступна</p>';
+        }
+
+        // Визуализация модели
+        visualizeBtn.addEventListener('click', () => {
+            if (!currentFile) return;
+
+            console.log('Начало построения 3D модели...');
+            loading.style.display = 'block';
+            screenshotBtn.disabled = false;
+
+            // Временно отключаем кнопку отправки чтобы не мешала
+            sendDataBtn.disabled = true;
+            sendDataBtn.textContent = 'Построение модели...';
+
+            // Чтение файла и построение модели
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const fileContent = e.target.result;
+                    const jsonData = JSON.parse(fileContent);
+
+                    // Очистка сцены
+                    clearScene();
+
+                    // Добавление освещения и осей заново
+                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                    scene.add(ambientLight);
+
+                    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                    directionalLight.position.set(1, 1, 1);
+                    scene.add(directionalLight);
+
+                    axesHelper = new THREE.AxesHelper(2);
+                    scene.add(axesHelper);
+
+                    // Построение модели на основе данных mesh
+                    buildModelFromMesh(jsonData.mesh);
+
+                    loading.style.display = 'none';
+
+                    // Восстанавливаем кнопку отправки после построения
+                    sendDataBtn.disabled = !isServerConnected;
+                    sendDataBtn.textContent = 'Посчитать';
+
+                    console.log('3D модель успешно построена');
+
+                } catch (error) {
+                    console.error('Ошибка при построении модели:', error);
+                    loading.style.display = 'none';
+                    alert('Ошибка при построении модели. Проверьте формат файла.');
+
+                    // Восстанавливаем кнопку при ошибке
+                    sendDataBtn.disabled = !isServerConnected;
+                    sendDataBtn.textContent = 'Посчитать';
+                }
+            };
+            reader.readAsText(currentFile);
+        });
+
+        // Очистка сцены
+        function clearScene() {
+            // Удаляем только меши и каркасы, оставляя освещение и другие элементы
+            const objectsToRemove = [];
+            scene.traverse((child) => {
+                if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
+                    objectsToRemove.push(child);
+                }
+            });
+
+            objectsToRemove.forEach(obj => scene.remove(obj));
+
+            currentMesh = null;
+            internalWireframe = null;
+            internalEdgesData = null;
+            positionsData = null;
+            numNodesData = null;
+
+            // Скрываем colorbar
+            hideColorbar();
+        }
+
+        // Сброс сцены
+        resetBtn.addEventListener('click', () => {
+            clearScene();
+            fileInfo.innerHTML = '<p>Файл не выбран</p>';
+            modelInfo.innerHTML = '<p>Загрузите файл для просмотра информации о модели</p>';
+            statsPanel.innerHTML = '<p>Статистика будет отображена после построения модели</p>';
+            visualizeBtn.disabled = true;
+            screenshotBtn.disabled = true;
+            sendDataBtn.disabled = true;
+            currentFile = null;
+            currentFileData = null;
+
+            // Сбрасываем результаты
+            resultsData = null;
+            resultsInfo.innerHTML = '<p>Результаты не загружены</p>';
+            resultsType.value = 'none';
+            resultsType.disabled = true;
+            colorScheme.disabled = true;
+            componentSelect.disabled = true;
+        });
+
+        // Сделать скриншот
+        screenshotBtn.addEventListener('click', () => {
+            renderer.render(scene, camera);
+            const image = renderer.domElement.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = 'model-screenshot.png';
+            link.click();
+        });
+
+        // Изменение цвета модели
+        modelColor.addEventListener('input', (e) => {
+            if (currentMesh) {
+                currentMesh.material.color.set(e.target.value);
+            }
+        });
+
+        // Изменение прозрачности
+        opacitySlider.addEventListener('input', (e) => {
+            if (currentMesh) {
+                currentMesh.material.opacity = parseFloat(e.target.value);
+            }
+        });
+
+        // Изменение цвета каркаса
+        wireframeColor.addEventListener('input', (e) => {
+            if (internalWireframe) {
+                internalWireframe.material.color.set(e.target.value);
+            }
+        });
+
+        // Переключение осей координат
+        axesToggle.addEventListener('change', (e) => {
+            if (axesHelper) {
+                axesHelper.visible = e.target.checked;
+            }
+        });
+
+        // Переключение режимов отображения
+        solidBtn.addEventListener('click', () => {
+            if (currentMesh) {
+                currentMesh.material.wireframe = false;
+            }
+            // Убираем внутренний каркас
+            if (internalWireframe) {
+                internalWireframe.visible = false;
+            }
+        });
+
+        wireframeBtn.addEventListener('click', () => {
+            if (currentMesh) {
+                currentMesh.material.wireframe = false;
+            }
+            // Включаем внутренний каркас
+            if (internalWireframe) {
+                internalWireframe.visible = true;
+            } else if (internalEdgesData && positionsData && numNodesData) {
+                // Создаем каркас если его еще нет
+                createInternalWireframe(internalEdgesData, positionsData, numNodesData);
+            }
+        });
+
+        // Функция для проверки подключения к серверу
+        async function checkServerConnection() {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const response = await fetch('http://localhost:3000/', {
+                    method: 'GET',
+                    mode: 'cors',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const text = await response.text();
+                    console.log('✅ Сервер приложения доступен:', text);
+                    return true;
+                } else {
+                    console.log('❌ Сервер ответил с ошибкой:', response.status);
+                    return false;
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log('❌ Таймаут подключения к серверу');
+                } else {
+                    console.log('❌ Ошибка подключения к серверу:', error.message);
+                }
+                return false;
+            }
+        }
+
+        // Функция для отправки данных анализа на сервер
+        async function sendAnalysisToServer(analysisData) {
+            try {
+                console.log('Отправка данных на сервер...');
+
+                const response = await fetch('http://localhost:3000/api/analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(analysisData)
+                });
+
+                const result = await response.json();
+                console.log('Ответ сервера:', result);
+
+                if (result.success) {
+                    console.log('Данные успешно отправлены, ID:', result.id);
+                    showNotification('Данные анализа успешно отправлены в приложение', 'success');
+                    return result.id;
+                } else {
+                    throw new Error(result.message || 'Неизвестная ошибка сервера');
+                }
+            } catch (error) {
+                console.error('Ошибка отправки данных:', error);
+                showNotification('Ошибка при отправке данных в приложение: ' + error.message, 'error');
+                return null;
+            }
+        }
+
+        // Функция сбора данных для отправки
+        function collectAnalysisData() {
+            if (!currentFileData) {
+                showNotification('Нет данных для отправки', 'error');
+                return null;
+            }
+
+            // Убедимся, что имя файла есть в данных
+            if (!currentFileData.header) {
+                currentFileData.header = {};
+            }
+            if (!currentFileData.header.original_filename && currentFile) {
+                currentFileData.header.original_filename = currentFile.name.replace(/\.fc$/, '').replace(/\.txt$/, '');
+            }
+
+            return currentFileData;
+        }
+
+        // Обработчик кнопки отправки
+        sendDataBtn.addEventListener('click', async () => {
+            if (!currentFileData) {
+                showNotification('Сначала загрузите файл', 'error');
+                return;
+            }
+
+            sendDataBtn.disabled = true;
+            sendDataBtn.textContent = 'Расчет...';
+
+            try {
+                const analysisData = collectAnalysisData();
+                if (analysisData) {
+                    const resultId = await sendAnalysisToServer(analysisData);
+                    console.log('✅ Отправка завершена, ID:', resultId);
+
+                    // Периодически проверяем статус расчета
+                    showNotification('Расчет запущен... Ожидайте результатов', 'info');
+
+                    let attempts = 0;
+                    const maxAttempts = 30; // 30 попыток по 2 секунды = 60 секунд максимум
+
+                    const checkInterval = setInterval(async () => {
+                        attempts++;
+                        console.log(`🔄 Проверка результатов (попытка ${attempts}/${maxAttempts})...`);
+
+                        if (await checkCalculationStatus()) {
+                            clearInterval(checkInterval);
+                            // Автоматически загружаем результаты
+                            await loadResults();
+                        } else if (attempts >= maxAttempts) {
+                            clearInterval(checkInterval);
+                            showNotification('Расчет занимает больше времени чем ожидалось', 'warning');
+                        }
+                    }, 2000); // Проверяем каждые 2 секунды
+
+                }
+            } catch (error) {
+                console.error('Ошибка отправки:', error);
+            } finally {
+                sendDataBtn.disabled = false;
+                sendDataBtn.textContent = 'Посчитать';
+            }
+        });
+
+        // Уведомления
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 15px 20px;
+                    border-radius: 5px;
+                    color: white;
+                    z-index: 10000;
+                    font-weight: bold;
+                    transition: opacity 0.3s;
+                    background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+                `;
+            notification.textContent = message;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Обновление статуса сервера
+        function updateServerStatus(connected) {
+            isServerConnected = connected;
+            const statusElement = serverStatus.querySelector('span');
+
+            if (connected) {
+                statusElement.textContent = 'Подключен';
+                statusElement.className = 'status-connected';
+                sendDataBtn.disabled = !currentFile;
+            } else {
+                statusElement.textContent = 'Не подключен';
+                statusElement.className = 'status-disconnected';
+                sendDataBtn.disabled = true;
+            }
+        }
+
+        // Построение 3D модели из данных mesh
+        function buildModelFromMesh(meshData) {
+            console.log('Построение модели из mesh данных');
+
+            if (!meshData || !meshData.nodes || !meshData.elems) {
+                console.error('Отсутствуют необходимые данные mesh');
+                return;
+            }
+
+            // Декодирование base64 -> ArrayBuffer -> typed arrays
+            const nodesBuffer = base64ToArrayBuffer(meshData.nodes);
+            const nodes = new Float64Array(nodesBuffer);
+            const elemsBuffer = base64ToArrayBuffer(meshData.elems);
+            let elems = new Uint32Array(elemsBuffer);
+
+            const numNodes = nodes.length / 3;
+            console.log('decoded nodes:', numNodes, 'raw elems length:', elems.length);
+
+            // Определяем максимум индекса, чтобы понять 0-based или 1-based
+            let maxIdx = 0;
+            for (let i = 0; i < elems.length; i++) {
+                if (elems[i] > maxIdx) maxIdx = elems[i];
+            }
+
+            let oneBased = false;
+            if (maxIdx === numNodes) {
+                oneBased = true;
+                console.log('Connectivity looks 1-based, will subtract 1 from indices.');
+            } else if (maxIdx > numNodes) {
+                console.warn('Max index > numNodes. Trying to subtract 1 (maybe 1-based).');
+                oneBased = true;
+            }
+
+            // Определяем тип элементов
+            let elemsPer = 8; // HEX8 по умолчанию
+            if (meshData.elems_count && meshData.elems_count > 0) {
+                elemsPer = Math.max(1, Math.floor(elems.length / meshData.elems_count));
+            } else {
+                // Автоопределение по делимости
+                if (elems.length % 6 === 0) elemsPer = 6; // PRISM6
+                else if (elems.length % 4 === 0) elemsPer = 4; // TET4
+                else if (elems.length % 8 === 0) elemsPer = 8; // HEX8
+                else if (elems.length % 3 === 0) elemsPer = 3; // TRI3
+            }
+
+            const elemCount = Math.floor(elems.length / elemsPer);
+            console.log('Detected elemsPer:', elemsPer, 'elemCount:', elemCount);
+
+            // Переведём nodes в Float32
+            const positions = new Float32Array(nodes.length);
+            for (let i = 0; i < nodes.length; i++) positions[i] = nodes[i];
+
+            // Сохраняем данные для создания каркаса позже
+            positionsData = positions;
+            numNodesData = numNodes;
+
+            // Создаем отдельную геометрию для каждого типа элементов
+            const geometries = [];
+            const internalEdges = new Set(); // Только для внутренних ребер
+
+            // Функция для добавления ребер и подсчета их частоты
+            function addEdge(edgeCounts, a, b) {
+                const key = a < b ? `${a}-${b}` : `${b}-${a}`;
+                edgeCounts.set(key, (edgeCounts.get(key) || 0) + 1);
+            }
+
+            // Функция для сбора только внутренних ребер
+            function collectInternalEdges(edgeCounts) {
+                for (const [edge, count] of edgeCounts.entries()) {
+                    if (count > 1) {
+                        // Ребро принадлежит нескольким элементам - внутреннее
+                        internalEdges.add(edge);
+                    }
+                }
+            }
+
+            const edgeCounts = new Map();
+
+            if (elemsPer === 8) {
+                // HEX8 элементы - рисуем квадратными гранями
+                const quadIndices = [];
+
+                // Порядок узлов для HEX8 (стандартный для Fidesys)
+                const faceMap = [
+                    [0, 1, 2, 3], // нижняя
+                    [4, 5, 6, 7], // верхняя
+                    [0, 4, 7, 3], // левая
+                    [1, 5, 6, 2], // правая
+                    [0, 1, 5, 4], // передняя
+                    [2, 3, 7, 6]  // задняя
+                ];
+
+                for (let e = 0; e < elemCount; e++) {
+                    const base = e * elemsPer;
+
+                    // собираем 8 узлов элемента (с коррекцией, если 1-based)
+                    const en = new Array(8);
+                    for (let k = 0; k < 8; k++) {
+                        let id = elems[base + k];
+                        if (oneBased) id = id - 1;
+                        en[k] = id;
+                    }
+
+                    // Для каждой грани добавляем 2 треугольника (для квадратной грани)
+                    for (const face of faceMap) {
+                        const a = en[face[0]], b = en[face[1]], c = en[face[2]], d = en[face[3]];
+
+                        // Проверка корректности индексов
+                        if ([a, b, c, d].some(x => x < 0 || x >= numNodes)) continue;
+
+                        // Добавляем два треугольника для квадрата
+                        quadIndices.push(a, b, c);
+                        quadIndices.push(a, c, d);
+
+                        // Добавляем ребра грани
+                        addEdge(edgeCounts, a, b);
+                        addEdge(edgeCounts, b, c);
+                        addEdge(edgeCounts, c, d);
+                        addEdge(edgeCounts, d, a);
+                    }
+                }
+
+                if (quadIndices.length > 0) {
+                    geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+                    const useUint32 = (numNodes > 65535);
+                    const IndexArray = useUint32 ? Uint32Array : Uint16Array;
+                    const indexTyped = new IndexArray(quadIndices);
+
+                    geometry.setIndex(new THREE.BufferAttribute(indexTyped, 1));
+                    geometry.computeVertexNormals();
+                    geometries.push(geometry);
+                }
+            } else if (elemsPer === 6) {
+                // PRISM6 элементы (призмы)
+                console.log("Processing PRISM6 elements");
+                const triIndices = [];
+
+                const faceMap = [
+                    [0, 2, 1], // нижнее основание (треугольник)
+                    [3, 4, 5], // верхнее основание (треугольник)
+                    [0, 1, 4, 3], // боковая грань 1
+                    [1, 2, 5, 4], // боковая грань 2
+                    [2, 0, 3, 5]  // боковая грань 3
+                ];
+
+                for (let e = 0; e < elemCount; e++) {
+                    const base = e * elemsPer;
+
+                    // собираем 6 узлов элемента (с коррекцией, если 1-based)
+                    const en = new Array(6);
+                    for (let k = 0; k < 6; k++) {
+                        let id = elems[base + k];
+                        if (oneBased) id = id - 1;
+                        en[k] = id;
+                    }
+
+                    // Обрабатываем каждую грань
+                    for (let f = 0; f < faceMap.length; f++) {
+                        const face = faceMap[f];
+
+                        if (face.length === 3) {
+                            // Треугольная грань
+                            const a = en[face[0]], b = en[face[1]], c = en[face[2]];
+
+                            if ([a, b, c].some(x => x < 0 || x >= numNodes)) continue;
+
+                            triIndices.push(a, b, c);
+
+                            // Добавляем ребра треугольника
+                            addEdge(edgeCounts, a, b);
+                            addEdge(edgeCounts, b, c);
+                            addEdge(edgeCounts, c, a);
+                        } else if (face.length === 4) {
+                            // Четырехугольная грань - разбиваем на 2 треугольника
+                            const a = en[face[0]], b = en[face[1]], c = en[face[2]], d = en[face[3]];
+
+                            if ([a, b, c, d].some(x => x < 0 || x >= numNodes)) continue;
+
+                            // Два треугольника для четырехугольника
+                            triIndices.push(a, b, c);
+                            triIndices.push(a, c, d);
+
+                            // Добавляем ребра грани
+                            addEdge(edgeCounts, a, b);
+                            addEdge(edgeCounts, b, c);
+                            addEdge(edgeCounts, c, d);
+                            addEdge(edgeCounts, d, a);
+                        }
+                    }
+                }
+
+                if (triIndices.length > 0) {
+                    geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+                    const useUint32 = (numNodes > 65535);
+                    const IndexArray = useUint32 ? Uint32Array : Uint16Array;
+                    const indexTyped = new IndexArray(triIndices);
+
+                    geometry.setIndex(new THREE.BufferAttribute(indexTyped, 1));
+                    geometry.computeVertexNormals();
+                    geometries.push(geometry);
+                }
+            } else if (elemsPer === 4) {
+                // TET4 элементы (тетраэдры)
+                console.log("Processing TET4 elements");
+                const triIndices = [];
+
+                const faceMap = [
+                    [0, 2, 3], // грань 0
+                    [2, 3, 1], // грань 1
+                    [0, 1, 3], // грань 2
+                    [1, 0, 2]  // грань 3
+                ];
+
+                for (let e = 0; e < elemCount; e++) {
+                    const base = e * elemsPer;
+
+                    // собираем 4 узла элемента (с коррекцией, если 1-based)
+                    const en = new Array(4);
+                    for (let k = 0; k < 4; k++) {
+                        let id = elems[base + k];
+                        if (oneBased) id = id - 1;
+                        en[k] = id;
+                    }
+
+                    // Обрабатываем все 4 треугольные грани
+                    for (const face of faceMap) {
+                        const a = en[face[0]], b = en[face[1]], c = en[face[2]];
+
+                        if ([a, b, c].some(x => x < 0 || x >= numNodes)) continue;
+
+                        triIndices.push(a, b, c);
+
+                        // Добавляем ребра треугольника
+                        addEdge(edgeCounts, a, b);
+                        addEdge(edgeCounts, b, c);
+                        addEdge(edgeCounts, c, a);
+                    }
+                }
+
+                if (triIndices.length > 0) {
+                    geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+                    const useUint32 = (numNodes > 65535);
+                    const IndexArray = useUint32 ? Uint32Array : Uint16Array;
+                    const indexTyped = new IndexArray(triIndices);
+
+                    geometry.setIndex(new THREE.BufferAttribute(indexTyped, 1));
+                    geometry.computeVertexNormals();
+                    geometries.push(geometry);
+                }
+            } else if (elemsPer === 3) {
+                // TRI элементы
+                const triIndices = [];
+
+                for (let e = 0; e < elemCount; e++) {
+                    const base = e * elemsPer;
+                    let a = elems[base], b = elems[base + 1], c = elems[base + 2];
+                    if (oneBased) { a--; b--; c--; }
+                    if ([a, b, c].some(x => x < 0 || x >= numNodes)) continue;
+                    triIndices.push(a, b, c);
+
+                    // Добавляем ребра треугольника
+                    addEdge(edgeCounts, a, b);
+                    addEdge(edgeCounts, b, c);
+                    addEdge(edgeCounts, c, a);
+                }
+
+                if (triIndices.length > 0) {
+                    geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+                    const useUint32 = (numNodes > 65535);
+                    const IndexArray = useUint32 ? Uint32Array : Uint16Array;
+                    const indexTyped = new IndexArray(triIndices);
+
+                    geometry.setIndex(new THREE.BufferAttribute(indexTyped, 1));
+                    geometry.computeVertexNormals();
+                    geometries.push(geometry);
+                }
+            }
+
+            // Собираем только внутренние ребра
+            collectInternalEdges(edgeCounts);
+            internalEdgesData = internalEdges;
+
+            if (geometries.length === 0) {
+                console.error('No geometry created. Check elems format.');
+                return;
+            }
+
+            // Объединяем все геометрии в одну
+            const mergedGeometry = mergeGeometries(geometries);
+
+            // Материал и меш
+            const material = new THREE.MeshPhongMaterial({
+                color: modelColor.value,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: parseFloat(opacitySlider.value),
+                wireframe: false
+            });
+
+            currentMesh = new THREE.Mesh(mergedGeometry, material);
+            scene.add(currentMesh);
+
+            // Обновление статистики
+            updateStats(mergedGeometry, elemCount, numNodes);
+
+            // Подгон камеры
+            try {
+                const boundingBox = new THREE.Box3().setFromObject(currentMesh);
+                const center = boundingBox.getCenter(new THREE.Vector3());
+                const size = boundingBox.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / Math.sin(fov / 2));
+
+                camera.position.set(center.x, center.y, center.z + cameraZ * 1.2);
+                controls.target.set(center.x, center.y, center.z);
+                controls.update();
+            } catch (err) {
+                console.warn('Camera fit failed:', err);
+            }
+        }
+
+        // Функция для создания внутреннего каркаса
+        function createInternalWireframe(internalEdges, positions, numNodes) {
+            // Удаляем старый каркас если есть
+            if (internalWireframe) {
+                scene.remove(internalWireframe);
+            }
+
+            // Создаем внутренний каркас
+            if (internalEdges.size > 0) {
+                const internalWireframeGeometry = new THREE.BufferGeometry();
+                internalWireframeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+                const internalEdgesArray = [];
+                for (const edge of internalEdges) {
+                    const [a, b] = edge.split('-').map(Number);
+                    internalEdgesArray.push(a, b);
+                }
+
+                const useUint32 = (numNodes > 65535);
+                const IndexArray = useUint32 ? Uint32Array : Uint16Array;
+                const internalIndices = new IndexArray(internalEdgesArray);
+
+                internalWireframeGeometry.setIndex(new THREE.BufferAttribute(internalIndices, 1));
+
+                internalWireframe = new THREE.LineSegments(
+                    internalWireframeGeometry,
+                    new THREE.LineBasicMaterial({
+                        color: wireframeColor.value,
+                        transparent: true,
+                        opacity: 0.6,
+                        linewidth: 1
+                    })
+                );
+                scene.add(internalWireframe);
+            }
+        }
+
+        // Функция для объединения геометрий
+        function mergeGeometries(geometries) {
+            if (geometries.length === 1) return geometries[0];
+
+            // Простое объединение - берем первую геометрию
+            return geometries[0];
+        }
+
+        // Обновление статистики
+        function updateStats(geometry, elemCount, nodeCount) {
+            const triangleCount = geometry.index ? geometry.index.count / 3 : 0;
+            const statsHTML = `
+                    <div class="info-item">
+                        <span class="info-label">Узлов:</span>
+                        <span class="info-value">${nodeCount}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Элементов:</span>
+                        <span class="info-value">${elemCount}</span>
+                    </div>
+                `;
+
+            statsPanel.innerHTML = statsHTML;
+        }
+
+        // Вспомогательная функция для декодирования base64 в ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Функция для загрузки результатов с сервера
+        async function loadResults() {
+            const loadResultsBtn = document.getElementById('load-results-btn');
+            const resultsInfo = document.getElementById('results-info');
+
+            loadResultsBtn.disabled = true;
+            loadResultsBtn.textContent = 'Загрузка...';
+
+            try {
+                console.log("🔄 Запрос результатов с сервера...");
+                const response = await fetch('http://localhost:3000/api/results');
+                const result = await response.json();
+
+                console.log("📥 Ответ сервера:", result);
+
+                if (result.success && result.has_results) {
+                    // Сохраняем полученные данные для визуализации
+                    resultsData = {
+                        displacements: result.displacements || [],
+                        stresses: result.stresses || [],
+                        strains: result.strains || [],
+                        points: result.points || []
+                    };
+
+                    console.log("✅ resultsData заполнен:");
+                    console.log("   - displacements:", resultsData.displacements.length);
+                    console.log("   - stresses:", resultsData.stresses.length);
+                    console.log("   - strains:", resultsData.strains.length);
+                    console.log("   - points:", resultsData.points.length);
+
+                    resultsInfo.innerHTML = `
+                <div class="info-item">
+                    <span class="info-label">Файл:</span>
+                    <span class="info-value">${result.file_path || 'Неизвестно'}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Размер файла:</span>
+                    <span class="info-value">${result.file_size ? (result.file_size / 1024).toFixed(2) + ' KB' : 'Неизвестно'}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Узлов:</span>
+                    <span class="info-value">${result.number_of_points}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Элементов:</span>
+                    <span class="info-value">${result.number_of_cells}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Перемещения:</span>
+                    <span class="info-value">${resultsData.displacements.length} значений</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Напряжения:</span>
+                    <span class="info-value">${resultsData.stresses.length} значений</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Статус:</span>
+                    <span class="info-value" style="color: #4CAF50;">Результаты загружены успешно</span>
+                </div>
+            `;
+
+                    showNotification('Результаты анализа загружены', 'success');
+
+                    // Активируем выпадающие списки
+                    document.getElementById('results-type').disabled = false;
+                    document.getElementById('color-scheme').disabled = false;
+                    document.getElementById('component-select').disabled = false;
+
+                    // Активируем кнопку скачивания
+                    downloadVtuBtn.disabled = false;
+
+                    // Автоматически визуализируем перемещения
+                    visualizeResults("displacement", "jet");
+
+                } else {
+                    resultsInfo.innerHTML = `
+                <div class="info-item">
+                    <span class="info-label">Статус:</span>
+                    <span class="info-value" style="color: #ff9800;">Результаты анализа еще не готовы</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Отладка:</span>
+                    <span class="info-value">${result.debug_info || result.message || 'Неизвестная ошибка'}</span>
+                </div>
+            `;
+                    showNotification('Результаты анализа еще не готовы', 'warning');
+                    console.warn("⚠️ Результаты не готовы:", result.message);
+                }
+            } catch (error) {
+                console.error('❌ Ошибка загрузки результатов:', error);
+                resultsInfo.innerHTML = `
+            <div class="info-item">
+                <span class="info-label">Статус:</span>
+                <span class="info-value" style="color: #f44336;">Ошибка загрузки результатов</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Ошибка:</span>
+                <span class="info-value">${error.message}</span>
+            </div>
+        `;
+                showNotification('Ошибка загрузки результатов: ' + error.message, 'error');
+            } finally {
+                loadResultsBtn.disabled = false;
+                loadResultsBtn.textContent = 'Загрузить результаты';
+            }
+        }
+
+        async function checkCalculationStatus() {
+            try {
+                const response = await fetch('http://localhost:3000/api/results');
+                const result = await response.json();
+
+                if (result.success && result.has_results) {
+                    downloadVtuBtn.disabled = false;
+                    showNotification('Расчет завершен! Результаты готовы.', 'success');
+                    return true;
+                }
+            } catch (error) {
+                console.log('Статус расчета:', error.message);
+            }
+
+            return false;
+        }
+
+        const downloadVtuBtn = document.getElementById('download-vtu-btn');
+
+        // Функция для скачивания VTU файла
+        async function downloadVtuFile() {
+            downloadVtuBtn.disabled = true;
+            downloadVtuBtn.textContent = 'Скачивание...';
+
+            try {
+                const response = await fetch('http://localhost:3000/api/download/vtu');
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Ошибка при скачивании файла');
+                }
+
+                // Получаем blob и создаем ссылку для скачивания
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+
+                // Получаем имя файла из заголовков
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'result.vtu';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                    }
+                } else if (currentFile) {
+                    // Если сервер не вернул имя, генерируем его на основе .fc файла
+                    filename = currentFile.name.replace(/\.fc$/, '.vtu').replace(/\.txt$/, '.vtu');
+                }
+
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                showNotification(`VTU файл "${filename}" успешно скачан`, 'success');
+
+            } catch (error) {
+                console.error('Ошибка при скачивании VTU файла:', error);
+                showNotification('Ошибка при скачивании VTU файла: ' + error.message, 'error');
+            } finally {
+                downloadVtuBtn.disabled = false;
+                downloadVtuBtn.textContent = 'Скачать .vtu файл';
+            }
+        }
+
+        // Обработчик кнопки скачивания
+        downloadVtuBtn.addEventListener('click', downloadVtuFile);
+
+        // Функция для проверки доступности VTU файла и активации кнопки
+        async function checkVtuFileAvailable() {
+            try {
+                const response = await fetch('http://localhost:3000/api/results');
+                const data = await response.json();
+
+                if (data.success && data.has_results) {
+                    downloadVtuBtn.disabled = false;
+                    return true;
+                }
+            } catch (error) {
+                console.log('VTU файл недоступен:', error.message);
+            }
+
+            downloadVtuBtn.disabled = true;
+            return false;
+        }
+
+        // Проверяем доступность VTU файла при загрузке результатов
+        document.getElementById('load-results-btn').addEventListener('click', async () => {
+            await loadResults();
+            await checkVtuFileAvailable();
+        });
+
+        // Также проверяем при загрузке страницы
+        window.addEventListener('DOMContentLoaded', async () => {
+            // ... существующий код ...
+
+            // Проверяем доступность VTU файла через 3 секунды после загрузки
+            setTimeout(async () => {
+                await checkVtuFileAvailable();
+            }, 3000);
+        });
+
+        // Функция для визуализации результатов
+        function visualizeResults(resultType, colorSchemeValue, component = 'magnitude') {
+            console.log("🎨 visualizeResults вызван:", resultType, colorSchemeValue, component);
+
+            if (resultType === 'none') {
+                hideColorbar();
+                // Возвращаем исходный цвет модели
+                if (currentMesh) {
+                    currentMesh.material.color.set(modelColor.value);
+                    currentMesh.material.vertexColors = false;
+                }
+                return;
+            }
+
+            if (!resultsData) {
+                console.error("⚠️ Нет данных resultsData");
+                showNotification("Нет данных результатов", "error");
+                return;
+            }
+
+            console.log("📦 resultsData:", resultsData);
+
+            // Определяем, что показывать
+            let resultValues = [];
+
+            // Если явно выбрали displacement / stress / strain
+            switch (resultType) {
+                case "displacement":
+                    resultValues = resultsData.displacements || [];
+                    break;
+                case "stress":
+                    resultValues = resultsData.stresses || [];
+                    break;
+                case "strain":
+                    resultValues = resultsData.strains || [];
+                    break;
+                default:
+                    console.warn("⚠️ Неизвестный тип результата:", resultType);
+                    resultValues = resultsData.displacements || [];
+                    resultType = "displacement";
+            }
+
+            // Если массив пуст — пробуем использовать другой тип
+            if (!resultValues || resultValues.length === 0) {
+                console.warn("⚠️ resultValues пуст, пробуем использовать displacements");
+                if (resultsData.displacements && resultsData.displacements.length > 0) {
+                    resultValues = resultsData.displacements;
+                    resultType = "displacement";
+                } else {
+                    showNotification("Нет данных для визуализации", "warning");
+                    return;
+                }
+            }
+
+            console.log(`📊 Используется массив ${resultType}, длина = ${resultValues.length}`);
+
+            // Определяем количество компонент
+            const components = (resultType === "displacement") ? 3 :
+                (resultType === "stress") ? 6 : 1;
+
+            // Получаем значения для выбранной компоненты
+            let displayValues = [];
+
+            if (component === 'magnitude') {
+                // Вычисляем модуль
+                for (let i = 0; i < resultValues.length; i += components) {
+                    let mag = 0;
+                    for (let j = 0; j < components && i + j < resultValues.length; j++) {
+                        mag += resultValues[i + j] ** 2;
+                    }
+                    displayValues.push(Math.sqrt(mag));
+                }
+            } else {
+                // Получаем конкретную компоненту
+                const componentIndex = getComponentIndex(component, resultType);
+                for (let i = 0; i < resultValues.length; i += components) {
+                    if (i + componentIndex < resultValues.length) {
+                        displayValues.push(resultValues[i + componentIndex]);
+                    }
+                }
+            }
+
+            console.log(`📈 Отображаемых значений: ${displayValues.length}, компонента: ${component}`);
+
+            if (displayValues.length === 0) {
+                console.warn("⚠️ После обработки — массив displayValues пуст");
+                showNotification("Нет данных для визуализации", "warning");
+                return;
+            }
+
+            // Находим диапазон значений
+            const minVal = Math.min(...displayValues);
+            const maxVal = Math.max(...displayValues);
+
+            console.log(`🔢 Диапазон: ${minVal} ... ${maxVal}`);
+
+            // Создаем colorbar
+            createColorbar(minVal, maxVal, colorSchemeValue);
+
+            showNotification(`Построены результаты: ${resultType} (${getComponentName(component)})`, "success");
+            updateResultsInfo(resultType, minVal, maxVal, component);
+
+            // === Раскраска узлов модели ===
+            if (geometry && geometry.attributes && geometry.attributes.position) {
+                const colors = [];
+
+                for (let i = 0; i < displayValues.length; i++) {
+                    const [r, g, b] = getColorForValue(displayValues[i], minVal, maxVal, colorSchemeValue);
+                    colors.push(r, g, b);
+                }
+
+                geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+                geometry.attributes.color.needsUpdate = true;
+
+                if (currentMesh) {
+                    currentMesh.material = new THREE.MeshPhongMaterial({
+                        vertexColors: true,
+                        flatShading: false,
+                        shininess: 30,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: parseFloat(opacitySlider.value)
+                    });
+                    currentMesh.material.needsUpdate = true;
+                }
+
+                console.log("🎨 Модель окрашена по", resultType, "компонента:", component);
+            }
+        }
+
+        // Функция для получения индекса компоненты
+        function getComponentIndex(component, resultType) {
+            const componentMap = {
+                'displacement': { 'x': 0, 'y': 1, 'z': 2 },
+                'stress': { 'x': 0, 'y': 1, 'z': 2, 'xy': 3, 'yz': 4, 'zx': 5 },
+                'strain': { 'x': 0, 'y': 1, 'z': 2, 'xy': 3, 'yz': 4, 'zx': 5 }
+            };
+
+            return componentMap[resultType]?.[component] || 0;
+        }
+
+        // Функция для получения читаемого имени компоненты
+        function getComponentName(component) {
+            const names = {
+                'magnitude': 'Модуль',
+                'x': 'X',
+                'y': 'Y',
+                'z': 'Z',
+                'xy': 'XY',
+                'yz': 'YZ',
+                'zx': 'ZX'
+            };
+            return names[component] || component;
+        }
+
+        // Обновление информации о результатах
+        function updateResultsInfo(resultType, minVal, maxVal, component = 'magnitude') {
+            const typeNames = {
+                displacement: 'Перемещения',
+                stress: 'Напряжения',
+                strain: 'Деформации'
+            };
+
+            resultsInfo.innerHTML = `
+                    <div class="info-item">
+                        <span class="info-label">Тип:</span>
+                        <span class="info-value">${typeNames[resultType]}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Компонента:</span>
+                        <span class="info-value">${getComponentName(component)}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Мин. значение:</span>
+                        <span class="info-value">${minVal.toExponential(4)}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Макс. значение:</span>
+                        <span class="info-value">${maxVal.toExponential(4)}</span>
+                    </div>
+                `;
+        }
+
+        // Обработчики событий для результатов
+        loadResultsBtn.addEventListener('click', loadResults);
+
+        resultsType.addEventListener('change', (e) => {
+            const colorSchemeValue = colorScheme.value;
+            const component = componentSelect.value;
+            visualizeResults(e.target.value, colorSchemeValue, component);
+        });
+
+        colorScheme.addEventListener('change', (e) => {
+            const resultType = resultsType.value;
+            const component = componentSelect.value;
+            if (resultType !== 'none') {
+                visualizeResults(resultType, e.target.value, component);
+            }
+        });
+
+        componentSelect.addEventListener('change', (e) => {
+            const resultType = resultsType.value;
+            const colorSchemeValue = colorScheme.value;
+            if (resultType !== 'none') {
+                visualizeResults(resultType, colorSchemeValue, e.target.value);
+            }
+        });
+
+        // Инициализация при загрузке страницы
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Загрузка приложения...');
+            initScene();
+
+            // Инициализация элементов результатов
+            resultsType.disabled = true;
+            colorScheme.disabled = true;
+            componentSelect.disabled = true;
+
+            // Проверяем сервер через 2 секунды после загрузки
+            setTimeout(async () => {
+                console.log('Проверка подключения к серверу...');
+                const connected = await checkServerConnection();
+                updateServerStatus(connected);
+
+                if (connected) {
+                    showNotification('Сервер приложения подключен', 'success');
+                } else {
+                    showNotification('Сервер приложения недоступен', 'error');
+                }
+            }, 2000);
+        });
+
+        // === Скачать VTU-файл ===
+
+        downloadVtuBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:3000/api/results');
+                const data = await response.json();
+
+                if (data.success && data.has_results && data.file_path) {
+                    const fileName = data.file_path.split('/').pop();
+
+                    // Получаем бинарные данные VTU
+                    const fileResponse = await fetch(`http://localhost:3000/${fileName}`);
+                    if (!fileResponse.ok) throw new Error('Не удалось загрузить VTU-файл');
+
+                    const blob = await fileResponse.blob();
+                    const url = window.URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    showNotification(`Файл ${fileName} успешно загружен`, 'success');
+                } else {
+                    showNotification('VTU-файл не найден на сервере', 'error');
+                }
+            } catch (err) {
+                console.error('Ошибка при скачивании VTU:', err);
+                showNotification('Ошибка при скачивании VTU-файла', 'error');
+            }
+        });
+
+        async function enableDownloadButtonIfResultsExist() {
+            try {
+                const res = await fetch('http://localhost:3000/api/results');
+                const data = await res.json();
+                if (data.success && data.has_results) {
+                    downloadVtuBtn.disabled = false;
+                }
+            } catch (err) {
+                console.warn('VTU results check failed:', err);
+            }
+        }
+
+        enableDownloadButtonIfResultsExist();
+
+    </script>
+</body>
+</html>

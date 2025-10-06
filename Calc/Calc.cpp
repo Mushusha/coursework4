@@ -15,7 +15,12 @@ void Calculate::Solve() {
 	VTUWriter writer(data.get_elements(), data.get_nodes());
 	writer.write(file + ".vtu");
 
-    try { // change
+    if (data.analisys_type == "dynamic")
+        writeDynResults();
+}
+
+void Calculate::writeDynResults() {
+    try {
         std::vector<fs::path> vtu_files;
         std::filesystem::create_directory(file);
         std::string full_path = (std::filesystem::path(file) / file).string();
@@ -28,15 +33,14 @@ void Calculate::Solve() {
 
         if (vtu_files.empty()) {
             std::cerr << "No VTU files found in directory\n";
-            return;
         }
 
         auto timesteps = parse_timesteps(vtu_files);
 
         std::sort(timesteps.begin(), timesteps.end(),
-                  [](const TimestepFile& a, const TimestepFile& b) {
-                      return a.time < b.time;
-                  });
+            [](const TimestepFile& a, const TimestepFile& b) {
+                return a.time < b.time;
+            });
 
         create_pvd_file(timesteps, full_path + ".pvd");
     }

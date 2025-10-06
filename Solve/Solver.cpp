@@ -139,7 +139,7 @@ void Solver::addToGlobalF(int index, double value) {
 void Solver::zeroDiagonalCheck() {
 	for (int i = 0; i < calc_data.nodes_count() * calc_data.dim; i++)
 		if (K.coeffRef(i, i) == std::complex<double>(0, 0)) {
-			std::cout << "Zero on diagonal: node " + std::to_string(static_cast<int>(i / calc_data.dim + 1)) + " dof " + std::to_string(static_cast<int>(i % calc_data.dim)) << std::endl;
+			throw runtime_error("Zero on diagonal: node " + std::to_string(static_cast<int>(i / calc_data.dim + 1)) + " dof " + std::to_string(static_cast<int>(i % calc_data.dim)));
 			break;
 		}
 }

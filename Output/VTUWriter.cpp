@@ -17,6 +17,9 @@ bool VTUWriter::write(const std::string& filename) {
     writer->SetDataModeToBinary();
     writer->SetCompressorTypeToZLib();
 
+    logger& log = logger::log();
+    log.print("End writing results");
+
     return writer->Write() == 1;
 }
 void VTUWriter::createPoints(vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid) {

@@ -1,21 +1,22 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 set(CMAKE_TOOLCHAIN_FILE "C:/Users/mushusha/vcpkg/scripts/buildsystems/vcpkg.cmake")
 project(cw)
 
-set(GLEW_DIR "C:/Users/mushusha/vcpkg/installed/x64-windows/share/glew")
-
-set(VTK_NO_AUTO_FIND_GLEW ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "Vcpkg target triplet")
 set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/eigen-3.4.0")
 set(VTK_DIR "C:/Users/mushusha/vcpkg/packages/vtk_x64-windows/share/vtk")
+set(GLEW_DIR "C:/Users/mushusha/vcpkg/installed/x64-windows/share/glew")
+
+set(VTK_NO_AUTO_FIND_GLEW ON)
 
 find_package(VTK CONFIG REQUIRED)
 find_package(GLEW CONFIG REQUIRED)
 find_package(pugixml REQUIRED)
-find_package(GTest REQUIRED) 
+find_package(GTest CONFIG REQUIRED)
+find_package(Crow CONFIG REQUIRED)
 
 source_group(Calc FILES 
 Calc/main.cpp
@@ -64,6 +65,10 @@ Smoothing/Smoothing.h
 Smoothing/Smoothing.cpp
 Smoothing/Interpolation.h
 Smoothing/Interpolation.cpp)
+
+source_group(Server FILES 
+Server/Server.h
+Server/Server.cpp)
 
 source_group(Output FILES 
 Output/Output.h
@@ -123,6 +128,9 @@ add_executable(Core
     Smoothing/Interpolation.h
     Smoothing/Interpolation.cpp
 
+    Server/Server.h
+    Server/Server.cpp
+
     Output/Output.h
     Output/Output.cpp
     Output/VTUWriter.h
@@ -132,10 +140,10 @@ add_executable(Core
 
     Parser/Parser.h
     Parser/Parser.cpp
-
-    Tests/Tests.h
+	
     Tests/Tests.cpp
-    Tests/log1.h
+    Tests/Tests.h
+	Tests/log1.h
 )
 
 target_link_libraries(Core PRIVATE 
@@ -144,13 +152,18 @@ target_link_libraries(Core PRIVATE
     VTK::IOXML
     GLEW::GLEW
     pugixml::pugixml
-    GTest::GTest
-    GTest::Main
+    Crow::Crow
+    GTest::gtest
+    GTest::gtest_main
 )
 
 target_include_directories(Core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Calc
     ${CMAKE_CURRENT_SOURCE_DIR}/Elements
+    ${CMAKE_CURRENT_SOURCE_DIR}/Node
+    ${CMAKE_CURRENT_SOURCE_DIR}/Output
+    ${CMAKE_CURRENT_SOURCE_DIR}/Smoothing
+    ${CMAKE_CURRENT_SOURCE_DIR}/Server
     ${CMAKE_CURRENT_SOURCE_DIR}/Solve
     ${CMAKE_CURRENT_SOURCE_DIR}/Parser
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests

@@ -19,5 +19,7 @@ public:
 private:
 	Calculate();
 
+	void writeDynResults();
+
 	std::string file;
 };
