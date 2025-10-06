@@ -987,6 +987,17 @@
             resultsType.disabled = true;
             colorScheme.disabled = true;
             componentSelect.disabled = true;
+
+            // Очищаем curr_filename на сервере
+            resetServerFilename();
+
+            // Скрываем colorbar
+            hideColorbar();
+
+            // Деактивируем кнопку скачивания VTU
+            downloadVtuBtn.disabled = true;
+
+            console.log('Сброс выполнен, curr_filename очищен');
         });
 
         // Сделать скриншот
@@ -1132,6 +1143,7 @@
         }
 
         // Обработчик кнопки отправки
+        // Обработчик кнопки отправки
         sendDataBtn.addEventListener('click', async () => {
             if (!currentFileData) {
                 showNotification('Сначала загрузите файл', 'error');
@@ -1147,11 +1159,12 @@
                     const resultId = await sendAnalysisToServer(analysisData);
                     console.log('✅ Отправка завершена, ID:', resultId);
 
+                    // УБЕРИТЕ этот блок - не загружаем результаты автоматически
                     // Периодически проверяем статус расчета
                     showNotification('Расчет запущен... Ожидайте результатов', 'info');
 
                     let attempts = 0;
-                    const maxAttempts = 30; // 30 попыток по 2 секунды = 60 секунд максимум
+                    const maxAttempts = 30;
 
                     const checkInterval = setInterval(async () => {
                         attempts++;
@@ -1159,14 +1172,13 @@
 
                         if (await checkCalculationStatus()) {
                             clearInterval(checkInterval);
-                            // Автоматически загружаем результаты
-                            await loadResults();
+                            // НЕ загружаем автоматически - только уведомляем
+                            showNotification('Расчет завершен! Нажмите "Загрузить результаты" для просмотра.', 'success');
                         } else if (attempts >= maxAttempts) {
                             clearInterval(checkInterval);
                             showNotification('Расчет занимает больше времени чем ожидалось', 'warning');
                         }
-                    }, 2000); // Проверяем каждые 2 секунды
-
+                    }, 2000);
                 }
             } catch (error) {
                 console.error('Ошибка отправки:', error);
@@ -1175,7 +1187,6 @@
                 sendDataBtn.textContent = 'Посчитать';
             }
         });
-
         // Уведомления
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
@@ -1622,6 +1633,7 @@
         }
 
         // Функция для загрузки результатов с сервера
+        // Функция для загрузки результатов с сервера
         async function loadResults() {
             const loadResultsBtn = document.getElementById('load-results-btn');
             const resultsInfo = document.getElementById('results-info');
@@ -1692,8 +1704,11 @@
                     // Активируем кнопку скачивания
                     downloadVtuBtn.disabled = false;
 
-                    // Автоматически визуализируем перемещения
-                    visualizeResults("displacement", "jet");
+                    // НЕ ВИЗУАЛИЗИРУЕМ автоматически - ждем выбора пользователя
+                    // Оставляем значение "Нет" по умолчанию
+                    resultsType.value = 'none';
+
+                    console.log("✅ Результаты загружены, готовы к визуализации");
 
                 } else {
                     resultsInfo.innerHTML = `
@@ -1838,12 +1853,14 @@
             console.log("🎨 visualizeResults вызван:", resultType, colorSchemeValue, component);
 
             if (resultType === 'none') {
+                console.log("❌ Раскраска отключена (выбран 'Нет')");
                 hideColorbar();
-                // Возвращаем исходный цвет модели
-                if (currentMesh) {
-                    currentMesh.material.color.set(modelColor.value);
-                    currentMesh.material.vertexColors = false;
-                }
+
+                // Восстанавливаем исходный вид модели
+                restoreOriginalModel();
+
+                // Очищаем информацию о результатах
+                resultsInfo.innerHTML = '<p>Раскраска отключена</p>';
                 return;
             }
 
@@ -2017,7 +2034,44 @@
         }
 
         // Обработчики событий для результатов
+        // Обработчики событий для результатов
         loadResultsBtn.addEventListener('click', loadResults);
+
+        resultsType.addEventListener('change', (e) => {
+            const resultType = e.target.value;
+            const colorSchemeValue = colorScheme.value;
+            const component = componentSelect.value;
+
+            // Включаем/отключаем дополнительные элементы управления
+            if (resultType === 'none') {
+                colorScheme.disabled = true;
+                componentSelect.disabled = true;
+            } else {
+                colorScheme.disabled = false;
+                componentSelect.disabled = false;
+            }
+
+            // Визуализируем только если есть данные
+            if (resultsData && resultType !== 'none') {
+                visualizeResults(resultType, colorSchemeValue, component);
+            }
+        });
+
+        colorScheme.addEventListener('change', (e) => {
+            const resultType = resultsType.value;
+            const component = componentSelect.value;
+            if (resultType !== 'none' && resultsData) {
+                visualizeResults(resultType, e.target.value, component);
+            }
+        });
+
+        componentSelect.addEventListener('change', (e) => {
+            const resultType = resultsType.value;
+            const colorSchemeValue = colorScheme.value;
+            if (resultType !== 'none' && resultsData) {
+                visualizeResults(resultType, colorSchemeValue, e.target.value);
+            }
+        });
 
         resultsType.addEventListener('change', (e) => {
             const colorSchemeValue = colorScheme.value;
@@ -2109,6 +2163,54 @@
                 }
             } catch (err) {
                 console.warn('VTU results check failed:', err);
+            }
+        }
+
+        // Функция для очистки curr_filename на сервере
+        async function resetServerFilename() {
+            try {
+                const response = await fetch('http://localhost:3000/api/reset-filename', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ reset: true })
+                });
+
+                if (response.ok) {
+                    console.log('✅ curr_filename очищен на сервере');
+                } else {
+                    console.log('⚠️ Не удалось очистить curr_filename на сервере');
+                }
+            } catch (error) {
+                console.log('❌ Ошибка при очистке curr_filename:', error.message);
+            }
+        }
+
+        function restoreOriginalModel() {
+            if (!currentMesh || !geometry) return;
+
+            try {
+                // Удаляем атрибут цветов если он есть
+                if (geometry.attributes.color) {
+                    geometry.deleteAttribute('color');
+                }
+
+                // Создаем новый материал с исходными настройками
+                currentMesh.material = new THREE.MeshPhongMaterial({
+                    color: modelColor.value,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: parseFloat(opacitySlider.value),
+                    wireframe: false,
+                    shininess: 30
+                });
+
+                currentMesh.material.needsUpdate = true;
+                console.log("✅ Модель восстановлена к исходному виду");
+
+            } catch (error) {
+                console.error("❌ Ошибка при восстановлении модели:", error);
             }
         }
 

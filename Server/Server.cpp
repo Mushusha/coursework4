@@ -206,7 +206,6 @@ void ApiServer::setupRoutes() {
 
     CROW_ROUTE(app_, "/api/analysis").methods("POST"_method)
         ([this](const crow::request& req) {
-
         try {
             auto json_data = crow::json::load(req.body);
             std::string originalFilename;
@@ -218,14 +217,14 @@ void ApiServer::setupRoutes() {
                 }
             }
 
-            this->curr_filename = originalFilename;
+            this->curr_filename = this->getVtuFilename(originalFilename);
 
-            std::ofstream ofs(curr_filename + ".fc");
+            std::ofstream ofs(originalFilename + ".fc");
             ofs << req.body;
             ofs.close();
 
             logger& log = logger::log();
-            log.print("Starting calculation");
+            log.print("Starting calculation " + originalFilename);
             std::cout << "Starting calculation..." << std::endl;
 
             Calculate solve(originalFilename);
@@ -234,13 +233,7 @@ void ApiServer::setupRoutes() {
             std::cout << "Calculation completed" << std::endl;
             log.print("Calculation completed");
 
-            std::string resultVtuFile = this->getVtuFilename(originalFilename);
-
-            bool hasResults = !resultVtuFile.empty();
-
-            if (hasResults) {
-                VtuData results = this->parseVtuFile(resultVtuFile);
-            }
+            bool hasResults = std::filesystem::exists(this->curr_filename);
 
             crow::json::wvalue response;
             response["success"] = true;
@@ -248,8 +241,12 @@ void ApiServer::setupRoutes() {
             response["results_available"] = hasResults;
 
             if (hasResults) {
-                response["results_file"] = resultVtuFile;
-                response["download_filename"] = this->getVtuFilename(originalFilename);
+                response["results_file"] = this->curr_filename;
+                response["download_filename"] = this->curr_filename;
+                std::cout << "VTU file created: " << this->curr_filename << std::endl;
+            }
+            else {
+                std::cerr << "VTU file not found: " << this->curr_filename << std::endl;
             }
 
             return crow::response{ 200, response };
@@ -265,15 +262,13 @@ void ApiServer::setupRoutes() {
 
     CROW_ROUTE(app_, "/api/results")
         ([this](const crow::request& req) {
-
         try {
-
-            if (curr_filename.empty()) {
+            if (curr_filename.empty() || !std::filesystem::exists(curr_filename)) {
                 crow::json::wvalue response;
                 response["success"] = true;
                 response["has_results"] = false;
                 response["message"] = "No VTU results file found";
-                response["debug_info"] = "No .vtu files found in current directory";
+                response["debug_info"] = "VTU file not found: " + curr_filename;
                 return crow::response{ 200, response };
             }
 
@@ -294,7 +289,6 @@ void ApiServer::setupRoutes() {
             response["file_size"] = std::filesystem::file_size(curr_filename);
 
             return crow::response{ 200, response };
-
         }
         catch (const std::exception& e) {
             std::cerr << "Error in /api/results: " << e.what() << std::endl;
@@ -323,15 +317,38 @@ void ApiServer::setupRoutes() {
 
     CROW_ROUTE(app_, "/api/download/vtu")
         ([this](const crow::request& req) {
-
         try {
-            std::string vtuFile = this->getVtuFilename(this->curr_filename);
-
-            if (vtuFile.empty()) {
+            if (this->curr_filename.empty()) {
                 crow::json::wvalue error;
                 error["success"] = false;
                 error["message"] = "No VTU file available for download";
+                error["debug_info"] = "Current filename is empty";
                 return crow::response{ 404, error };
+            }
+
+            std::string vtuFile = this->curr_filename;
+
+            if (vtuFile.length() < 4 || vtuFile.substr(vtuFile.length() - 4) != ".vtu") {
+                vtuFile += ".vtu";
+            }
+
+
+            if (!std::filesystem::exists(vtuFile)) {
+                for (const auto& entry : std::filesystem::directory_iterator(".")) {
+                    if (entry.path().extension() == ".vtu") {
+                        vtuFile = entry.path().filename().string();
+                        break;
+                    }
+                }
+
+                if (!std::filesystem::exists(vtuFile)) {
+                    crow::json::wvalue error;
+                    error["success"] = false;
+                    error["message"] = "Cannot open VTU file";
+                    error["debug_info"] = "File not found: " + vtuFile;
+                    error["available_files"] = "No .vtu files in directory";
+                    return crow::response{ 500, error };
+                }
             }
 
             std::ifstream file(vtuFile, std::ios::binary);
@@ -339,6 +356,7 @@ void ApiServer::setupRoutes() {
                 crow::json::wvalue error;
                 error["success"] = false;
                 error["message"] = "Cannot open VTU file";
+                error["debug_info"] = "Failed to open: " + vtuFile;
                 return crow::response{ 500, error };
             }
 
@@ -363,10 +381,29 @@ void ApiServer::setupRoutes() {
             crow::json::wvalue error;
             error["success"] = false;
             error["message"] = e.what();
+            error["debug_info"] = "Exception during file download";
             return crow::response{ 500, error };
         }
         });
 
+    CROW_ROUTE(app_, "/api/reset-filename").methods("POST"_method)
+        ([this](const crow::request& req) {
+        try {
+            this->curr_filename.clear();
+
+            crow::json::wvalue response;
+            response["success"] = true;
+            response["message"] = "Filename reset successfully";
+            return crow::response{ 200, response };
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error resetting filename: " << e.what() << std::endl;
+            crow::json::wvalue error;
+            error["success"] = false;
+            error["message"] = e.what();
+            return crow::response{ 500, error };
+        }
+        });
 }
 
 
