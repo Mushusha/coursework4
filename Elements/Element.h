@@ -51,6 +51,9 @@ public:
 	void set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z);
 	void set_load(int type, int edge, std::array<double, 6> value); // nodes
 	void set_constants(double E, double nu, double rho);
+	void set_order(int order);
+	void set_nodes(const std::vector<int>& new_nodes);
+
 
 	int get_node(int i) const { return nodes[i]; }
 	std::vector<int> get_node() const { return nodes; }
@@ -58,6 +61,7 @@ public:
 	double get_coord(int loc_node, int comp) const;
 	int get_id() const { return id; }
 	ElemType get_type() const { return type; }
+	int get_order() const { return order; }
 
 	double get_E() const { return Young; }
 	double get_nu() const { return Poisson; }
@@ -75,6 +79,7 @@ protected:
 
 	ElemType type;
 	int id;
+	int order;
 	std::vector <double> x, y, z;
 	std::vector <int> nodes; // find in Node
 

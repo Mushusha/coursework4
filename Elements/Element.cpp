@@ -84,6 +84,14 @@ void Element::set_constants(double E, double nu, double rho) {
 	density = rho;
 }
 
+void Element::set_order(int order) {
+	this->order = order;
+}
+
+void Element::set_nodes(const std::vector<int>& new_nodes) {
+	nodes = new_nodes;
+}
+
 double Element::get_coord(int loc_node, int comp) const {
 	if (comp == 0) return x[loc_node];
 	else if (comp == 1) return y[loc_node];

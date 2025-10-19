@@ -21,6 +21,7 @@
 #include <vtkWedge.h>
 #include <vtkPyramid.h>
 #include <vtkVertex.h>
+#include <vtkPolygon.h>
 
 #include "Elements/Element.h"
 #include "Node/Node.h"

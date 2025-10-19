@@ -3,7 +3,7 @@
 #include <map>
 #include <string>
 
-enum ElemType { TRI = 10, QUAD = 12, TETRA = 1, HEX = 3, WEDGE = 6, PYR = 8, INFQUAD = 14 };
+enum ElemType { TRI = 10, QUAD = 12, TETRA = 1, HEX = 3, WEDGE = 6, PYR = 8, QUADSEM = 13, INFQUAD = 14 };
 enum LoadType { PRESSURE = 3, NODEFORCE = 5, BERLAGE = 20 };
 enum LocVar { KSI, ETA, ZETA };
 enum GlobVar { X, Y, Z };
@@ -36,6 +36,9 @@ inline constexpr int count_nodes(ElemType elem_t) {
 		break;
 	case PYR:
 		return 5;
+		break;
+	case QUADSEM:
+		return 8;
 		break;
 	default:
 		throw std::runtime_error("Error: wrong element type");

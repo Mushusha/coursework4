@@ -1,0 +1,513 @@
+#pragma once
+#include <vector>
+#include <complex>
+#include <cmath>
+#include <stdexcept>
+#include <algorithm>
+#include <cassert>
+
+#include "Eigen/Core"
+#include "Element.h"
+#include "MathMV.h"
+
+template <int NODES>
+class SpectralQuad : public Element {
+    static_assert(NODES >= 2, "NODES must be >= 2");
+
+public:
+    SpectralQuad() : Element() {
+        init_gll(); 
+    }
+    SpectralQuad(int id, ElemType type, std::vector<int> nodes)
+        : Element(id, type, nodes) {
+        init_gll();
+    }
+    SpectralQuad(const SpectralQuad& other) : Element(other) {
+        init_gll(); 
+    }
+    SpectralQuad& operator=(const SpectralQuad& other) {
+        if (this != &other) Element::operator=(other);
+        return *this;
+    }
+    SpectralQuad(SpectralQuad&& other) noexcept : Element(std::move(other)) {
+        init_gll(); 
+    }
+    SpectralQuad& operator=(SpectralQuad&& other) noexcept {
+        if (this != &other) Element::operator=(std::move(other));
+        return *this;
+    }
+    virtual ~SpectralQuad() = default;
+
+
+    std::vector<std::complex<double>> FF(double ksi, double eta, double zeta = 0) override;
+    Eigen::MatrixXcd gradFF(double ksi, double eta, double zeta = 0) override;
+    Eigen::MatrixXcd J(double ksi, double eta, double zeta = 0) override;
+    Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
+
+    Eigen::MatrixXcd localK() override;
+    std::vector<double> localF(double mult = 1) override;
+
+    Eigen::MatrixXd localC() override;
+    std::vector<double> localR(std::vector<double> value) override;
+    Eigen::MatrixXcd localM() override;
+
+    std::vector<int> edge_to_node(int edge) final;
+
+    double gaussPoint(LocVar var, int i) override;
+    double weight(LocVar var, int i) override;
+    double Volume() final;
+
+    bool pointInElem(std::vector<double> point) override;
+    std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
+
+protected:
+    void set_pressure(int edge, double value) override;
+
+private:
+    static constexpr int nNodes = NODES * NODES;
+    std::vector<double> gll_x;
+    std::vector<double> gll_w;
+
+    void init_gll();
+    void compute_gll_nodes_weights();
+    double legendreP(int n, double x) const;
+    double dlegendreP(int n, double x) const;
+
+    double lagrange1D(int i, double x) const;
+    double dlagrange1D(int i, double x) const;
+
+    double len_edge(int edge) const;
+};
+
+
+template<int NODES>
+void SpectralQuad<NODES>::init_gll() {
+    if (gll_x.empty() || gll_w.empty()) 
+        compute_gll_nodes_weights();
+}
+
+template<int NODES>
+double SpectralQuad<NODES>::legendreP(int n, double x) const {
+
+    if (n == 0)
+        return 1.0;
+    if (n == 1)
+        return x;
+
+    double Pnm2 = 1.0;
+    double Pnm1 = x;
+    double Pn = 0.0;
+
+    for (int k = 2; k <= n; ++k) {
+        Pn = ((2.0 * k - 1.0) * x * Pnm1 - (k - 1.0) * Pnm2) / k;
+        Pnm2 = Pnm1;
+        Pnm1 = Pn;
+    }
+    return Pn;
+}
+
+template<int NODES>
+double SpectralQuad<NODES>::dlegendreP(int n, double x) const {
+
+    if (n == 0) 
+        return 0.0;
+    double Pn = legendreP(n, x);
+    double Pn1 = legendreP(n - 1, x);
+
+    return (n * (x * Pn - Pn1)) / (x * x - 1.0);
+}
+
+template<int NODES>
+void SpectralQuad<NODES>::compute_gll_nodes_weights() {
+
+    const int p = NODES - 1;
+
+    gll_x.assign(NODES, 0.0);
+    gll_w.assign(NODES, 0.0);
+
+    gll_x[0] = -1.0;
+    gll_x[NODES - 1] = 1.0;
+
+    if (NODES > 2) {
+        int interior = NODES - 2;
+        for (int i = 0; i < interior; ++i) {
+
+            double xi = -cos(3.1415926535 * (i + 1) / (p));
+
+            for (int it = 0; it < 50; ++it) {
+                double Pp = legendreP(p, xi);
+                double dPp = dlegendreP(p, xi);
+
+                double denom = 1.0 - xi * xi;
+                double d2Pp;
+
+                if (std::abs(denom) < 1e-14) 
+                    d2Pp = 0.0;
+                else 
+                    d2Pp = (p * (p + 1) * Pp - 2.0 * xi * dPp) / denom;
+
+                double delta = dPp / d2Pp;
+                xi -= delta;
+
+                if (std::abs(delta) < 1e-14) 
+                    break;
+            }
+            gll_x[1 + i] = xi;
+        }
+        std::sort(gll_x.begin() + 1, gll_x.begin() + 1 + (NODES - 2));
+    }
+
+    for (int i = 0; i < NODES; ++i) {
+        double xi = gll_x[i];
+        double Pp = legendreP(p, xi);
+
+        double wi;
+        if (std::abs(std::abs(xi) - 1.0) < 1e-14)
+            wi = 2.0 / (p * (p + 1.0));
+        else
+            wi = 2.0 / (p * (p + 1.0) * Pp * Pp);
+
+        gll_w[i] = wi;
+    }
+}
+
+template<int NODES>
+double SpectralQuad<NODES>::lagrange1D(int i, double x) const {
+    double val = 1.0;
+    for (int m = 0; m < NODES; ++m) {
+        if (m == i)
+            continue;
+        val *= (x - gll_x[m]) / (gll_x[i] - gll_x[m]);
+    }
+    return val;
+}
+
+template<int NODES>
+double SpectralQuad<NODES>::dlagrange1D(int i, double x) const {
+    double sum = 0.0;
+    for (int m = 0; m < NODES; ++m) {
+        if (m == i) 
+            continue;
+
+        double prod = 1.0 / (gll_x[i] - gll_x[m]);
+
+        for (int k = 0; k < NODES; ++k) {
+            if (k == i || k == m) 
+                continue;
+
+            prod *= (x - gll_x[k]) / (gll_x[i] - gll_x[k]);
+        }
+        sum += prod;
+    }
+    return sum;
+}
+
+template<int NODES>
+std::vector<std::complex<double>> SpectralQuad<NODES>::FF(double ksi, double eta, double) {
+    std::vector<std::complex<double>> N(nNodes);
+    int idx = 0;
+
+    for (int j = 0; j < NODES; ++j) {
+        for (int i = 0; i < NODES; ++i) {
+            double val = lagrange1D(i, ksi) * lagrange1D(j, eta);
+            N[idx++] = std::complex<double>(val, 0.0);
+        }
+    }
+    return N;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralQuad<NODES>::gradFF(double ksi, double eta, double) {
+    Eigen::MatrixXcd grad(2, nNodes);
+    grad.setZero();
+    int idx = 0;
+
+    for (int j = 0; j < NODES; ++j) {
+        for (int i = 0; i < NODES; ++i, ++idx) {
+            double dN_dksi = dlagrange1D(i, ksi) * lagrange1D(j, eta);
+            double dN_deta = lagrange1D(i, ksi) * dlagrange1D(j, eta);
+
+            grad(0, idx) = std::complex<double>(dN_dksi, 0.0);
+            grad(1, idx) = std::complex<double>(dN_deta, 0.0);
+        }
+    }
+    return grad;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralQuad<NODES>::J(double ksi, double eta, double) {
+    Eigen::MatrixXcd jac = Eigen::MatrixXcd::Zero(2, 2);
+    Eigen::MatrixXcd g = gradFF(ksi, eta);
+
+    for (int a = 0; a < nNodes; ++a) {
+        jac(0, 0) += g(0, a) * x[a];
+        jac(0, 1) += g(0, a) * y[a];
+        jac(1, 0) += g(1, a) * x[a];
+        jac(1, 1) += g(1, a) * y[a];
+    }
+    return jac;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralQuad<NODES>::B(double ksi, double eta, double) {
+    Eigen::MatrixXcd Bm = Eigen::MatrixXcd::Zero(3, 2 * nNodes);
+    Eigen::Matrix2cd invJ = J(ksi, eta).inverse();
+    Eigen::MatrixXcd dN = invJ * gradFF(ksi, eta);
+
+    for (int a = 0; a < nNodes; ++a) {
+        double dNx = dN(0, a).real();
+        double dNy = dN(1, a).real();
+
+        Bm(0, 2 * a) = dNx;
+        Bm(1, 2 * a + 1) = dNy;
+        Bm(2, 2 * a) = dNy;
+        Bm(2, 2 * a + 1) = dNx;
+    }
+    return Bm;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralQuad<NODES>::localK() {
+    Eigen::MatrixXcd K = Eigen::MatrixXcd::Zero(2 * nNodes, 2 * nNodes);
+
+    for (int j = 0; j < NODES; ++j) {
+        double eta = gll_x[j];
+        double w_eta = gll_w[j];
+
+        for (int i = 0; i < NODES; ++i) {
+            double ksi = gll_x[i];
+            double w_ksi = gll_w[i];
+
+            Eigen::MatrixXcd Bm = B(ksi, eta);
+            Eigen::MatrixXcd Jm = J(ksi, eta);
+
+            double detJ = std::abs(Jm.determinant());
+
+            K += (w_ksi * w_eta) * (Bm.transpose() * D * Bm * detJ);
+        }
+    }
+    return K;
+}
+
+template<int NODES>
+std::vector<double> SpectralQuad<NODES>::localF(double mult) {
+    std::vector<double> F(2 * nNodes, 0.0);
+    if (load.empty()) return F;
+
+    for (auto const& l : load) {
+        int edge = l.first.first;
+        int comp = l.first.second;
+        double value = l.second;
+
+        std::vector<int> edge_nodes = edge_to_node(edge);
+
+        int m = static_cast<int>(edge_nodes.size());
+
+        for (int idx = 0; idx < m; ++idx) {
+            int node_global = edge_nodes[idx];
+            F[2 * node_global + comp] += mult * value / static_cast<double>(m);
+        }
+    }
+    return F;
+}
+
+template<int NODES>
+Eigen::MatrixXd SpectralQuad<NODES>::localC() {
+    Eigen::MatrixXd C = Eigen::MatrixXd::Zero(nNodes, nNodes);
+
+    for (int j = 0; j < NODES; ++j) {
+        double eta = gll_x[j];
+        double w_eta = gll_w[j];
+
+        for (int i = 0; i < NODES; ++i) {
+            double ksi = gll_x[i];
+            double w_ksi = gll_w[i];
+
+            double detJ = std::abs(J(ksi, eta).determinant());
+            auto Nvals = FF(ksi, eta);
+
+            for (int a = 0; a < nNodes; ++a)
+                for (int b = 0; b < nNodes; ++b)
+                    C(a, b) += w_ksi * w_eta * Nvals[a].real() * Nvals[b].real() * detJ;
+        }
+    }
+    return C;
+}
+
+template<int NODES>
+std::vector<double> SpectralQuad<NODES>::localR(std::vector<double> value) {
+
+    std::vector<double> R(nNodes, 0.0);
+
+    for (int j = 0; j < NODES; ++j) {
+        double eta = gll_x[j];
+        double w_eta = gll_w[j];
+
+        for (int i = 0; i < NODES; ++i) {
+            double ksi = gll_x[i];
+            double w_ksi = gll_w[i];
+
+            double detJ = std::abs(J(ksi, eta).determinant());
+            auto Nvals = FF(ksi, eta);
+
+            for (int a = 0; a < nNodes; ++a)
+                R[a] += value[a] * w_ksi * w_eta * Nvals[a].real() * detJ;
+        }
+    }
+    return R;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralQuad<NODES>::localM() {
+    if (density == 0.0) 
+        throw std::runtime_error("Error: density is zero in element " + std::to_string(id));
+
+    Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(2 * nNodes, 2 * nNodes);
+
+    for (int j = 0; j < NODES; ++j) {
+        double eta = gll_x[j];
+        double w_eta = gll_w[j];
+
+        for (int i = 0; i < NODES; ++i) {
+            double ksi = gll_x[i];
+            double w_ksi = gll_w[i];
+
+            double detJ = std::abs(J(ksi, eta).determinant());
+            auto Nvals = FF(ksi, eta);
+
+            for (int a = 0; a < nNodes; ++a)
+                for (int b = 0; b < nNodes; ++b) {
+                    std::complex<double> Mij = w_ksi * w_eta * Nvals[a] * Nvals[b] * detJ;
+                    M(2 * a, 2 * b) += Mij;
+                    M(2 * a + 1, 2 * b + 1) += Mij;
+                }
+        }
+    }
+    return density * M;
+}
+
+template<int NODES>
+std::vector<int> SpectralQuad<NODES>::edge_to_node(int edge) {
+    std::vector<int> res;
+
+    if (edge < 0 || edge > 3) 
+        throw std::runtime_error("edge_to_node: wrong edge index");
+    if (edge == 0) {
+        int j = 0;
+        for (int i = 0; i < NODES; ++i) 
+            res.push_back(j * NODES + i);
+    }
+    else if (edge == 1) {
+        int i = NODES - 1;
+        for (int j = 0; j < NODES; ++j) 
+            res.push_back(j * NODES + i);
+    }
+    else if (edge == 2) {
+        int j = NODES - 1;
+        for (int i = NODES - 1; i >= 0; --i) 
+            res.push_back(j * NODES + i);
+    }
+    else { 
+        int i = 0;
+        for (int j = NODES - 1; j >= 0; --j) 
+            res.push_back(j * NODES + i);
+    }
+    return res;
+}
+
+template<int NODES>
+double SpectralQuad<NODES>::gaussPoint(LocVar var, int i)
+{
+    if (i < 0 || i >= NODES * NODES)
+        throw std::out_of_range("SpectralQuad<NODES>::gaussPoint: index out of range");
+
+    int idx_eta = i / NODES;
+    int idx_ksi = i % NODES;
+
+    if (var == KSI)
+        return gll_x[idx_ksi];
+    else if (var == ETA)
+        return gll_x[idx_eta];
+    else
+        return 0.0;
+}
+
+template<int NODES>
+double SpectralQuad<NODES>::weight(LocVar var, int i)
+{
+    if (i < 0 || i >= NODES * NODES)
+        throw std::out_of_range("SpectralQuad<NODES>::weight: index out of range");
+
+    int idx_eta = i / NODES;
+    int idx_ksi = i % NODES;
+
+    if (var == KSI)
+        return gll_w[idx_ksi];
+    else if (var == ETA)
+        return gll_w[idx_eta];
+    else
+        return 0.0;
+}
+
+template<int NODES>
+double SpectralQuad<NODES>::Volume() {
+    std::complex<double> S = 0.0;
+
+    for (int j = 0; j < NODES; ++j) {
+        double eta = gll_x[j];
+        double w_eta = gll_w[j];
+
+        for (int i = 0; i < NODES; ++i) {
+            double ksi = gll_x[i];
+            double w_ksi = gll_w[i];
+
+            auto Nvals = FF(ksi, eta);
+            double detJ = std::abs(J(ksi, eta).determinant());
+
+            for (int a = 0; a < nNodes; ++a)
+                S += w_ksi * w_eta * Nvals[a] * detJ;
+        }
+    }
+    return S.real();
+}
+
+template<int NODES>
+bool SpectralQuad<NODES>::pointInElem(std::vector<double> point) {
+    return false;
+}
+
+template<int NODES>
+std::vector<double> SpectralQuad<NODES>::coordFF(double x0, double y0, double) {
+    return std::vector<double>();
+}
+
+template<int NODES>
+void SpectralQuad<NODES>::set_pressure(int edge, double value) {
+    auto nodes_on_edge = edge_to_node(edge);
+
+    int n0 = nodes_on_edge.front();
+    int n1 = nodes_on_edge.back();
+
+    std::array<double, 2> comp;
+
+    comp[0] = -y[n0] + y[n1];
+    comp[1] = x[n0] - x[n1];
+
+    if ((x[n0] - x[n1]) * (y[n0] - y[(edge + 2) % 4]) - (y[n0] - y[n1]) * (x[n0] - x[(edge + 2) % 4]) < 0)
+        for (auto& c : comp) c *= -1;
+
+    for (int i = 0; i < 2; ++i) {
+        std::pair<int, int> key(edge, i);
+        load.insert({ key, -value * comp[i] });
+    }
+}
+
+template<int NODES>
+double SpectralQuad<NODES>::len_edge(int edge) const {
+    auto nodes_on_edge = edge_to_node(edge);
+
+    int n0 = nodes_on_edge.front();
+    int n1 = nodes_on_edge.back();
+
+    return std::sqrt(std::pow(x[n0] - x[n1], 2) + std::pow(y[n0] - y[n1], 2));
+}

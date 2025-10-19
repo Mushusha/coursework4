@@ -44,26 +44,54 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
     vtkSmartPointer<vtkCell> cell;
 
     switch (type) {
-        case ElemType::TRI:
-            cell = vtkSmartPointer<vtkTriangle>::New();
-            break;
-        case ElemType::QUAD:
-            cell = vtkSmartPointer<vtkQuad>::New();
-            break;
-        case ElemType::TETRA:
-            cell = vtkSmartPointer<vtkTetra>::New();
-            break;
-        case ElemType::HEX:
-            cell = vtkSmartPointer<vtkHexahedron>::New();
-            break;
-        case ElemType::WEDGE:
-            cell = vtkSmartPointer<vtkWedge>::New();
-            break;
-        case ElemType::PYR:
-            cell = vtkSmartPointer<vtkPyramid>::New();
-            break;
-        default:
-            return nullptr;
+    case ElemType::TRI:
+        cell = vtkSmartPointer<vtkTriangle>::New();
+        break;
+    case ElemType::QUAD:
+        cell = vtkSmartPointer<vtkQuad>::New();
+        break;
+    case ElemType::TETRA:
+        cell = vtkSmartPointer<vtkTetra>::New();
+        break;
+    case ElemType::HEX:
+        cell = vtkSmartPointer<vtkHexahedron>::New();
+        break;
+    case ElemType::WEDGE:
+        cell = vtkSmartPointer<vtkWedge>::New();
+        break;
+    case ElemType::PYR:
+        cell = vtkSmartPointer<vtkPyramid>::New();
+        break;
+    case ElemType::QUADSEM: {
+        int NODES = static_cast<int>(std::sqrt(nodeIds.size()));
+
+        if (NODES * NODES != static_cast<int>(nodeIds.size()))
+            throw std::runtime_error("VTUWriter: QUADSEM node count is not a perfect square");
+
+        std::vector<int> boundary;
+
+        for (int i = 0; i < NODES; ++i)
+            boundary.push_back(nodeIds[i]);
+
+        for (int j = 1; j < NODES - 1; ++j)
+            boundary.push_back(nodeIds[j * NODES + (NODES - 1)]);
+
+        for (int i = NODES - 1; i >= 0; --i)
+            boundary.push_back(nodeIds[(NODES - 1) * NODES + i]);
+
+        for (int j = NODES - 2; j >= 1; --j)
+            boundary.push_back(nodeIds[j * NODES]);
+
+        vtkSmartPointer<vtkPolygon> polygon = vtkSmartPointer<vtkPolygon>::New();
+        polygon->GetPointIds()->SetNumberOfIds(boundary.size());
+
+        for (size_t i = 0; i < boundary.size(); ++i)
+            polygon->GetPointIds()->SetId(i, boundary[i] - 1);
+
+        return polygon;
+    }
+    default:
+        return nullptr;
     }
 
     for (size_t i = 0; i < nodeIds.size(); ++i)
@@ -100,13 +128,18 @@ void VTUWriter::addElementData(vtkSmartPointer<vtkUnstructuredGrid> unstructured
     for (const auto& elem : elements)
         elemIdArray->InsertNextValue(elem->get_id());
 
-        unstructuredGrid->GetCellData()->AddArray(elemIdArray);
+    unstructuredGrid->GetCellData()->AddArray(elemIdArray);
 
     vtkSmartPointer<vtkIntArray> elemTypeArray =
         vtkSmartPointer<vtkIntArray>::New();
     elemTypeArray->SetName("ElementType");
+
     for (const auto& elem : elements)
-        elemTypeArray->InsertNextValue(static_cast<int>(elem->get_type()));
+        elemTypeArray->InsertNextValue(
+            elem->get_type() == ElemType::QUADSEM
+            ? static_cast<int>(ElemType::QUAD)
+            : static_cast<int>(elem->get_type())
+        );
 
     unstructuredGrid->GetCellData()->AddArray(elemTypeArray);
 }

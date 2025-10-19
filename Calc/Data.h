@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cmath>
+#include <algorithm>
+
 #include "Parser.h"
 #include "log1.h"
 #include "Enums.h"
@@ -11,6 +14,7 @@
 #include "Hex.h"
 #include "Wedge.h"
 //#include "Pyr.h"
+#include "QuadSEM.h"
 
 
 class Data {
@@ -58,4 +62,9 @@ private:
 	void create_constraints(std::shared_ptr <const Parser> parser);
 	void create_load(std::shared_ptr <const Parser> parser);
 	void create_D(std::shared_ptr <const Parser> parser);
-}; 
+
+	void build_spectral_element(std::shared_ptr<Element> elem);
+	void computeGLLPoints(int order, std::vector<double>& points, std::vector<double>& weights);
+
+	void renumber_nodes();
+};
