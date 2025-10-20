@@ -6,6 +6,7 @@
 #include "Parser.h"
 #include "log1.h"
 #include "Enums.h"
+#include "MathMV.h"
 #include "Node/Node.h"
 #include "Element.h"
 #include "Tri.h"
@@ -64,7 +65,13 @@ private:
 	void create_D(std::shared_ptr <const Parser> parser);
 
 	void build_spectral_element(std::shared_ptr<Element> elem);
-	void computeGLLPoints(int order, std::vector<double>& points, std::vector<double>& weights);
+
+	bool is_node_on_constrained_edge(int i, int j, int nodes_per_side,
+		const std::vector<bool>& edge_fully_constrained);
+	void apply_constraints_new_nodes(
+		std::shared_ptr<Node> new_node, double xi, double eta,
+		const std::vector<int>& original_nodes,
+		const std::map<int, std::map<int, double>>& original_constraints);
 
 	void renumber_nodes();
 };

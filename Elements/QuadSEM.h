@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <vector>
 #include <complex>
 #include <cmath>
@@ -40,8 +40,7 @@ public:
 
 
     std::vector<std::complex<double>> FF(double ksi, double eta, double zeta = 0) override;
-    Eigen::MatrixXcd gradFF(double ksi, double eta, double zeta = 0) override;
-    Eigen::MatrixXcd J(double ksi, double eta, double zeta = 0) override;
+
     Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
 
     Eigen::MatrixXcd localK() override;
@@ -57,6 +56,9 @@ public:
     double weight(LocVar var, int i) override;
     double Volume() final;
 
+    Eigen::MatrixXcd gradFF(double ksi, double eta, double zeta = 0) override;
+    Eigen::MatrixXcd J(double ksi, double eta, double zeta = 0) override;
+
     bool pointInElem(std::vector<double> point) override;
     std::vector<double> coordFF(double x0, double y0, double z0 = 0) override;
 
@@ -69,106 +71,18 @@ private:
     std::vector<double> gll_w;
 
     void init_gll();
-    void compute_gll_nodes_weights();
-    double legendreP(int n, double x) const;
-    double dlegendreP(int n, double x) const;
 
     double lagrange1D(int i, double x) const;
     double dlagrange1D(int i, double x) const;
 
-    double len_edge(int edge) const;
+    double len_edge(int edge);
 };
 
 
 template<int NODES>
 void SpectralQuad<NODES>::init_gll() {
     if (gll_x.empty() || gll_w.empty()) 
-        compute_gll_nodes_weights();
-}
-
-template<int NODES>
-double SpectralQuad<NODES>::legendreP(int n, double x) const {
-
-    if (n == 0)
-        return 1.0;
-    if (n == 1)
-        return x;
-
-    double Pnm2 = 1.0;
-    double Pnm1 = x;
-    double Pn = 0.0;
-
-    for (int k = 2; k <= n; ++k) {
-        Pn = ((2.0 * k - 1.0) * x * Pnm1 - (k - 1.0) * Pnm2) / k;
-        Pnm2 = Pnm1;
-        Pnm1 = Pn;
-    }
-    return Pn;
-}
-
-template<int NODES>
-double SpectralQuad<NODES>::dlegendreP(int n, double x) const {
-
-    if (n == 0) 
-        return 0.0;
-    double Pn = legendreP(n, x);
-    double Pn1 = legendreP(n - 1, x);
-
-    return (n * (x * Pn - Pn1)) / (x * x - 1.0);
-}
-
-template<int NODES>
-void SpectralQuad<NODES>::compute_gll_nodes_weights() {
-
-    const int p = NODES - 1;
-
-    gll_x.assign(NODES, 0.0);
-    gll_w.assign(NODES, 0.0);
-
-    gll_x[0] = -1.0;
-    gll_x[NODES - 1] = 1.0;
-
-    if (NODES > 2) {
-        int interior = NODES - 2;
-        for (int i = 0; i < interior; ++i) {
-
-            double xi = -cos(3.1415926535 * (i + 1) / (p));
-
-            for (int it = 0; it < 50; ++it) {
-                double Pp = legendreP(p, xi);
-                double dPp = dlegendreP(p, xi);
-
-                double denom = 1.0 - xi * xi;
-                double d2Pp;
-
-                if (std::abs(denom) < 1e-14) 
-                    d2Pp = 0.0;
-                else 
-                    d2Pp = (p * (p + 1) * Pp - 2.0 * xi * dPp) / denom;
-
-                double delta = dPp / d2Pp;
-                xi -= delta;
-
-                if (std::abs(delta) < 1e-14) 
-                    break;
-            }
-            gll_x[1 + i] = xi;
-        }
-        std::sort(gll_x.begin() + 1, gll_x.begin() + 1 + (NODES - 2));
-    }
-
-    for (int i = 0; i < NODES; ++i) {
-        double xi = gll_x[i];
-        double Pp = legendreP(p, xi);
-
-        double wi;
-        if (std::abs(std::abs(xi) - 1.0) < 1e-14)
-            wi = 2.0 / (p * (p + 1.0));
-        else
-            wi = 2.0 / (p * (p + 1.0) * Pp * Pp);
-
-        gll_w[i] = wi;
-    }
+        compute_gll_nodes_weights(NODES - 1, gll_x, gll_w);
 }
 
 template<int NODES>
@@ -301,11 +215,12 @@ std::vector<double> SpectralQuad<NODES>::localF(double mult) {
 
         std::vector<int> edge_nodes = edge_to_node(edge);
 
+        double edge_length = len_edge(edge);
         int m = static_cast<int>(edge_nodes.size());
 
         for (int idx = 0; idx < m; ++idx) {
-            int node_global = edge_nodes[idx];
-            F[2 * node_global + comp] += mult * value / static_cast<double>(m);
+            int local_node_idx = edge_nodes[idx];
+            F[2 * local_node_idx + comp] += mult * value * edge_length / m;
         }
     }
     return F;
@@ -483,27 +398,34 @@ std::vector<double> SpectralQuad<NODES>::coordFF(double x0, double y0, double) {
 
 template<int NODES>
 void SpectralQuad<NODES>::set_pressure(int edge, double value) {
-    auto nodes_on_edge = edge_to_node(edge);
+    std::vector<int> nodes_on_edge = edge_to_node(edge);
+
+    if (nodes_on_edge.size() < 2)
+        throw std::runtime_error("Not enough nodes on edge");
 
     int n0 = nodes_on_edge.front();
     int n1 = nodes_on_edge.back();
 
-    std::array<double, 2> comp;
+    double dx = x[n1] - x[n0];
+    double dy = y[n1] - y[n0];
 
-    comp[0] = -y[n0] + y[n1];
-    comp[1] = x[n0] - x[n1];
+    double nx = dy;
+    double ny = -dx;
 
-    if ((x[n0] - x[n1]) * (y[n0] - y[(edge + 2) % 4]) - (y[n0] - y[n1]) * (x[n0] - x[(edge + 2) % 4]) < 0)
-        for (auto& c : comp) c *= -1;
-
-    for (int i = 0; i < 2; ++i) {
-        std::pair<int, int> key(edge, i);
-        load.insert({ key, -value * comp[i] });
+    double length = std::sqrt(nx * nx + ny * ny);
+    if (length > 0) {
+        nx /= length;
+        ny /= length;
     }
+
+    std::pair<int, int> key_x(edge, 0);
+    std::pair<int, int> key_y(edge, 1);
+    load[key_x] = value * nx;
+    load[key_y] = value * ny;
 }
 
 template<int NODES>
-double SpectralQuad<NODES>::len_edge(int edge) const {
+double SpectralQuad<NODES>::len_edge(int edge) {
     auto nodes_on_edge = edge_to_node(edge);
 
     int n0 = nodes_on_edge.front();

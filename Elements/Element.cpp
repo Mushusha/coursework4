@@ -107,7 +107,7 @@ std::complex<double> Element::Jac(double ksi, double eta, double zeta) {
 }
 
 void Element::set_load(int type, int apply_to, std::array<double, 6> value) {
-	if (type == PRESSURE)
+	if (type == PRESSURE || type == PRESSURESEM)
 		set_pressure(apply_to, value[0]);
 	else
 		for (int i = 0; i < value.size(); i++) {

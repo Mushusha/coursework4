@@ -79,9 +79,9 @@ Data::Data(std::shared_ptr <const Parser> parser) {
 	Amp = 1e+08;
 
 	create_nodes(parser);
+	create_constraints(parser);
 	create_elements(parser);
 	create_constants(parser);
-	create_constraints(parser);
 	create_load(parser);
 	create_D(parser);
 
@@ -244,12 +244,12 @@ void Data::create_load(std::shared_ptr <const Parser> parser) { // type - pressu
 	for (int id = 0; id < parser->load.size(); id++)
 		if (!parser->load[id].inf) {
 			auto& load = parser->load[id];
-			if (load.type == PRESSURE) 		// else add to F
+			if (load.type == PRESSURE || load.type == PRESSURESEM) 		// else add to F
 				for (int elem = 0; elem < load.apply_to.size() / 2; elem++)
 					elements[load.apply_to[2 * elem] - 1]->set_load(load.type, load.apply_to[2 * elem + 1], load.data);
-			else if (load.type == NODEFORCE)
+			else if (load.type == NODEFORCE) // add new spectral points
 				for (int i = 0; i < 6; i++)
-					if (load.data[i] == 0.0)
+					if (load.data[i] == 0.0) 
 						continue;
 					else
 						for (int node = 0; node < load.apply_to.size(); node += 2)
@@ -326,6 +326,15 @@ void Data::build_spectral_element(std::shared_ptr<Element> elem) {
 		throw std::runtime_error("Expected QUAD8 element with 8 nodes for spectral element.");
 	}
 
+	std::map<int, std::map<int, double>> original_constraints;
+	for (int node_id : original_nodes) {
+		auto it = std::find_if(nodes.begin(), nodes.end(),
+			[node_id](const std::shared_ptr<Node>& n) { return n->getID() == node_id; });
+		if (it != nodes.end()) {
+			original_constraints[node_id] = (*it)->constraints;
+		}
+	}
+
 	std::vector<double> orig_x, orig_y, orig_z;
 	for (int node_id : original_nodes) {
 		auto it = std::find_if(nodes.begin(), nodes.end(),
@@ -339,7 +348,8 @@ void Data::build_spectral_element(std::shared_ptr<Element> elem) {
 	}
 
 	std::vector<double> gll_points, gll_weights;
-	computeGLLPoints(order, gll_points, gll_weights);
+
+	compute_gll_nodes_weights(order, gll_points, gll_weights);
 
 	auto quad8_shape_functions = [](double xi, double eta, std::vector<double>& N) {
 		N[0] = 0.25 * (1.0 - xi) * (1.0 - eta) * (-1.0 - xi - eta);
@@ -364,6 +374,24 @@ void Data::build_spectral_element(std::shared_ptr<Element> elem) {
 			max_id = std::max(max_id, node->getID());
 		}
 		next_node_id = max_id + 1;
+	}
+
+	std::vector<bool> edge_fully_constrained(4, true);
+	std::vector<std::vector<int>> edge_original_nodes = {
+		{0, 1, 4},
+		{1, 2, 5},
+		{2, 3, 6},
+		{3, 0, 7}
+	};
+
+	for (int edge = 0; edge < 4; edge++) {
+		for (int local_node_idx : edge_original_nodes[edge]) {
+			int global_node_id = original_nodes[local_node_idx];
+			if (original_constraints[global_node_id].empty()) {
+				edge_fully_constrained[edge] = false;
+				break;
+			}
+		}
 	}
 
 	for (int j = 0; j < nodes_per_side; j++) {
@@ -401,7 +429,13 @@ void Data::build_spectral_element(std::shared_ptr<Element> elem) {
 			else {
 				new_node_ids.push_back(next_node_id);
 				std::array<double, 3> coords = { x, y, z };
-				nodes.push_back(std::make_shared<Node>(next_node_id, coords));
+				auto new_node = std::make_shared<Node>(next_node_id, coords);
+
+				if (is_node_on_constrained_edge(i, j, nodes_per_side, edge_fully_constrained)) {
+					apply_constraints_new_nodes(new_node, xi, eta, original_nodes, original_constraints);
+				}
+
+				nodes.push_back(new_node);
 				next_node_id++;
 			}
 
@@ -418,68 +452,47 @@ void Data::build_spectral_element(std::shared_ptr<Element> elem) {
 		" nodes (order " + std::to_string(order) + ")");
 }
 
-void Data::computeGLLPoints(int order, std::vector<double>& points, std::vector<double>& weights) {
-	if (order < 1) 
-		throw std::runtime_error("Order must be at least 1");
+bool Data::is_node_on_constrained_edge(int i, int j, int nodes_per_side,
+	const std::vector<bool>& edge_fully_constrained) {
+	if (j == 0 && edge_fully_constrained[0])  
+		return true;
+	if (i == nodes_per_side - 1 && edge_fully_constrained[1]) 
+		return true;
+	if (j == nodes_per_side - 1 && edge_fully_constrained[2]) 
+		return true;
+	if (i == 0 && edge_fully_constrained[3]) 
+		return true;
 
-	int n = order + 1;
-	points.resize(n);
-	weights.resize(n);
+	return false;
+}
 
-	points[0] = -1.0;
-	points[n - 1] = 1.0;
+void Data::apply_constraints_new_nodes(
+	std::shared_ptr<Node> new_node, double xi, double eta,
+	const std::vector<int>& original_nodes,
+	const std::map<int, std::map<int, double>>& original_constraints) {
 
-	if (order == 1) {
-		weights[0] = 1.0;
-		weights[1] = 1.0;
-		return;
-	}
+	int nearest_corner = 0;
+	double min_dist = std::numeric_limits<double>::max();
 
-	if (order > 1) {
-		for (int i = 1; i < n - 1; i++) {
-			double x = -cos(3.14159265358979323846 * i / order);
-			double delta;
-			int iter = 0, max_iter = 100;
+	std::vector<std::pair<double, double>> corner_coords = {
+		{-1, -1}, {1, -1}, {1, 1}, {-1, 1}
+	};
 
-			do {
-				double P_prev = 1.0;
-				double P_curr = x;
-				double P_next;
-
-				for (int k = 2; k <= order; k++) {
-					P_next = ((2.0 * k - 1.0) * x * P_curr - (k - 1.0) * P_prev) / k;
-					P_prev = P_curr;
-					P_curr = P_next;
-				}
-
-				double derivative = order * (P_prev - x * P_curr) / (1.0 - x * x);
-				double second_deriv = (2.0 * x * derivative - order * (order + 1) * P_curr) / (1.0 - x * x);
-
-				delta = -derivative / second_deriv;
-				x += delta;
-				iter++;
-			} while (std::abs(delta) > 1e-14 && iter < max_iter);
-
-			points[i] = x;
+	for (int corner = 0; corner < 4; corner++) {
+		double dist = std::sqrt(std::pow(xi - corner_coords[corner].first, 2) +
+			std::pow(eta - corner_coords[corner].second, 2));
+		if (dist < min_dist) {
+			min_dist = dist;
+			nearest_corner = corner;
 		}
 	}
 
-	std::sort(points.begin(), points.end());
-
-	for (int i = 0; i < n; i++) {
-		double x = points[i];
-
-		double P_prev = 1.0;
-		double P_curr = x;
-		double P_next;
-
-		for (int k = 2; k <= order; k++) {
-			P_next = ((2.0 * k - 1.0) * x * P_curr - (k - 1.0) * P_prev) / k;
-			P_prev = P_curr;
-			P_curr = P_next;
+	int original_node_id = original_nodes[nearest_corner];
+	if (original_constraints.count(original_node_id)) {
+		const auto& constraints = original_constraints.at(original_node_id);
+		for (const auto& constraint : constraints) {
+			new_node->set_constraints(constraint.first, constraint.second);
 		}
-
-		weights[i] = 2.0 / (order * (order + 1) * P_curr * P_curr);
 	}
 }
 
@@ -514,13 +527,8 @@ void Data::renumber_nodes() {
 		int old_id = old_node->getID();
 		if (old_to_new.count(old_id)) {
 			int new_id = old_to_new[old_id];
-			auto new_node = std::make_shared<Node>(
-				new_id,
-				std::array<double, 3>{
-				old_node->getX(),
-					old_node->getY(),
-					old_node->getZ()
-			}
+			auto new_node = std::make_shared<Node>(new_id,
+				std::array<double, 3>{ old_node->getX(), old_node->getY(), old_node->getZ()	}
 			);
 			new_node->load = old_node->load;
 			new_node->constraints = old_node->constraints;

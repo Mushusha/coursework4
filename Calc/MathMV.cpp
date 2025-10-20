@@ -34,3 +34,68 @@ double berlage(double omega, double A, double time) {
 
 	return mult * (term1 - sqrt(3) * term2);
 }
+
+void compute_gll_nodes_weights(int order, std::vector<double>& points, std::vector<double>& weights) {
+	if (order < 1)
+		throw std::runtime_error("Order must be at least 1");
+
+	int n = order + 1;
+	points.resize(n);
+	weights.resize(n);
+
+	points[0] = -1.0;
+	points[n - 1] = 1.0;
+
+	if (order == 1) {
+		weights[0] = 1.0;
+		weights[1] = 1.0;
+		return;
+	}
+
+	if (order > 1) {
+		for (int i = 1; i < n - 1; i++) {
+			double x = -cos(3.14159265358979323846 * i / order);
+			double delta;
+			int iter = 0, max_iter = 100;
+
+			do {
+				double P_prev = 1.0;
+				double P_curr = x;
+				double P_next;
+
+				for (int k = 2; k <= order; k++) {
+					P_next = ((2.0 * k - 1.0) * x * P_curr - (k - 1.0) * P_prev) / k;
+					P_prev = P_curr;
+					P_curr = P_next;
+				}
+
+				double derivative = order * (P_prev - x * P_curr) / (1.0 - x * x);
+				double second_deriv = (2.0 * x * derivative - order * (order + 1) * P_curr) / (1.0 - x * x);
+
+				delta = -derivative / second_deriv;
+				x += delta;
+				iter++;
+			} while (std::abs(delta) > 1e-14 && iter < max_iter);
+
+			points[i] = x;
+		}
+	}
+
+	std::sort(points.begin(), points.end());
+
+	for (int i = 0; i < n; i++) {
+		double x = points[i];
+
+		double P_prev = 1.0;
+		double P_curr = x;
+		double P_next;
+
+		for (int k = 2; k <= order; k++) {
+			P_next = ((2.0 * k - 1.0) * x * P_curr - (k - 1.0) * P_prev) / k;
+			P_prev = P_curr;
+			P_curr = P_next;
+		}
+
+		weights[i] = 2.0 / (order * (order + 1) * P_curr * P_curr);
+	}
+}
