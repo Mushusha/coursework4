@@ -89,8 +89,7 @@ template<int NODES>
 double SpectralQuad<NODES>::lagrange1D(int i, double x) const {
     double val = 1.0;
     for (int m = 0; m < NODES; ++m) {
-        if (m == i)
-            continue;
+        if (m == i) continue;
         val *= (x - gll_x[m]) / (gll_x[i] - gll_x[m]);
     }
     return val;
@@ -122,9 +121,13 @@ std::vector<std::complex<double>> SpectralQuad<NODES>::FF(double ksi, double eta
     int idx = 0;
 
     for (int j = 0; j < NODES; ++j) {
+        double Nj_eta = lagrange1D(j, eta);
         for (int i = 0; i < NODES; ++i) {
-            double val = lagrange1D(i, ksi) * lagrange1D(j, eta);
-            N[idx++] = std::complex<double>(val, 0.0);
+            double Ni_ksi = lagrange1D(i, ksi);
+            double value = Ni_ksi * Nj_eta;
+            N[idx] = std::complex<double>(value, 0.0);
+
+            idx++;
         }
     }
     return N;
@@ -214,15 +217,58 @@ std::vector<double> SpectralQuad<NODES>::localF(double mult) {
         double value = l.second;
 
         std::vector<int> edge_nodes = edge_to_node(edge);
+        int m = edge_nodes.size();
 
-        double edge_length = len_edge(edge);
-        int m = static_cast<int>(edge_nodes.size());
+        for (int i = 0; i < m; ++i) {
+            double ksi, eta;
+            double weight = gll_w[i];
 
-        for (int idx = 0; idx < m; ++idx) {
-            int local_node_idx = edge_nodes[idx];
-            F[2 * local_node_idx + comp] += mult * value * edge_length / m;
+            if (edge == 0) {
+                ksi = gll_x[i];
+                eta = -1.0;
+            }
+            else if (edge == 1) {
+                ksi = 1.0;
+                eta = gll_x[i];
+            }
+            else if (edge == 2) {
+                ksi = gll_x[i];
+                eta = 1.0;
+            }
+            else {
+                ksi = -1.0;
+                eta = gll_x[i];
+            }
+
+            Eigen::MatrixXcd grad = gradFF(ksi, eta);
+            double dx = 0.0, dy = 0.0;
+
+            if (edge == 0 || edge == 2) {
+                for (int a = 0; a < nNodes; ++a) {
+                    dx += grad(0, a).real() * x[a];
+                    dy += grad(0, a).real() * y[a];
+                }
+            }
+            else {
+                for (int a = 0; a < nNodes; ++a) {
+                    dx += grad(1, a).real() * x[a];
+                    dy += grad(1, a).real() * y[a];
+                }
+            }
+
+            double detJ_edge = std::sqrt(dx * dx + dy * dy);
+
+            auto Nvals = FF(ksi, eta);
+
+            for (int a_index = 0; a_index < edge_nodes.size(); ++a_index) {
+                int local_node_index = edge_nodes[a_index];
+                double contribution = mult * value * weight * Nvals[local_node_index].real() * detJ_edge;
+
+                F[2 * local_node_index + comp] += contribution;
+            }
         }
     }
+
     return F;
 }
 
@@ -305,31 +351,35 @@ template<int NODES>
 std::vector<int> SpectralQuad<NODES>::edge_to_node(int edge) {
     std::vector<int> res;
 
-    if (edge < 0 || edge > 3) 
+    if (edge < 0 || edge > 3)
         throw std::runtime_error("edge_to_node: wrong edge index");
-    if (edge == 0) {
-        int j = 0;
-        for (int i = 0; i < NODES; ++i) 
-            res.push_back(j * NODES + i);
+
+    if (edge == 0) { // bottom edge: nodes 0, 1, 2, ..., NODES-1
+        for (int i = 0; i < NODES; ++i) {
+            res.push_back(i);
+        }
     }
-    else if (edge == 1) {
-        int i = NODES - 1;
-        for (int j = 0; j < NODES; ++j) 
-            res.push_back(j * NODES + i);
+    else if (edge == 1) { // right edge: nodes NODES-1, 2*NODES-1, 3*NODES-1, ..., NODES*NODES-1
+        for (int j = 0; j < NODES; ++j) {
+            int node_idx = j * NODES + (NODES - 1);
+            res.push_back(node_idx);
+        }
     }
-    else if (edge == 2) {
-        int j = NODES - 1;
-        for (int i = NODES - 1; i >= 0; --i) 
-            res.push_back(j * NODES + i);
+    else if (edge == 2) { // top edge: nodes NODES*(NODES-1), NODES*(NODES-1)+1, ..., NODES*NODES-1
+        for (int i = 0; i < NODES; ++i) {
+            int node_idx = (NODES - 1) * NODES + i;
+            res.push_back(node_idx);
+        }
     }
-    else { 
-        int i = 0;
-        for (int j = NODES - 1; j >= 0; --j) 
-            res.push_back(j * NODES + i);
+    else if (edge == 3) { // left edge: nodes 0, NODES, 2*NODES, ..., NODES*(NODES-1)
+        for (int j = 0; j < NODES; ++j) {
+            int node_idx = j * NODES;
+            res.push_back(node_idx);
+        }
     }
+
     return res;
 }
-
 template<int NODES>
 double SpectralQuad<NODES>::gaussPoint(LocVar var, int i)
 {
@@ -420,8 +470,8 @@ void SpectralQuad<NODES>::set_pressure(int edge, double value) {
 
     std::pair<int, int> key_x(edge, 0);
     std::pair<int, int> key_y(edge, 1);
-    load[key_x] = value * nx;
-    load[key_y] = value * ny;
+    load[key_x] += -value * nx;
+    load[key_y] += -value * ny;
 }
 
 template<int NODES>

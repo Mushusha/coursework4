@@ -234,7 +234,7 @@ void Data::create_constraints(std::shared_ptr <const Parser> parser) {
 	for (int id = 0; id < parser->restraints.size(); id++) {
 		auto& restraints = parser->restraints[id];
 		for (int node = 0; node < restraints.size; node++)
-			for (int i = 0; i < 3; i++)
+			for (int i = 0; i < dim; i++)
 				if (restraints.flag[i])
 					nodes[restraints.apply_to[node] - 1]->set_constraints(i, restraints.data[i]);
 	}
@@ -416,7 +416,7 @@ void Data::build_spectral_element(std::shared_ptr<Element> elem) {
 				double dy = node->getY() - y;
 				double dz = node->getZ() - z;
 				double dist_sq = dx * dx + dy * dy + dz * dz;
-				if (dist_sq < 1e-12) {
+				if (dist_sq < 1e-8) {
 					node_exists = true;
 					existing_id = node->getID();
 					break;
