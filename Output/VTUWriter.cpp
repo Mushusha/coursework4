@@ -90,6 +90,31 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
 
         return polygon;
     }
+    case ElemType::HEXSEM: {
+        int NODES = static_cast<int>(std::cbrt(nodeIds.size()));
+
+        if (NODES * NODES * NODES != static_cast<int>(nodeIds.size()))
+            throw std::runtime_error("VTUWriter: HEXSEM node count is not a perfect cube");
+
+        vtkSmartPointer<vtkHexahedron> hex = vtkSmartPointer<vtkHexahedron>::New();
+
+        std::vector<int> corner_indices = {
+            0,                                    
+            NODES - 1,                            
+            NODES * NODES - 1,                    
+            NODES * (NODES - 1),                  
+            NODES * NODES * (NODES - 1),          
+            NODES * NODES * (NODES - 1) + NODES - 1, 
+            NODES * NODES * NODES - 1,            
+            NODES * NODES * (NODES - 1) + NODES * (NODES - 1) 
+        };
+
+        for (int i = 0; i < 8; ++i) {
+            hex->GetPointIds()->SetId(i, nodeIds[corner_indices[i]] - 1);
+        }
+
+        return hex;
+    }
     default:
         return nullptr;
     }
@@ -119,6 +144,15 @@ void VTUWriter::addNodeData(vtkSmartPointer<vtkUnstructuredGrid> unstructuredGri
 
         unstructuredGrid->GetPointData()->AddArray(dataArray);
     }
+
+    vtkSmartPointer<vtkIntArray> nodeIDArray = vtkSmartPointer<vtkIntArray>::New();
+    nodeIDArray->SetName("nodeID");
+    nodeIDArray->SetNumberOfComponents(1);
+
+    for (size_t i = 0; i < nodes.size(); ++i)
+        nodeIDArray->InsertNextValue(i + 1);
+
+    unstructuredGrid->GetPointData()->AddArray(nodeIDArray);
 }
 
 void VTUWriter::addElementData(vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid) {
@@ -134,12 +168,21 @@ void VTUWriter::addElementData(vtkSmartPointer<vtkUnstructuredGrid> unstructured
         vtkSmartPointer<vtkIntArray>::New();
     elemTypeArray->SetName("ElementType");
 
-    for (const auto& elem : elements)
-        elemTypeArray->InsertNextValue(
-            elem->get_type() == ElemType::QUADSEM
-            ? static_cast<int>(ElemType::QUAD)
-            : static_cast<int>(elem->get_type())
-        );
+    for (const auto& elem : elements) {
+        int vtk_type;
+        switch (elem->get_type()) {
+        case ElemType::QUADSEM:
+            vtk_type = static_cast<int>(ElemType::QUAD);
+            break;
+        case ElemType::HEXSEM:
+            vtk_type = static_cast<int>(ElemType::HEX);
+            break;
+        default:
+            vtk_type = static_cast<int>(elem->get_type());
+            break;
+        }
+        elemTypeArray->InsertNextValue(vtk_type);
+    }
 
     unstructuredGrid->GetCellData()->AddArray(elemTypeArray);
 }

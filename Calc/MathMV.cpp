@@ -3,19 +3,19 @@
 void print(Eigen::SparseMatrix<std::complex<double>>& A) {
 	for (int i = 0; i < A.innerSize(); i++)
 		for (int j = 0; j < A.outerSize(); j++)
-			if (A.coeffRef(i, j) != 0.0)
+			if ((A.coeffRef(i, j).real() > 1e-10) || (A.coeffRef(i, j).real() < -1e-10))
 				std::cout << i << " " << j << "\t" << A.coeffRef(i, j) << " " << std::endl;
 }
 
 void print(Eigen::SparseVector<std::complex<double>>& B) {
 	for (int i = 0; i < B.size(); i++)
-		if (B.coeffRef(i) != 0.0)
+		if ((B.coeffRef(i).real() > 1e-10) || (B.coeffRef(i).real() < -1e-10))
 			std::cout << i << "\t" << B.coeffRef(i) << std::endl;
 }
 
 void print(Eigen::VectorX <std::complex<double>>& B) {
 	for (int i = 0; i < B.size(); i++)
-		if (B(i) != 0.0)
+		if ((B(i).real() > 1e-10) || (B(i).real() < -1e-10))
 			std::cout << i << "\t" << B(i) << std::endl;
 }
 

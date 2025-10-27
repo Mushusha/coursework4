@@ -16,6 +16,7 @@
 #include "Wedge.h"
 //#include "Pyr.h"
 #include "QuadSEM.h"
+#include "HexSEM.h"
 
 
 class Data {
@@ -64,13 +65,20 @@ private:
 	void create_load(std::shared_ptr <const Parser> parser);
 	void create_D(std::shared_ptr <const Parser> parser);
 
-	void build_spectral_element(std::shared_ptr<Element> elem);
+	void build_spectral_quad_element(std::shared_ptr<Element> elem);
 
-	bool is_node_on_constrained_edge(int i, int j, int nodes_per_side,
+	bool is_quad_node_on_constrained_edge(int i, int j, int nodes_per_side,
 		const std::vector<bool>& edge_fully_constrained);
-	void apply_constraints_new_nodes(
+	void apply_constraints_new_quad_nodes(
 		std::shared_ptr<Node> new_node, double xi, double eta,
 		const std::vector<int>& original_nodes,
+		const std::map<int, std::map<int, double>>& original_constraints);
+
+	void build_spectral_hex_element(std::shared_ptr<Element> elem);
+	bool is_hex_node_on_constrained_face(int i, int j, int k, 
+		int nodes_per_side, const std::vector<bool>& face_fully_constrained);
+	void apply_constraints_new_hex_nodes(std::shared_ptr<Node> new_node, 
+		double xi, double eta, double zeta, const std::vector<int>& original_nodes, 
 		const std::map<int, std::map<int, double>>& original_constraints);
 
 	void renumber_nodes();

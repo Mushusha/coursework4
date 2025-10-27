@@ -354,24 +354,24 @@ std::vector<int> SpectralQuad<NODES>::edge_to_node(int edge) {
     if (edge < 0 || edge > 3)
         throw std::runtime_error("edge_to_node: wrong edge index");
 
-    if (edge == 0) { // bottom edge: nodes 0, 1, 2, ..., NODES-1
+    if (edge == 0) {
         for (int i = 0; i < NODES; ++i) {
             res.push_back(i);
         }
     }
-    else if (edge == 1) { // right edge: nodes NODES-1, 2*NODES-1, 3*NODES-1, ..., NODES*NODES-1
+    else if (edge == 1) {
         for (int j = 0; j < NODES; ++j) {
             int node_idx = j * NODES + (NODES - 1);
             res.push_back(node_idx);
         }
     }
-    else if (edge == 2) { // top edge: nodes NODES*(NODES-1), NODES*(NODES-1)+1, ..., NODES*NODES-1
+    else if (edge == 2) {
         for (int i = 0; i < NODES; ++i) {
             int node_idx = (NODES - 1) * NODES + i;
             res.push_back(node_idx);
         }
     }
-    else if (edge == 3) { // left edge: nodes 0, NODES, 2*NODES, ..., NODES*(NODES-1)
+    else if (edge == 3) {
         for (int j = 0; j < NODES; ++j) {
             int node_idx = j * NODES;
             res.push_back(node_idx);

@@ -48,7 +48,8 @@ Elements/Wedge.h
 Elements/Wedge.cpp
 Elements/Pyr.h
 Elements/Pyr.cpp
-Elements/QuadSEM.h)
+Elements/QuadSEM.h
+Elements/HexSEM.h)
 
 source_group(Solve FILES 
 Solve/Solver.h
@@ -117,6 +118,7 @@ add_executable(Core
     Elements/Pyr.h
     Elements/Pyr.cpp
     Elements/QuadSEM.h
+    Elements/HexSEM.h
 
     Solve/Solver.h
     Solve/Solver.cpp

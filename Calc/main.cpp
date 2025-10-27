@@ -17,8 +17,6 @@ int main(int argc, char* argv[]) {
 	Test();
 
 	logger& log = logger::log();
-	log.print("Start program");
-
 
 	std::signal(SIGINT, signalHandler);
 	std::signal(SIGTERM, signalHandler);

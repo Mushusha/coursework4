@@ -124,8 +124,22 @@ void Data::create_elements(std::shared_ptr<const Parser> parser) {
             
 			elem->set_order(order);
 
-			build_spectral_element(elem);
+			build_spectral_quad_element(elem);
         }
+		if (type == HEXSEM && order > 2) {
+			if (order == 3)
+				elem = std::make_shared<SpectralHex<4>>(SpectralHex<4>(parser->mesh.elem_id[i], HEXSEM, elem_nodes));
+			else if (order == 4)
+				elem = std::make_shared<SpectralHex<5>>(SpectralHex<5>(parser->mesh.elem_id[i], HEXSEM, elem_nodes));
+			else if (order == 5)
+				elem = std::make_shared<SpectralHex<6>>(SpectralHex<6>(parser->mesh.elem_id[i], HEXSEM, elem_nodes));
+			else
+				throw std::runtime_error("Unsupported spectral element order: " + std::to_string(order));
+
+			elem->set_order(order);
+
+			build_spectral_hex_element(elem);
+		}
 		else {
 			switch (type) {
 			case TRI:
@@ -316,8 +330,7 @@ void Data::create_D(std::shared_ptr <const Parser> parser) {
 		}
 }
 
-void Data::build_spectral_element(std::shared_ptr<Element> elem) {
-	logger& log = logger::log();
+void Data::build_spectral_quad_element(std::shared_ptr<Element> elem) {
 	int order = elem->get_order();
 	int nodes_per_side = order + 1;
 
@@ -431,8 +444,8 @@ void Data::build_spectral_element(std::shared_ptr<Element> elem) {
 				std::array<double, 3> coords = { x, y, z };
 				auto new_node = std::make_shared<Node>(next_node_id, coords);
 
-				if (is_node_on_constrained_edge(i, j, nodes_per_side, edge_fully_constrained)) {
-					apply_constraints_new_nodes(new_node, xi, eta, original_nodes, original_constraints);
+				if (is_quad_node_on_constrained_edge(i, j, nodes_per_side, edge_fully_constrained)) {
+					apply_constraints_new_quad_nodes(new_node, xi, eta, original_nodes, original_constraints);
 				}
 
 				nodes.push_back(new_node);
@@ -447,12 +460,9 @@ void Data::build_spectral_element(std::shared_ptr<Element> elem) {
 
 	elem->set_nodes(new_node_ids);
 	elem->set_coords(new_x, new_y, new_z);
-
-	log.print("Spectral element built: " + std::to_string(new_node_ids.size()) +
-		" nodes (order " + std::to_string(order) + ")");
 }
 
-bool Data::is_node_on_constrained_edge(int i, int j, int nodes_per_side,
+bool Data::is_quad_node_on_constrained_edge(int i, int j, int nodes_per_side,
 	const std::vector<bool>& edge_fully_constrained) {
 	if (j == 0 && edge_fully_constrained[0])  
 		return true;
@@ -466,7 +476,7 @@ bool Data::is_node_on_constrained_edge(int i, int j, int nodes_per_side,
 	return false;
 }
 
-void Data::apply_constraints_new_nodes(
+void Data::apply_constraints_new_quad_nodes(
 	std::shared_ptr<Node> new_node, double xi, double eta,
 	const std::vector<int>& original_nodes,
 	const std::map<int, std::map<int, double>>& original_constraints) {
@@ -492,6 +502,213 @@ void Data::apply_constraints_new_nodes(
 		const auto& constraints = original_constraints.at(original_node_id);
 		for (const auto& constraint : constraints) {
 			new_node->set_constraints(constraint.first, constraint.second);
+		}
+	}
+}
+
+void Data::build_spectral_hex_element(std::shared_ptr<Element> elem) {
+	int order = elem->get_order();
+	int nodes_per_side = order + 1;
+
+	std::vector<int> original_nodes = elem->get_node();
+	if (original_nodes.size() != 20) {
+		throw std::runtime_error("Expected HEX20 element with 20 nodes for spectral element.");
+	}
+
+	std::map<int, std::map<int, double>> original_constraints;
+	for (int node_id : original_nodes) {
+		auto it = std::find_if(nodes.begin(), nodes.end(),
+			[node_id](const std::shared_ptr<Node>& n) { return n->getID() == node_id; });
+		if (it != nodes.end()) {
+			original_constraints[node_id] = (*it)->constraints;
+		}
+	}
+
+	std::vector<double> orig_x, orig_y, orig_z;
+	for (int node_id : original_nodes) {
+		auto it = std::find_if(nodes.begin(), nodes.end(),
+			[node_id](const std::shared_ptr<Node>& n) { return n->getID() == node_id; });
+		if (it == nodes.end()) {
+			throw std::runtime_error("Node " + std::to_string(node_id) + " not found");
+		}
+		orig_x.push_back((*it)->getX());
+		orig_y.push_back((*it)->getY());
+		orig_z.push_back((*it)->getZ());
+	}
+
+	std::vector<double> gll_points, gll_weights;
+	compute_gll_nodes_weights(order, gll_points, gll_weights);
+
+	auto hex20_shape_functions = [](double xi, double eta, double zeta, std::vector<double>& N) {
+		N.resize(20);
+
+		N[0] = 0.125 * (1 - xi) * (1 - eta) * (1 - zeta) * (-2 - xi - eta - zeta);
+		N[1] = 0.125 * (1 + xi) * (1 - eta) * (1 - zeta) * (-2 + xi - eta - zeta);
+		N[2] = 0.125 * (1 + xi) * (1 + eta) * (1 - zeta) * (-2 + xi + eta - zeta);
+		N[3] = 0.125 * (1 - xi) * (1 + eta) * (1 - zeta) * (-2 - xi + eta - zeta);
+		N[4] = 0.125 * (1 - xi) * (1 - eta) * (1 + zeta) * (-2 - xi - eta + zeta);
+		N[5] = 0.125 * (1 + xi) * (1 - eta) * (1 + zeta) * (-2 + xi - eta + zeta);
+		N[6] = 0.125 * (1 + xi) * (1 + eta) * (1 + zeta) * (-2 + xi + eta + zeta);
+		N[7] = 0.125 * (1 - xi) * (1 + eta) * (1 + zeta) * (-2 - xi + eta + zeta);
+
+		N[8] = 0.25 * (1 - xi * xi) * (1 - eta) * (1 - zeta);
+		N[9] = 0.25 * (1 + xi) * (1 - eta * eta) * (1 - zeta);
+		N[10] = 0.25 * (1 - xi * xi) * (1 + eta) * (1 - zeta);
+		N[11] = 0.25 * (1 - xi) * (1 - eta * eta) * (1 - zeta);
+		N[12] = 0.25 * (1 - xi * xi) * (1 - eta) * (1 + zeta);
+		N[13] = 0.25 * (1 + xi) * (1 - eta * eta) * (1 + zeta);
+		N[14] = 0.25 * (1 - xi * xi) * (1 + eta) * (1 + zeta);
+		N[15] = 0.25 * (1 - xi) * (1 - eta * eta) * (1 + zeta);
+		N[16] = 0.25 * (1 - xi) * (1 - eta) * (1 - zeta * zeta);
+		N[17] = 0.25 * (1 + xi) * (1 - eta) * (1 - zeta * zeta);
+		N[18] = 0.25 * (1 + xi) * (1 + eta) * (1 - zeta * zeta);
+		N[19] = 0.25 * (1 - xi) * (1 + eta) * (1 - zeta * zeta);
+		};
+
+	std::vector<double> N(20);
+	std::vector<int> new_node_ids;
+	std::vector<double> new_x, new_y, new_z;
+
+	int next_node_id = nodes.size() + 1;
+	if (!nodes.empty()) {
+		int max_id = 0;
+		for (const auto& node : nodes) {
+			max_id = std::max(max_id, node->getID());
+		}
+		next_node_id = max_id + 1;
+	}
+
+	std::vector<bool> face_fully_constrained(6, true);
+	std::vector<std::vector<int>> face_original_nodes = {
+		{0, 1, 2, 3, 8, 9, 10, 11},
+		{0, 3, 7, 4, 11, 19, 15, 16},
+		{1, 2, 6, 5, 9, 18, 13, 17},
+		{2, 3, 7, 6, 10, 19, 14, 18},
+		{0, 1, 5, 4, 8, 17, 12, 16},
+		{4, 5, 6, 7, 12, 13, 14, 15}
+	};
+	for (int face = 0; face < 6; face++) {
+		for (int local_node_idx : face_original_nodes[face]) {
+			int global_node_id = original_nodes[local_node_idx];
+			if (original_constraints[global_node_id].empty()) {
+				face_fully_constrained[face] = false;
+				break;
+			}
+		}
+	}
+
+	for (int k = 0; k < nodes_per_side; k++) {
+		double zeta = gll_points[k];
+		for (int j = 0; j < nodes_per_side; j++) {
+			double eta = gll_points[j];
+			for (int i = 0; i < nodes_per_side; i++) {
+				double xi = gll_points[i];
+
+				hex20_shape_functions(xi, eta, zeta, N);
+
+				double x = 0.0, y = 0.0, z = 0.0;
+				for (int m = 0; m < 20; m++) {
+					x += N[m] * orig_x[m];
+					y += N[m] * orig_y[m];
+					z += N[m] * orig_z[m];
+				}
+
+				bool node_exists = false;
+				int existing_id = -1;
+
+				for (const auto& node : nodes) {
+					double dx = node->getX() - x;
+					double dy = node->getY() - y;
+					double dz = node->getZ() - z;
+					double dist_sq = dx * dx + dy * dy + dz * dz;
+					if (dist_sq < 1e-8) {
+						node_exists = true;
+						existing_id = node->getID();
+						break;
+					}
+				}
+
+				if (node_exists) {
+					new_node_ids.push_back(existing_id);
+				}
+				else {
+					new_node_ids.push_back(next_node_id);
+					std::array<double, 3> coords = { x, y, z };
+					auto new_node = std::make_shared<Node>(next_node_id, coords);
+
+					if (is_hex_node_on_constrained_face(i, j, k, nodes_per_side, face_fully_constrained)) {
+						apply_constraints_new_hex_nodes(new_node, xi, eta, zeta, original_nodes, original_constraints);
+					}
+
+					nodes.push_back(new_node);
+					next_node_id++;
+				}
+
+				new_x.push_back(x);
+				new_y.push_back(y);
+				new_z.push_back(z);
+			}
+		}
+	}
+
+	elem->set_nodes(new_node_ids);
+	elem->set_coords(new_x, new_y, new_z);
+}
+
+bool Data::is_hex_node_on_constrained_face(
+	int i, int j, int k, int nodes_per_side,
+	const std::vector<bool>& face_fully_constrained) {
+	if (j == 0 && face_fully_constrained[0])
+		return true;
+	if (i == 0 && face_fully_constrained[1])
+		return true;
+	if (i == nodes_per_side - 1 && face_fully_constrained[2])
+		return true;
+	if (j == nodes_per_side - 1 && face_fully_constrained[3])
+		return true;
+	if (k == nodes_per_side - 1 == 0 && face_fully_constrained[4])
+		return true;
+	if (k == 0 && face_fully_constrained[5])
+		return true;
+
+	return false;
+}
+
+void Data::apply_constraints_new_hex_nodes(
+	std::shared_ptr<Node> new_node,
+	double xi, double eta, double zeta,
+	const std::vector<int>& original_nodes,
+	const std::map<int, std::map<int, double>>& original_constraints) {
+	int nearest_corner = 0;
+	double min_dist = std::numeric_limits<double>::max();
+
+	std::vector<std::tuple<double, double, double>> corner_coords = {
+		{-1, -1, -1},
+		{ 1, -1, -1},
+		{ 1,  1, -1},
+		{-1,  1, -1},
+		{-1, -1,  1},
+		{ 1, -1,  1},
+		{ 1,  1,  1},
+		{-1,  1,  1}
+	};
+
+	for (int corner = 0; corner < 8; corner++) {
+		auto [cx, cy, cz] = corner_coords[corner];
+		double dist = std::sqrt(std::pow(xi - cx, 2) +
+			std::pow(eta - cy, 2) +
+			std::pow(zeta - cz, 2));
+		if (dist < min_dist) {
+			min_dist = dist;
+			nearest_corner = corner;
+		}
+	}
+
+	int original_node_id = original_nodes[nearest_corner];
+	if (original_constraints.count(original_node_id)) {
+		const auto& constraints = original_constraints.at(original_node_id);
+		for (const auto& [dof, value] : constraints) {
+			new_node->set_constraints(dof, value);
 		}
 	}
 }

@@ -232,6 +232,9 @@ uint8_t mesh::count_nodes(uint8_t elem_t) {
 	case QUADSEM:
 		return 8;
 		break;
+	case HEXSEM:
+		return 20;
+		break;
 	default:
 		throw runtime_error("Error: wrong element type");
 	}

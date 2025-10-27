@@ -96,12 +96,12 @@ void Solver::fillGlobalF(double mult) {
 
 	std::vector<size_t> ind(calc_data.nodes_count());
 	std::iota(ind.begin(), ind.end(), 0);
-	
+
 	std::for_each(std::execution::par, ind.begin(), ind.end(), [&](size_t i) {
 		for (auto pair : calc_data.get_node(i)->load) {
 			F.coeffRef(dim * i + pair.first) += mult * pair.second;
 		}
-	});
+		});
 	log.print("End filling right vector");
 }
 
