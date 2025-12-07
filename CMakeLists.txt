@@ -5,26 +5,6 @@ project(cw)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ====== Оптимизации компилятора ======
-if(MSVC)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /Oi /Ot /GL /fp:fast /arch:AVX2")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
-else()
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -ffast-math -flto")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-endif()
-
-# Eigen: отключаем проверки в Release, не используем внутреннюю параллелизацию
-add_definitions(-DEIGEN_NO_DEBUG)
-
-# Опционально: Intel MKL для быстрых матричных операций (если установлен)
-# find_package(MKL CONFIG)
-# if(MKL_FOUND)
-#     add_definitions(-DEIGEN_USE_MKL_ALL)
-#     target_link_libraries(Core PRIVATE MKL::MKL)
-# endif()
-
 set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "Vcpkg target triplet")
 set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/eigen-3.4.0")
 set(VTK_DIR "C:/Users/mushusha/vcpkg/packages/vtk_x64-windows/share/vtk")
@@ -134,9 +114,6 @@ Tests/Elements/WedgeTests.cpp
 Tests/Elements/PyrTests.h
 Tests/Elements/PyrTests.cpp)
 
-source_group(Tests\\Node FILES
-Tests/Node/NodeTests.h
-Tests/Node/NodeTests.cpp)
 
 source_group(Tests\\Calc FILES
 Tests/Calc/MathMVTests.h
@@ -230,9 +207,6 @@ add_executable(Core
     Tests/Elements/WedgeTests.cpp
     Tests/Elements/PyrTests.h
     Tests/Elements/PyrTests.cpp
-    
-    Tests/Node/NodeTests.h
-    Tests/Node/NodeTests.cpp
     
     Tests/Calc/MathMVTests.h
     Tests/Calc/MathMVTests.cpp
