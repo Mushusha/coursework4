@@ -3,7 +3,7 @@
 #include <map>
 #include <string>
 
-enum ElemType { TRI = 10, QUAD = 12, TETRA = 1, HEX = 3, WEDGE = 6, PYR = 8, QUADSEM = 13, HEXSEM = 4, INFQUAD = 14 };
+enum ElemType { TRI = 10, QUAD = 12, TETRA = 1, HEX = 3, WEDGE = 6, PYR = 8, QUADSEM = 13, HEXSEM = 4, INFQUAD = 14, INFHEX = 15, INFQUADSEM = 16, INFHEXSEM = 17 };
 enum LoadType { PRESSURE = 3, PRESSURESEM = 4, NODEFORCE = 5, BERLAGE = 20 };
 enum LocVar { KSI, ETA, ZETA };
 enum GlobVar { X, Y, Z };

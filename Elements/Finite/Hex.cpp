@@ -17,28 +17,51 @@ std::vector<std::complex<double>> Hex::FF(double ksi, double eta, double zeta) {
 
 Eigen::MatrixXcd Hex::gradFF(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd gradFF = Eigen::MatrixXcd::Zero(3, 8);
-	double h = 0.01;
-	for (int i = 0; i < 8; i++) {
-		gradFF(KSI, i) = (FF(ksi + h, eta, zeta)[i] - FF(ksi - h, eta, zeta)[i]) / (2 * h);
-		gradFF(ETA, i) = (FF(ksi, eta + h, zeta)[i] - FF(ksi, eta - h, zeta)[i]) / (2 * h);
-		gradFF(ZETA, i) = (FF(ksi, eta, zeta + h)[i] - FF(ksi, eta, zeta - h)[i]) / (2 * h);
-	}
+
+	gradFF(KSI, 0) = -(1 - eta) * (1 - zeta) / 8;
+	gradFF(KSI, 1) =  (1 - eta) * (1 - zeta) / 8;
+	gradFF(KSI, 2) =  (1 + eta) * (1 - zeta) / 8;
+	gradFF(KSI, 3) = -(1 + eta) * (1 - zeta) / 8;
+	gradFF(KSI, 4) = -(1 - eta) * (1 + zeta) / 8;
+	gradFF(KSI, 5) =  (1 - eta) * (1 + zeta) / 8;
+	gradFF(KSI, 6) =  (1 + eta) * (1 + zeta) / 8;
+	gradFF(KSI, 7) = -(1 + eta) * (1 + zeta) / 8;
+
+	gradFF(ETA, 0) = -(1 - ksi) * (1 - zeta) / 8;
+	gradFF(ETA, 1) = -(1 + ksi) * (1 - zeta) / 8;
+	gradFF(ETA, 2) =  (1 + ksi) * (1 - zeta) / 8;
+	gradFF(ETA, 3) =  (1 - ksi) * (1 - zeta) / 8;
+	gradFF(ETA, 4) = -(1 - ksi) * (1 + zeta) / 8;
+	gradFF(ETA, 5) = -(1 + ksi) * (1 + zeta) / 8;
+	gradFF(ETA, 6) =  (1 + ksi) * (1 + zeta) / 8;
+	gradFF(ETA, 7) =  (1 - ksi) * (1 + zeta) / 8;
+
+	gradFF(ZETA, 0) = -(1 - ksi) * (1 - eta) / 8;
+	gradFF(ZETA, 1) = -(1 + ksi) * (1 - eta) / 8;
+	gradFF(ZETA, 2) = -(1 + ksi) * (1 + eta) / 8;
+	gradFF(ZETA, 3) = -(1 - ksi) * (1 + eta) / 8;
+	gradFF(ZETA, 4) =  (1 - ksi) * (1 - eta) / 8;
+	gradFF(ZETA, 5) =  (1 + ksi) * (1 - eta) / 8;
+	gradFF(ZETA, 6) =  (1 + ksi) * (1 + eta) / 8;
+	gradFF(ZETA, 7) =  (1 - ksi) * (1 + eta) / 8;
+
 	return gradFF;
 }
 
 Eigen::MatrixXcd Hex::J(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd J = Eigen::MatrixXcd::Zero(3, 3);
+	Eigen::MatrixXcd grad = gradFF(ksi, eta, zeta);
 
 	for (int i = 0; i < 8; i++) {
-		J(0, 0) += gradFF(ksi, eta, zeta)(KSI, i) * x[i];
-		J(0, 1) += gradFF(ksi, eta, zeta)(ETA, i) * x[i];
-		J(0, 2) += gradFF(ksi, eta, zeta)(ZETA, i) * x[i];
-		J(1, 0) += gradFF(ksi, eta, zeta)(KSI, i) * y[i];
-		J(1, 1) += gradFF(ksi, eta, zeta)(ETA, i) * y[i];
-		J(1, 2) += gradFF(ksi, eta, zeta)(ZETA, i) * y[i];
-		J(2, 0) += gradFF(ksi, eta, zeta)(KSI, i) * z[i];
-		J(2, 1) += gradFF(ksi, eta, zeta)(ETA, i) * z[i];
-		J(2, 2) += gradFF(ksi, eta, zeta)(ZETA, i) * z[i];
+		J(0, 0) += grad(KSI, i) * x[i];
+		J(0, 1) += grad(ETA, i) * x[i];
+		J(0, 2) += grad(ZETA, i) * x[i];
+		J(1, 0) += grad(KSI, i) * y[i];
+		J(1, 1) += grad(ETA, i) * y[i];
+		J(1, 2) += grad(ZETA, i) * y[i];
+		J(2, 0) += grad(KSI, i) * z[i];
+		J(2, 1) += grad(ETA, i) * z[i];
+		J(2, 2) += grad(ZETA, i) * z[i];
 	}
 	return J;
 }
@@ -241,10 +264,13 @@ double Hex::Volume() {
 }
 
 double Hex::gaussPoint(LocVar var, int i) {
-	std::vector<std::vector<double>> gp =
-	{ { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 },
-	{ -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 },
-	{ -0.57735026918926, -0.57735026918926, -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926, 0.57735026918926 } };
+	static const double gauss_coord = 1.0 / std::sqrt(3.0);
+	
+	static const std::array<std::array<double, 8>, 3> gp = {{
+		{ -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord }, // KSI
+		{ -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord }, // ETA
+		{ -gauss_coord, -gauss_coord, -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord,  gauss_coord,  gauss_coord }  // ZETA
+	}};
 
 	return gp[static_cast<int>(var)][i];
 }

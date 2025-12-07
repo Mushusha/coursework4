@@ -14,9 +14,13 @@
 #include "Tetra.h"
 #include "Hex.h"
 #include "Wedge.h"
-//#include "Pyr.h"
+#include "Pyr.h"
+#include "InfQuad.h"
+#include "InfHex.h"
 #include "QuadSEM.h"
 #include "HexSEM.h"
+#include "InfQuadSEM.h"
+#include "InfHexSEM.h"
 
 
 class Data {

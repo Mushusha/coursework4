@@ -5,8 +5,8 @@ std::vector<std::complex<double>> Wedge::FF(double ksi, double eta, double zeta)
 	std::vector<std::complex<double>> FF;
 	FF.resize(6);
 	double L1 = (1 - ksi - eta) / 2;
-	double L2 = ksi; // (1 + ksi) / 2;
-	double L3 = eta; // (1 + eta) / 2;
+	double L2 = ksi;
+	double L3 = eta;
 
 	FF[0] = L1 * (1 - zeta) / 2;
 	FF[1] = L2 * (1 - zeta) / 2;
@@ -19,28 +19,48 @@ std::vector<std::complex<double>> Wedge::FF(double ksi, double eta, double zeta)
 
 Eigen::MatrixXcd Wedge::gradFF(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd gradFF = Eigen::MatrixXcd::Zero(3, 6);
-	double h = 0.01;
-	for (int i = 0; i < 6; i++) {
-		gradFF(KSI, i) = (FF(ksi + h, eta, zeta)[i] - FF(ksi - h, eta, zeta)[i]) / (2 * h);
-		gradFF(ETA, i) = (FF(ksi, eta + h, zeta)[i] - FF(ksi, eta - h, zeta)[i]) / (2 * h);
-		gradFF(ZETA, i) = (FF(ksi, eta, zeta + h)[i] - FF(ksi, eta, zeta - h)[i]) / (2 * h);
-	}
+
+	gradFF(KSI, 0) = -0.5 * (1 - zeta) / 2;
+	gradFF(KSI, 1) =  1.0 * (1 - zeta) / 2;
+	gradFF(KSI, 2) =  0.0;
+	gradFF(KSI, 3) = -0.5 * (1 + zeta) / 2;
+	gradFF(KSI, 4) =  1.0 * (1 + zeta) / 2;
+	gradFF(KSI, 5) =  0.0;
+
+	gradFF(ETA, 0) = -0.5 * (1 - zeta) / 2;
+	gradFF(ETA, 1) =  0.0;
+	gradFF(ETA, 2) =  1.0 * (1 - zeta) / 2;
+	gradFF(ETA, 3) = -0.5 * (1 + zeta) / 2;
+	gradFF(ETA, 4) =  0.0;
+	gradFF(ETA, 5) =  1.0 * (1 + zeta) / 2;
+
+	double L1 = (1 - ksi - eta) / 2;
+	double L2 = ksi;
+	double L3 = eta;
+	gradFF(ZETA, 0) = -L1 / 2;
+	gradFF(ZETA, 1) = -L2 / 2;
+	gradFF(ZETA, 2) = -L3 / 2;
+	gradFF(ZETA, 3) =  L1 / 2;
+	gradFF(ZETA, 4) =  L2 / 2;
+	gradFF(ZETA, 5) =  L3 / 2;
+
 	return gradFF;
 }
 
 Eigen::MatrixXcd Wedge::J(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd J = Eigen::MatrixXcd::Zero(3, 3);
+	Eigen::MatrixXcd grad = gradFF(ksi, eta, zeta);
 
 	for (int i = 0; i < 6; i++) {
-		J(0, 0) += gradFF(ksi, eta, zeta)(KSI, i) * x[i];
-		J(0, 1) += gradFF(ksi, eta, zeta)(ETA, i) * x[i];
-		J(0, 2) += gradFF(ksi, eta, zeta)(ZETA, i) * x[i];
-		J(1, 0) += gradFF(ksi, eta, zeta)(KSI, i) * y[i];
-		J(1, 1) += gradFF(ksi, eta, zeta)(ETA, i) * y[i];
-		J(1, 2) += gradFF(ksi, eta, zeta)(ZETA, i) * y[i];
-		J(2, 0) += gradFF(ksi, eta, zeta)(KSI, i) * z[i];
-		J(2, 1) += gradFF(ksi, eta, zeta)(ETA, i) * z[i];
-		J(2, 2) += gradFF(ksi, eta, zeta)(ZETA, i) * z[i];
+		J(0, 0) += grad(KSI, i) * x[i];
+		J(0, 1) += grad(ETA, i) * x[i];
+		J(0, 2) += grad(ZETA, i) * x[i];
+		J(1, 0) += grad(KSI, i) * y[i];
+		J(1, 1) += grad(ETA, i) * y[i];
+		J(1, 2) += grad(ZETA, i) * y[i];
+		J(2, 0) += grad(KSI, i) * z[i];
+		J(2, 1) += grad(ETA, i) * z[i];
+		J(2, 2) += grad(ZETA, i) * z[i];
 	}
 	return J;
 }

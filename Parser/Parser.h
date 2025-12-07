@@ -100,7 +100,7 @@ struct mesh {
 struct infinite {
 	std::vector<lint> apply_to;
 	size_t size;
-	int point;
+	std::array<double, 3> point;
 
 	void read(json infinite);
 };

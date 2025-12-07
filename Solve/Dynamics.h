@@ -19,6 +19,7 @@ public:
 		if (this != &other) {
 			Solver::operator=(std::move(other));
 		}
+		return *this;
 	}
 	virtual ~Dynamics() = default;
 

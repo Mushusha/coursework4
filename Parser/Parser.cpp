@@ -197,9 +197,18 @@ void mesh::read(json mesh) {
 	}
 }
 void infinite::read(json infinite) {
-	this->point = infinite["point"];
+	if (infinite["point"].is_array()) {
+		for (int i = 0; i < 3; i++) {
+			this->point[i] = infinite["point"][i];
+		}
+	}
+	else {
+		this->point[0] = 0.0;
+		this->point[1] = 0.0;
+		this->point[2] = 0.0;
+	}
+	
 	this->size = infinite["apply_to_size"];
-	std::map<int, int> map_node_inf;
 
 	apply_to.resize(2 * this->size);
 

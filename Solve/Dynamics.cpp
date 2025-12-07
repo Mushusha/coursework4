@@ -1,4 +1,5 @@
 #include "Dynamics.h"
+#include "MathMV.h"
 
 Dynamics::Dynamics(Data& data) : Solver(data) {
 	fillGlobalM();
@@ -32,14 +33,67 @@ void Dynamics::fillGlobalM() {
 	int dim = calc_data.dim;
 
 	M.resize(dim * nodes_count, dim * nodes_count);
-	std::vector <Eigen::Triplet <std::complex<double>>> tripl_vec;
-	for (int i = 0; i < elems_count; i++) {
-		Eigen::MatrixXcd loc_m = calc_data.get_elem(i)->localM();
-		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
-			for (int k = 0; k < calc_data.get_elem(i)->nodes_count() * dim; k++) {
-				Eigen::Triplet <std::complex<double>> trpl(dim * (calc_data.get_elem(i)->get_node(j / dim) - 1) + j % dim, dim * (calc_data.get_elem(i)->get_node(k / dim) - 1) + k % dim, loc_m(j, k));
-				tripl_vec.push_back(trpl);
+	
+	std::vector<Eigen::Triplet<std::complex<double>>> tripl_vec;
+	
+	const int PARALLEL_THRESHOLD = 100;
+	
+	if (elems_count < PARALLEL_THRESHOLD) {
+		for (int i = 0; i < elems_count; i++) {
+			auto elem = calc_data.get_elem(i);
+			Eigen::MatrixXcd loc_m = elem->localM();
+			int elem_nodes = elem->nodes_count();
+			
+			for (int j = 0; j < elem_nodes * dim; j++)
+				for (int k = 0; k < elem_nodes * dim; k++) {
+					tripl_vec.push_back(Eigen::Triplet<std::complex<double>>(
+						dim * (elem->get_node(j / dim) - 1) + j % dim,
+						dim * (elem->get_node(k / dim) - 1) + k % dim, 
+						loc_m(j, k)));
+				}
+		}
+	}
+	else {
+		unsigned int num_threads = std::max(1u, std::thread::hardware_concurrency());
+		std::vector<std::vector<Eigen::Triplet<std::complex<double>>>> chunk_triplets(num_threads);
+		
+		int chunk_size = (elems_count + num_threads - 1) / num_threads;
+		
+		std::vector<unsigned int> chunk_indices(num_threads);
+		std::iota(chunk_indices.begin(), chunk_indices.end(), 0);
+		
+		std::for_each(std::execution::par, chunk_indices.begin(), chunk_indices.end(), [&](unsigned int chunk_id) {
+			int start = chunk_id * chunk_size;
+			int end = std::min(start + chunk_size, elems_count);
+			
+			if (start >= end) return;
+			
+			auto& local_triplets = chunk_triplets[chunk_id];
+			
+			for (int i = start; i < end; i++) {
+				auto elem = calc_data.get_elem(i);
+				Eigen::MatrixXcd loc_m = elem->localM();
+				int elem_nodes = elem->nodes_count();
+				
+				for (int j = 0; j < elem_nodes * dim; j++)
+					for (int k = 0; k < elem_nodes * dim; k++) {
+						local_triplets.push_back(Eigen::Triplet<std::complex<double>>(
+							dim * (elem->get_node(j / dim) - 1) + j % dim,
+							dim * (elem->get_node(k / dim) - 1) + k % dim, 
+							loc_m(j, k)));
+					}
 			}
+		});
+		
+		size_t total_size = 0;
+		for (const auto& tv : chunk_triplets) total_size += tv.size();
+		tripl_vec.reserve(total_size);
+		
+		for (auto& tv : chunk_triplets) {
+			tripl_vec.insert(tripl_vec.end(), 
+				std::make_move_iterator(tv.begin()), 
+				std::make_move_iterator(tv.end()));
+		}
 	}
 
 	M.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
@@ -69,10 +123,11 @@ void Dynamics::updateM() {
 }
 
 void Dynamics::calcDelta_t(Data& data) {
-	double h_min = data.get_elem(0)->Volume(); // len
+	double h_min = min_edge_length(data.get_elem(0)); // min edge length
 	double v_max = 0;
 	for (int i = 0; i < data.elements_count() - data.num_inf_elems; i++) {
-		h_min = (h_min > data.get_elem(i)->Volume()) ? data.get_elem(i)->Volume() : h_min;
+		double elem_min_edge = min_edge_length(data.get_elem(i));
+		h_min = (h_min > elem_min_edge) ? elem_min_edge : h_min;
 		double nu = data.get_elem(i)->get_nu();
 		double E = data.get_elem(i)->get_E();
 		double v_p = std::sqrt((E * nu / ((1 + nu) * (1 - 2 * nu)) + E / (2 * (1 + nu))) / data.get_elem(i)->get_rho());

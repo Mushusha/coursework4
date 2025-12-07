@@ -7,7 +7,6 @@
 #include "Eigen/Core"
 
 #include "Element.h"
-#include "MathMV.h"
 
 class Quad : public Element {
 public:
@@ -56,39 +55,4 @@ protected:
 	void set_pressure(int edge, double value) override;
 private:
 	double len_edge(int edge);
-};
-
-
-class infQuad : public  Quad {
-public:
-	infQuad() : Quad() {}
-	infQuad(int id, ElemType type, std::vector<int> nodes)
-		: Quad(id, type, nodes) {
-	}
-	infQuad(const infQuad& other)
-		: Quad(other) {}
-	infQuad& operator=(const infQuad& other) {
-		if (this != &other)
-			Element::operator=(other);
-		return *this;
-	}
-	infQuad(infQuad&& other) noexcept
-		: Quad(std::move(other)) {}
-	infQuad& operator=(infQuad&& other) noexcept {
-		if (this != &other)
-			Element::operator=(std::move(other));
-		return *this;
-	}
-	virtual ~infQuad() = default;
-
-	bool is_dyn;
-	double omega;
-
-	std::vector<std::complex<double>> FF(double ksi, double eta, double zeta = 0) final;
-	double gaussPoint(LocVar var, int i) final;
-	double weight(LocVar var, int i) final;
-
-private:
-	double A;
-	double k;
 };

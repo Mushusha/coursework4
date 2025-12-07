@@ -57,16 +57,71 @@ void Solver::fillGlobalK() {
 	int dim = calc_data.dim;
 
 	K.resize(dim * nodes_count, dim * nodes_count);
-	std::vector <Eigen::Triplet <std::complex<double>>> tripl_vec;
-	for (int i = 0; i < elems_count; i++) {
-		Eigen::MatrixXcd loc_k = calc_data.get_elem(i)->localK();
-		for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
-			for (int k = 0; k < calc_data.get_elem(i)->nodes_count() * dim; k++) {
-
-				Eigen::Triplet <std::complex<double>> trpl(dim * (calc_data.get_elem(i)->get_node(j / dim) - 1) + j % dim,
-														   dim * (calc_data.get_elem(i)->get_node(k / dim) - 1) + k % dim, loc_k(j, k));
-				tripl_vec.push_back(trpl);
+	
+	std::vector<Eigen::Triplet<std::complex<double>>> tripl_vec;
+	
+	const int PARALLEL_THRESHOLD = 100;
+	
+	if (elems_count < PARALLEL_THRESHOLD) {
+		for (int i = 0; i < elems_count; i++) {
+			auto elem = calc_data.get_elem(i);
+			Eigen::MatrixXcd loc_k = elem->localK();
+			int elem_nodes = elem->nodes_count();
+			
+			for (int j = 0; j < elem_nodes * dim; j++)
+				for (int k = 0; k < elem_nodes * dim; k++) {
+					tripl_vec.push_back(Eigen::Triplet<std::complex<double>>(
+						dim * (elem->get_node(j / dim) - 1) + j % dim,
+						dim * (elem->get_node(k / dim) - 1) + k % dim, 
+						loc_k(j, k)));
+				}
+		}
+	}
+	else {
+		unsigned int num_threads = std::max(1u, std::thread::hardware_concurrency());
+		std::vector<std::vector<Eigen::Triplet<std::complex<double>>>> chunk_triplets(num_threads);
+		
+		int chunk_size = (elems_count + num_threads - 1) / num_threads;
+		
+		std::vector<unsigned int> chunk_indices(num_threads);
+		std::iota(chunk_indices.begin(), chunk_indices.end(), 0);
+		
+		int avg_nodes_per_elem = calc_data.get_elem(0)->nodes_count();
+		int triplets_per_elem = avg_nodes_per_elem * avg_nodes_per_elem * dim * dim;
+		
+		std::for_each(std::execution::par, chunk_indices.begin(), chunk_indices.end(), [&](unsigned int chunk_id) {
+			int start = chunk_id * chunk_size;
+			int end = std::min(start + chunk_size, elems_count);
+			
+			if (start >= end) return;
+			
+			auto& local_triplets = chunk_triplets[chunk_id];
+			local_triplets.reserve((end - start) * triplets_per_elem);
+			
+			for (int i = start; i < end; i++) {
+				auto elem = calc_data.get_elem(i);
+				Eigen::MatrixXcd loc_k = elem->localK();
+				int elem_nodes = elem->nodes_count();
+				
+				for (int j = 0; j < elem_nodes * dim; j++)
+					for (int k = 0; k < elem_nodes * dim; k++) {
+						local_triplets.push_back(Eigen::Triplet<std::complex<double>>(
+							dim * (elem->get_node(j / dim) - 1) + j % dim,
+							dim * (elem->get_node(k / dim) - 1) + k % dim, 
+							loc_k(j, k)));
+					}
 			}
+		});
+		
+		size_t total_size = 0;
+		for (const auto& tv : chunk_triplets) total_size += tv.size();
+		tripl_vec.reserve(total_size);
+		
+		for (auto& tv : chunk_triplets) {
+			tripl_vec.insert(tripl_vec.end(), 
+				std::make_move_iterator(tv.begin()), 
+				std::make_move_iterator(tv.end()));
+		}
 	}
 
 	K.setFromTriplets(tripl_vec.begin(), tripl_vec.end());
@@ -146,24 +201,23 @@ void Solver::zeroDiagonalCheck() {
 
 void Solver::dispToElem() {
 	int dim = calc_data.dim;
+	int elems_count = calc_data.elements_count();
 
-	for (int elem = 0; elem < calc_data.elements_count(); elem++) {
-		calc_data.get_elem(elem)->results.resize(calc_data.get_elem(elem)->nodes_count());
-		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			//elements[elem]->results[node][DISPLACEMENT].resize(dim);
-
-			//elements[elem]->results[node][DISPLACEMENT][X] = U(dim * (elements[elem]->get_node(node) - 1));
-			//elements[elem]->results[node][DISPLACEMENT][Y] = U(dim * (elements[elem]->get_node(node) - 1) + 1);
-			//if (dim == 3)
-			//	elements[elem]->results[node][DISPLACEMENT][Z] = U(dim * (elements[elem]->get_node(node) - 1) + 2);
-
-			calc_data.get_elem(elem)->displacements.resize(dim * calc_data.get_elem(elem)->nodes_count());
-			calc_data.get_elem(elem)->displacements[dim * node] = U(dim * (calc_data.get_elem(elem)->get_node(node) - 1)).real();
-			calc_data.get_elem(elem)->displacements[dim * node + 1] = U(dim * (calc_data.get_elem(elem)->get_node(node) - 1) + 1).real();
+	std::vector<size_t> elem_indices(elems_count);
+	std::iota(elem_indices.begin(), elem_indices.end(), 0);
+	
+	std::for_each(std::execution::par, elem_indices.begin(), elem_indices.end(), [&](size_t elem) {
+		auto el = calc_data.get_elem(elem);
+		el->results.resize(el->nodes_count());
+		el->displacements.resize(dim * el->nodes_count());
+		
+		for (int node = 0; node < el->nodes_count(); node++) {
+			el->displacements[dim * node] = U(dim * (el->get_node(node) - 1)).real();
+			el->displacements[dim * node + 1] = U(dim * (el->get_node(node) - 1) + 1).real();
 			if (dim == 3)
-				calc_data.get_elem(elem)->displacements[dim * node + 2] = U(dim * (calc_data.get_elem(elem)->get_node(node) - 1) + 2).real();
+				el->displacements[dim * node + 2] = U(dim * (el->get_node(node) - 1) + 2).real();
 		}
-	}
+	});
 }
 
 void Solver::dispToNode() {
@@ -175,25 +229,37 @@ void Solver::dispToNode() {
 }
 
 void Solver::calcStrain() {
-	for (int elem = 0; elem < calc_data.elements_count(); elem++) {
-		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			calc_data.get_elem(elem)->results[node][STRAIN] = calc_data.get_elem(elem)->
-				B(calc_data.get_elem(elem)->gaussPoint(KSI, node), calc_data.get_elem(elem)->gaussPoint(ETA, node),
-					calc_data.get_elem(elem)->gaussPoint(ZETA, node)) * calc_data.get_elem(elem)->displacements;
+	int elems_count = calc_data.elements_count();
+	std::vector<size_t> elem_indices(elems_count);
+	std::iota(elem_indices.begin(), elem_indices.end(), 0);
+	
+	std::for_each(std::execution::par, elem_indices.begin(), elem_indices.end(), [&](size_t elem) {
+		auto el = calc_data.get_elem(elem);
+		for (int node = 0; node < el->nodes_count(); node++) {
+			el->results[node][STRAIN] = el->B(el->gaussPoint(KSI, node), el->gaussPoint(ETA, node),
+				el->gaussPoint(ZETA, node)) * el->displacements;
 		}
-	}
+	});
+	
 	logger& log = logger::log();
 	log.print("Calculate Strain");
 }
 
 void Solver::calcStress() {
-	for (int elem = 0; elem < calc_data.elements_count(); elem++) {
-		for (int node = 0; node < calc_data.get_elem(elem)->nodes_count(); node++) {
-			calc_data.get_elem(elem)->results[node][STRESS] = calc_data.get_elem(elem)->D * calc_data.get_elem(elem)->results[node][STRAIN];
-			if (calc_data.dim == 2)
-				calc_data.get_elem(elem)->results[node][STRAIN][Comp2D::XY] /= 2;
+	int elems_count = calc_data.elements_count();
+	int dim = calc_data.dim;
+	std::vector<size_t> elem_indices(elems_count);
+	std::iota(elem_indices.begin(), elem_indices.end(), 0);
+	
+	std::for_each(std::execution::par, elem_indices.begin(), elem_indices.end(), [&](size_t elem) {
+		auto el = calc_data.get_elem(elem);
+		for (int node = 0; node < el->nodes_count(); node++) {
+			el->results[node][STRESS] = el->D * el->results[node][STRAIN];
+			if (dim == 2)
+				el->results[node][STRAIN][Comp2D::XY] /= 2;
 		}
-	}
+	});
+	
 	logger& log = logger::log();
 	log.print("Calculate Stress");
 }

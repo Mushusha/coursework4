@@ -7,36 +7,33 @@
 #include "Element.h"
 
 
-class Hex : public Element {
+class Pyr : public Element {
 public:
-	Hex() : Element() {};
-	Hex(int id, ElemType type, std::vector <int> nodes)
-		: Element (id, type, nodes) {};
-	Hex(const Hex& other)
-		: Element(other) {}
-	Hex& operator=(const Hex& other) {
+	Pyr() : Element() {};
+	Pyr(int id, ElemType type, std::vector<int> nodes)
+		: Element(id, type, nodes) {};
+	Pyr(const Pyr& other) : Element(other) {}
+	Pyr& operator=(const Pyr& other) {
 		if (this != &other)
 			Element::operator=(other);
 		return *this;
 	}
-	Hex(Hex&& other) noexcept
-		: Element(std::move(other)) {}
-	Hex& operator=(Hex&& other) noexcept {
-		if (this != &other) {
+	Pyr(Pyr&& other) noexcept : Element(std::move(other)) {}
+	Pyr& operator=(Pyr&& other) noexcept {
+		if (this != &other)
 			Element::operator=(std::move(other));
-		}
 		return *this;
 	}
-	virtual ~Hex() = default;
+	virtual ~Pyr() = default;
 
 	std::vector<std::complex<double>> FF(double ksi, double eta, double zeta) override;
 	Eigen::MatrixXcd B(double ksi, double eta, double zeta) override;
 
 	Eigen::MatrixXcd localK() override;
-	std::vector <double> localF(double mult = 1) override;
+	std::vector<double> localF(double mult = 1) override;
 
 	Eigen::MatrixXd localC() override;
-	std::vector <double> localR(std::vector<double> value) override;
+	std::vector<double> localR(std::vector<double> value) override;
 	Eigen::MatrixXcd localM() override;
 
 	std::vector<int> edge_to_node(int edge) final;
@@ -56,3 +53,4 @@ protected:
 	std::array<double, 3> normal(int edge);
 	double area_edge(int edge);
 };
+

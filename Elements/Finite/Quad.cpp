@@ -12,22 +12,29 @@ std::vector<std::complex<double>> Quad::FF(double ksi, double eta, double zeta) 
 
 Eigen::MatrixXcd Quad::gradFF(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd gradFF = Eigen::MatrixXcd::Zero(2, 4);
-	double h = 0.01;
-	for (int i = 0; i < 4; i++) {
-		gradFF(KSI, i) = (FF(ksi + h, eta)[i] - FF(ksi - h, eta)[i]) / (2 * h);
-		gradFF(ETA, i) = (FF(ksi, eta + h)[i] - FF(ksi, eta - h)[i]) / (2 * h);
-	}
+
+	gradFF(KSI, 0) = -(1 - eta) / 4;
+	gradFF(KSI, 1) =  (1 - eta) / 4;
+	gradFF(KSI, 2) =  (1 + eta) / 4;
+	gradFF(KSI, 3) = -(1 + eta) / 4;
+
+	gradFF(ETA, 0) = -(1 - ksi) / 4;
+	gradFF(ETA, 1) = -(1 + ksi) / 4;
+	gradFF(ETA, 2) =  (1 + ksi) / 4;
+	gradFF(ETA, 3) =  (1 - ksi) / 4;
+
 	return gradFF;
 }
 
 Eigen::MatrixXcd Quad::J(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd J = Eigen::MatrixXcd::Zero(2, 2);
+	Eigen::MatrixXcd grad = gradFF(ksi, eta);
 	
 	for (int i = 0; i < 4; i++) {
-		J(0, 0) += gradFF(ksi, eta)(KSI, i) * x[i];
-		J(0, 1) += gradFF(ksi, eta)(KSI, i) * y[i];
-		J(1, 0) += gradFF(ksi, eta)(ETA, i) * x[i];
-		J(1, 1) += gradFF(ksi, eta)(ETA, i) * y[i];
+		J(0, 0) += grad(KSI, i) * x[i];
+		J(0, 1) += grad(KSI, i) * y[i];
+		J(1, 0) += grad(ETA, i) * x[i];
+		J(1, 1) += grad(ETA, i) * y[i];
 	}
 	return J;
 }
@@ -155,9 +162,13 @@ void Quad::set_pressure(int edge, double value) {
 }
 
 double Quad::gaussPoint(LocVar var, int i) {
-	std::vector<std::vector<double>> gp = { { -0.57735026918926, 0.57735026918926, 0.57735026918926, -0.57735026918926 },
-										  { -0.57735026918926, -0.57735026918926, 0.57735026918926, 0.57735026918926 },
-										  { 0.0, 0.0, 0.0, 0.0 } };
+	static const double gauss_coord = 1.0 / std::sqrt(3.0);
+	
+	static const std::array<std::array<double, 4>, 3> gp = {{
+		{ -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord },
+		{ -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord },
+		{  0.0,          0.0,          0.0,          0.0          }
+	}};
 
 	return gp[static_cast<int>(var)][i];
 }
@@ -181,25 +192,7 @@ double Quad::Volume() {
 }
 
 bool Quad::pointInElem(std::vector<double> point) {
-	bool answer = true;
-	for (int i = 0; i < 4; i++) {
-		std::vector<double> a{ x[i], y[i] };
-		std::vector<double> b{ x[(i + 1) % 4], y[(i + 1) % 4] };
-		std::vector<double> c{ x[(i + 2) % 4], y[(i + 2) % 4] };
-		std::vector<double> d{ x[(i + 3) % 4], y[(i + 3) % 4] };
-
-		if (a == point || b == point || c == point || d == point)
-			return true;
-		if ((line(a, b, point) >= 0 && line(b, c, point) >= 0) &&
-			(line(c, d, point) >= 0 && line(d, a, point) >= 0))
-			answer &= true;
-		else if ((line(a, b, point) <= 0 && line(b, c, point) <= 0) &&
-			(line(c, d, point) <= 0 && line(d, a, point) <= 0))
-			answer &= true;
-		else
-			return false;
-	}
-	return answer;
+	return false;
 }
 
 std::vector<double> Quad::coordFF(double x0, double y0, double z0) {

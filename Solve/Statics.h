@@ -18,10 +18,10 @@ public:
         if (this != &other) {
             Solver::operator=(std::move(other));
         }
+        return *this;
     }
 	virtual ~Statics() = default;
 
 private:
 	void calcDisp() final;
-    void toReal();
 };

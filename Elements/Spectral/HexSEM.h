@@ -49,7 +49,7 @@ public:
 	std::vector<double> localR(std::vector<double> value) override;
 	Eigen::MatrixXcd localM() override;
 
-	std::vector<int> edge_to_node(int edge) final;
+	std::vector<int> edge_to_node(int edge) override;
 
 	double gaussPoint(LocVar var, int i) override;
 	double weight(LocVar var, int i) override;
@@ -63,11 +63,12 @@ public:
 
 protected:
 	void set_pressure(int edge, double value) override;
+	
+	std::vector<double> gll_x;
+	std::vector<double> gll_w;
 
 private:
 	static constexpr int nNodes = NODES * NODES * NODES;
-	std::vector<double> gll_x;
-	std::vector<double> gll_w;
 
 	void init_gll();
 
@@ -214,23 +215,22 @@ Eigen::MatrixXcd SpectralHex<NODES>::localK() {
 	Eigen::MatrixXcd K = Eigen::MatrixXcd::Zero(3 * nNodes, 3 * nNodes);
 
 	for (int k = 0; k < NODES; ++k) {
-		double zeta = gll_x[k];
-		double w_zeta = gll_w[k];
-
 		for (int j = 0; j < NODES; ++j) {
-			double eta = gll_x[j];
-			double w_eta = gll_w[j];
-
 			for (int i = 0; i < NODES; ++i) {
-				double ksi = gll_x[i];
-				double w_ksi = gll_w[i];
+				int node_idx = i + j * NODES + k * NODES * NODES;
+				double ksi = gaussPoint(KSI, node_idx);
+				double eta = gaussPoint(ETA, node_idx);
+				double zeta = gaussPoint(ZETA, node_idx);
+				double w_ksi = weight(KSI, node_idx);
+				double w_eta = weight(ETA, node_idx);
+				double w_zeta = weight(ZETA, node_idx);
 
 				Eigen::MatrixXcd Bm = B(ksi, eta, zeta);
 				Eigen::MatrixXcd Jm = J(ksi, eta, zeta);
 
 				double detJ = std::abs(Jm.determinant());
 
-				K += (w_ksi * w_eta * w_zeta) * (Bm.transpose() * D * Bm * detJ);
+				K += (w_ksi * w_eta * w_zeta) * (Bm.adjoint() * D.template cast<std::complex<double>>() * Bm * detJ);
 			}
 		}
 	}
@@ -331,16 +331,15 @@ Eigen::MatrixXd SpectralHex<NODES>::localC() {
 	Eigen::MatrixXd C = Eigen::MatrixXd::Zero(nNodes, nNodes);
 
 	for (int k = 0; k < NODES; ++k) {
-		double zeta = gll_x[k];
-		double w_zeta = gll_w[k];
-
 		for (int j = 0; j < NODES; ++j) {
-			double eta = gll_x[j];
-			double w_eta = gll_w[j];
-
 			for (int i = 0; i < NODES; ++i) {
-				double ksi = gll_x[i];
-				double w_ksi = gll_w[i];
+				int node_idx = i + j * NODES + k * NODES * NODES;
+				double ksi = gaussPoint(KSI, node_idx);
+				double eta = gaussPoint(ETA, node_idx);
+				double zeta = gaussPoint(ZETA, node_idx);
+				double w_ksi = weight(KSI, node_idx);
+				double w_eta = weight(ETA, node_idx);
+				double w_zeta = weight(ZETA, node_idx);
 
 				double detJ = std::abs(J(ksi, eta, zeta).determinant());
 				auto Nvals = FF(ksi, eta, zeta);
@@ -359,16 +358,15 @@ std::vector<double> SpectralHex<NODES>::localR(std::vector<double> value) {
 	std::vector<double> R(nNodes, 0.0);
 
 	for (int k = 0; k < NODES; ++k) {
-		double zeta = gll_x[k];
-		double w_zeta = gll_w[k];
-
 		for (int j = 0; j < NODES; ++j) {
-			double eta = gll_x[j];
-			double w_eta = gll_w[j];
-
 			for (int i = 0; i < NODES; ++i) {
-				double ksi = gll_x[i];
-				double w_ksi = gll_w[i];
+				int node_idx = i + j * NODES + k * NODES * NODES;
+				double ksi = gaussPoint(KSI, node_idx);
+				double eta = gaussPoint(ETA, node_idx);
+				double zeta = gaussPoint(ZETA, node_idx);
+				double w_ksi = weight(KSI, node_idx);
+				double w_eta = weight(ETA, node_idx);
+				double w_zeta = weight(ZETA, node_idx);
 
 				double detJ = std::abs(J(ksi, eta, zeta).determinant());
 				auto Nvals = FF(ksi, eta, zeta);
@@ -389,23 +387,22 @@ Eigen::MatrixXcd SpectralHex<NODES>::localM() {
 	Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(3 * nNodes, 3 * nNodes);
 
 	for (int k = 0; k < NODES; ++k) {
-		double zeta = gll_x[k];
-		double w_zeta = gll_w[k];
-
 		for (int j = 0; j < NODES; ++j) {
-			double eta = gll_x[j];
-			double w_eta = gll_w[j];
-
 			for (int i = 0; i < NODES; ++i) {
-				double ksi = gll_x[i];
-				double w_ksi = gll_w[i];
+				int node_idx = i + j * NODES + k * NODES * NODES;
+				double ksi = gaussPoint(KSI, node_idx);
+				double eta = gaussPoint(ETA, node_idx);
+				double zeta = gaussPoint(ZETA, node_idx);
+				double w_ksi = weight(KSI, node_idx);
+				double w_eta = weight(ETA, node_idx);
+				double w_zeta = weight(ZETA, node_idx);
 
 				double detJ = std::abs(J(ksi, eta, zeta).determinant());
 				auto Nvals = FF(ksi, eta, zeta);
 
 				for (int a = 0; a < nNodes; ++a)
 					for (int b = 0; b < nNodes; ++b) {
-						std::complex<double> Mij = w_ksi * w_eta * w_zeta * Nvals[a] * Nvals[b] * detJ;
+						std::complex<double> Mij = w_ksi * w_eta * w_zeta * std::conj(Nvals[a]) * Nvals[b] * detJ;
 						M(3 * a, 3 * b) += Mij;
 						M(3 * a + 1, 3 * b + 1) += Mij;
 						M(3 * a + 2, 3 * b + 2) += Mij;

@@ -50,7 +50,7 @@ public:
     std::vector<double> localR(std::vector<double> value) override;
     Eigen::MatrixXcd localM() override;
 
-    std::vector<int> edge_to_node(int edge) final;
+    std::vector<int> edge_to_node(int edge) override;
 
     double gaussPoint(LocVar var, int i) override;
     double weight(LocVar var, int i) override;
@@ -64,11 +64,12 @@ public:
 
 protected:
     void set_pressure(int edge, double value) override;
+    
+    std::vector<double> gll_x;
+    std::vector<double> gll_w;
 
 private:
     static constexpr int nNodes = NODES * NODES;
-    std::vector<double> gll_x;
-    std::vector<double> gll_w;
 
     void init_gll();
 
@@ -187,20 +188,20 @@ template<int NODES>
 Eigen::MatrixXcd SpectralQuad<NODES>::localK() {
     Eigen::MatrixXcd K = Eigen::MatrixXcd::Zero(2 * nNodes, 2 * nNodes);
 
-    for (int j = 0; j < NODES; ++j) {
-        double eta = gll_x[j];
-        double w_eta = gll_w[j];
+	for (int j = 0; j < NODES; ++j) {
+		for (int i = 0; i < NODES; ++i) {
+			int node_idx = i + j * NODES;
+			double ksi = gaussPoint(KSI, node_idx);
+			double eta = gaussPoint(ETA, node_idx);
+			double w_ksi = weight(KSI, node_idx);
+			double w_eta = weight(ETA, node_idx);
 
-        for (int i = 0; i < NODES; ++i) {
-            double ksi = gll_x[i];
-            double w_ksi = gll_w[i];
+			Eigen::MatrixXcd Bm = B(ksi, eta);
+			Eigen::MatrixXcd Jm = J(ksi, eta);
 
-            Eigen::MatrixXcd Bm = B(ksi, eta);
-            Eigen::MatrixXcd Jm = J(ksi, eta);
+			double detJ = std::abs(Jm.determinant());
 
-            double detJ = std::abs(Jm.determinant());
-
-            K += (w_ksi * w_eta) * (Bm.transpose() * D * Bm * detJ);
+            K += (w_ksi * w_eta) * (Bm.adjoint() * D.template cast<std::complex<double>>() * Bm * detJ);
         }
     }
     return K;
@@ -277,12 +278,12 @@ Eigen::MatrixXd SpectralQuad<NODES>::localC() {
     Eigen::MatrixXd C = Eigen::MatrixXd::Zero(nNodes, nNodes);
 
     for (int j = 0; j < NODES; ++j) {
-        double eta = gll_x[j];
-        double w_eta = gll_w[j];
-
         for (int i = 0; i < NODES; ++i) {
-            double ksi = gll_x[i];
-            double w_ksi = gll_w[i];
+            int node_idx = i + j * NODES;
+            double ksi = gaussPoint(KSI, node_idx);
+            double eta = gaussPoint(ETA, node_idx);
+            double w_ksi = weight(KSI, node_idx);
+            double w_eta = weight(ETA, node_idx);
 
             double detJ = std::abs(J(ksi, eta).determinant());
             auto Nvals = FF(ksi, eta);
@@ -301,12 +302,12 @@ std::vector<double> SpectralQuad<NODES>::localR(std::vector<double> value) {
     std::vector<double> R(nNodes, 0.0);
 
     for (int j = 0; j < NODES; ++j) {
-        double eta = gll_x[j];
-        double w_eta = gll_w[j];
-
         for (int i = 0; i < NODES; ++i) {
-            double ksi = gll_x[i];
-            double w_ksi = gll_w[i];
+            int node_idx = i + j * NODES;
+            double ksi = gaussPoint(KSI, node_idx);
+            double eta = gaussPoint(ETA, node_idx);
+            double w_ksi = weight(KSI, node_idx);
+            double w_eta = weight(ETA, node_idx);
 
             double detJ = std::abs(J(ksi, eta).determinant());
             auto Nvals = FF(ksi, eta);
@@ -326,19 +327,19 @@ Eigen::MatrixXcd SpectralQuad<NODES>::localM() {
     Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(2 * nNodes, 2 * nNodes);
 
     for (int j = 0; j < NODES; ++j) {
-        double eta = gll_x[j];
-        double w_eta = gll_w[j];
-
         for (int i = 0; i < NODES; ++i) {
-            double ksi = gll_x[i];
-            double w_ksi = gll_w[i];
+            int node_idx = i + j * NODES;
+            double ksi = gaussPoint(KSI, node_idx);
+            double eta = gaussPoint(ETA, node_idx);
+            double w_ksi = weight(KSI, node_idx);
+            double w_eta = weight(ETA, node_idx);
 
             double detJ = std::abs(J(ksi, eta).determinant());
             auto Nvals = FF(ksi, eta);
 
             for (int a = 0; a < nNodes; ++a)
                 for (int b = 0; b < nNodes; ++b) {
-                    std::complex<double> Mij = w_ksi * w_eta * Nvals[a] * Nvals[b] * detJ;
+                    std::complex<double> Mij = w_ksi * w_eta * std::conj(Nvals[a]) * Nvals[b] * detJ;
                     M(2 * a, 2 * b) += Mij;
                     M(2 * a + 1, 2 * b + 1) += Mij;
                 }

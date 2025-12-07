@@ -126,7 +126,7 @@ void Data::create_elements(std::shared_ptr<const Parser> parser) {
 
 			build_spectral_quad_element(elem);
         }
-		if (type == HEXSEM && order > 2) {
+		else if (type == HEXSEM && order > 2) {
 			if (order == 3)
 				elem = std::make_shared<SpectralHex<4>>(SpectralHex<4>(parser->mesh.elem_id[i], HEXSEM, elem_nodes));
 			else if (order == 4)
@@ -157,6 +157,9 @@ void Data::create_elements(std::shared_ptr<const Parser> parser) {
 			case WEDGE:
 				elem = std::make_shared<Wedge>(Wedge(parser->mesh.elem_id[i], WEDGE, elem_nodes));
 				break;
+			case PYR:
+				elem = std::make_shared<Pyr>(Pyr(parser->mesh.elem_id[i], PYR, elem_nodes));
+				break;
 			default:
 				throw std::runtime_error("Error: incorrect element " + std::to_string(i) +
 					" type: " + std::to_string(type));
@@ -185,56 +188,160 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 	if (parser->infinite.size() == 0)
 		return;
 
-	const auto inf = parser->infinite[0];
+	// Helper function to set pole coordinates for infinite elements
+	auto set_pole = [](auto* elem, const std::array<double, 3>& point) {
+		elem->pole_x = point[0];
+		elem->pole_y = point[1];
+		elem->pole_z = point[2];
+	};
 
-	std::map<int, int> map_node_inf;
-	std::map<int, std::array<int, 3>> node_coords; // [i] - num node, [j] - x | y | z
+	for (const auto& inf : parser->infinite) {
+		for (int i = 0; i < inf.size; i++) {
+			const int elem_id = inf.apply_to[2 * i];
+			const int side = inf.apply_to[2 * i + 1];
+			
+			auto parent_elem = this->elements[elem_id - 1];
+			ElemType parent_type = parent_elem->get_type();
+			int parent_order = parent_elem->get_order();
+			int NODES = parent_order + 1;
 
-	for (int i = 0; i < inf.size; i++) {
-		const int elem = inf.apply_to[2 * i];
-		const int side = inf.apply_to[2 * i + 1];
-
-		int num_nodes;
-		std::vector<int> side_nodes = this->elements[elem - 1]->edge_to_node(side);
-		std::vector<int> new_nodes;
-
-		for (int& node : side_nodes) {
-			int glob_node = this->elements[elem - 1]->get_node(node);
-
-			if (map_node_inf.find(glob_node) == map_node_inf.end()) {
-				map_node_inf[glob_node] = nodes.size() + 1;
-				std::array <double, 3> coords;
-				for (int i = 0; i < 3; i++)
-					coords[i] = 2 * this->nodes[glob_node - 1]->getCoord(i) + this->nodes[inf.point - 1]->getCoord(i);
-
-				this->nodes.push_back(std::make_shared<Node>(map_node_inf.at(glob_node), coords));
+			std::vector<int> side_nodes = parent_elem->edge_to_node(side);
+			std::vector<int> boundary_glob_nodes;
+			for (int& local_node : side_nodes) {
+				boundary_glob_nodes.push_back(parent_elem->get_node(local_node));
 			}
 
-			new_nodes.push_back(glob_node);
-			new_nodes.push_back(map_node_inf.find(glob_node)->second);
+			std::vector<double> gr_x, gr_w;
+			compute_gauss_radau_nodes_weights(NODES, gr_x, gr_w);
+
+			std::vector<std::vector<int>> inf_layer_nodes(NODES);
+			inf_layer_nodes[0] = boundary_glob_nodes;
+
+			for (int k = 1; k < NODES; ++k) {
+				for (size_t n = 0; n < boundary_glob_nodes.size(); ++n) {
+					int boundary_node = boundary_glob_nodes[n];
+					
+					double t = (gr_x[k] + 1.0) / 2.0;
+					std::array<double, 3> coords;
+					for (int j = 0; j < 3; j++) {
+						double x_boundary = this->nodes[boundary_node - 1]->getCoord(j);
+						double x_pole = inf.point[j];
+						double x_inf = 2.0 * x_boundary - x_pole;
+						coords[j] = x_boundary + (x_inf - x_boundary) * t;
+					}
+
+					int new_node_id = nodes.size() + 1;
+					this->nodes.push_back(std::make_shared<Node>(new_node_id, coords));
+					inf_layer_nodes[k].push_back(new_node_id);
+				}
+			}
+
+			std::vector<int> inf_elem_nodes;
+			for (int k = 0; k < NODES; ++k) {
+				for (auto& node : inf_layer_nodes[k]) {
+					inf_elem_nodes.push_back(node);
+				}
+			}
+
+			std::vector<double> x1, y1, z1;
+			for (auto& node : inf_elem_nodes) {
+				x1.push_back(this->nodes[node - 1]->getX());
+				y1.push_back(this->nodes[node - 1]->getY());
+				z1.push_back(this->nodes[node - 1]->getZ());
+			}
+
+			std::shared_ptr<Element> new_elem;
+			
+			if (parent_type == QUADSEM || parent_type == HEXSEM) {
+				#define CREATE_SPECTRAL_INF_ELEM(ElemType, ElemTypeEnum, N) \
+					new_elem = std::make_shared<ElemType<N>>( \
+						ElemType<N>(this->elements.size() + 1, ElemTypeEnum, inf_elem_nodes)); \
+					new_elem->set_coords(x1, y1, z1); \
+					new_elem->set_order(parent_order); \
+					auto* elem_ptr = dynamic_cast<ElemType<N>*>(new_elem.get()); \
+					set_pole(elem_ptr, inf.point); \
+					if (parser->settings.analisys_type == "dynamic") { \
+						dynamic_cast<ElemType<N>*>(new_elem.get())->is_dynamic = true; \
+						dynamic_cast<ElemType<N>*>(new_elem.get())->omega = omega; \
+					}
+
+				if (dim == 2) {
+					switch (NODES) {
+						case 2: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 2); break;
+						case 3: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 3); break;
+						case 4: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 4); break;
+						case 5: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 5); break;
+						case 6: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 6); break;
+						default: throw std::runtime_error("Unsupported order for SpectralInfQuad");
+					}
+				}
+				else {
+					switch (NODES) {
+						case 2: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 2); break;
+						case 3: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 3); break;
+						case 4: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 4); break;
+						case 5: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 5); break;
+						case 6: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 6); break;
+						default: throw std::runtime_error("Unsupported order for SpectralInfHex");
+					}
+				}
+				#undef CREATE_SPECTRAL_INF_ELEM
+			}
+			else if (dim == 2) {
+				std::vector<int> inf_quad_nodes = { 
+					inf_layer_nodes[0][0], inf_layer_nodes[1][0], 
+					inf_layer_nodes[1][1], inf_layer_nodes[0][1] 
+				};
+
+				std::vector<double> xq, yq, zq;
+				for (auto& node : inf_quad_nodes) {
+					xq.push_back(this->nodes[node - 1]->getX());
+					yq.push_back(this->nodes[node - 1]->getY());
+					zq.push_back(this->nodes[node - 1]->getZ());
+				}
+
+				new_elem = std::make_shared<InfQuad>(InfQuad(this->elements.size() + 1, INFQUAD, inf_quad_nodes));
+				new_elem->set_coords(xq, yq, zq);
+				new_elem->set_order(parent_order);
+				
+				auto* iq = dynamic_cast<InfQuad*>(new_elem.get());
+				set_pole(iq, inf.point);
+				
+				if (parser->settings.analisys_type == "dynamic") {
+					iq->is_dyn = true;
+					iq->omega = omega;
+				}
+			}
+			else {
+				std::vector<int> inf_hex_nodes;
+				for (auto& node : inf_layer_nodes[0])  //boundary face
+					inf_hex_nodes.push_back(node);
+				for (auto& node : inf_layer_nodes[1])  //infinity face
+					inf_hex_nodes.push_back(node);
+
+				std::vector<double> xh, yh, zh;
+				for (auto& node : inf_hex_nodes) {
+					xh.push_back(this->nodes[node - 1]->getX());
+					yh.push_back(this->nodes[node - 1]->getY());
+					zh.push_back(this->nodes[node - 1]->getZ());
+				}
+
+				new_elem = std::make_shared<InfHex>(InfHex(this->elements.size() + 1, INFHEX, inf_hex_nodes));
+				new_elem->set_coords(xh, yh, zh);
+				new_elem->set_order(parent_order);
+
+				auto* ih = dynamic_cast<InfHex*>(new_elem.get());
+				set_pole(ih, inf.point);
+
+				if (parser->settings.analisys_type == "dynamic") {
+					ih->is_dyn = true;
+					ih->omega = omega;
+				}
+			}
+
+			this->elements.push_back(new_elem);
+			num_inf_elems++;
 		}
-
-		// ONLY INFQUAD
-		std::vector<int> inf_elem_nodes = { new_nodes[0], new_nodes[1], new_nodes[3], new_nodes[2] };
-
-		std::vector<double> x1, y1, z1;
-		for (auto& node : inf_elem_nodes) {
-			x1.push_back(this->nodes[node - 1]->getX());
-			y1.push_back(this->nodes[node - 1]->getY());
-			z1.push_back(this->nodes[node - 1]->getZ());
-		}
-
-		std::shared_ptr<Element> new_elem = std::make_shared<infQuad>(infQuad(this->elements.size(), INFQUAD, inf_elem_nodes));
-		new_elem->set_coords(x1, y1, z1);
-		this->elements.push_back(new_elem);
-
-		if (parser->settings.analisys_type == "dynamic") {
-			num_inf_elems++; // complex
-			dynamic_cast<infQuad*>(new_elem.get())->is_dyn = true;
-			dynamic_cast<infQuad*>(new_elem.get())->omega = omega;
-		}
-
-		num_inf_elems++;
 	}
 }
 

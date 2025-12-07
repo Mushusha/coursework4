@@ -1,5 +1,10 @@
 #pragma once
 
+#include <execution>
+#include <algorithm>
+#include <numeric>
+#include <thread>
+
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
 #include "Eigen/SparseCholesky"

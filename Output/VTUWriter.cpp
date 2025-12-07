@@ -48,12 +48,14 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
         cell = vtkSmartPointer<vtkTriangle>::New();
         break;
     case ElemType::QUAD:
+    case ElemType::INFQUAD:
         cell = vtkSmartPointer<vtkQuad>::New();
         break;
     case ElemType::TETRA:
         cell = vtkSmartPointer<vtkTetra>::New();
         break;
     case ElemType::HEX:
+    case ElemType::INFHEX:
         cell = vtkSmartPointer<vtkHexahedron>::New();
         break;
     case ElemType::WEDGE:
@@ -62,11 +64,12 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
     case ElemType::PYR:
         cell = vtkSmartPointer<vtkPyramid>::New();
         break;
-    case ElemType::QUADSEM: {
+    case ElemType::QUADSEM:
+    case ElemType::INFQUADSEM: {
         int NODES = static_cast<int>(std::sqrt(nodeIds.size()));
 
         if (NODES * NODES != static_cast<int>(nodeIds.size()))
-            throw std::runtime_error("VTUWriter: QUADSEM node count is not a perfect square");
+            throw std::runtime_error("VTUWriter: QUADSEM/INFQUADSEM node count is not a perfect square");
 
         std::vector<int> boundary;
 
@@ -90,11 +93,12 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
 
         return polygon;
     }
-    case ElemType::HEXSEM: {
+    case ElemType::HEXSEM:
+    case ElemType::INFHEXSEM: {
         int NODES = static_cast<int>(std::cbrt(nodeIds.size()));
 
         if (NODES * NODES * NODES != static_cast<int>(nodeIds.size()))
-            throw std::runtime_error("VTUWriter: HEXSEM node count is not a perfect cube");
+            throw std::runtime_error("VTUWriter: HEXSEM/INFHEXSEM node count is not a perfect cube");
 
         vtkSmartPointer<vtkHexahedron> hex = vtkSmartPointer<vtkHexahedron>::New();
 
@@ -172,9 +176,11 @@ void VTUWriter::addElementData(vtkSmartPointer<vtkUnstructuredGrid> unstructured
         int vtk_type;
         switch (elem->get_type()) {
         case ElemType::QUADSEM:
+        case ElemType::INFQUADSEM:
             vtk_type = static_cast<int>(ElemType::QUAD);
             break;
         case ElemType::HEXSEM:
+        case ElemType::INFHEXSEM:
             vtk_type = static_cast<int>(ElemType::HEX);
             break;
         default:

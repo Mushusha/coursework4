@@ -2,7 +2,9 @@
 
 #include <execution>
 #include <algorithm>
+#include <numeric>
 #include <vector>
+#include <thread>
 
 #include "Eigen/Dense"
 #include "Eigen/Sparse"

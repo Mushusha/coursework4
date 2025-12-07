@@ -21,4 +21,7 @@ double line(std::vector<double> a, std::vector<double> b, std::vector<double> x)
 
 double berlage(double omega, double A, double time);
 
+double min_edge_length(const std::shared_ptr<Element>& elem);
+
 void compute_gll_nodes_weights(int order, std::vector<double>& points, std::vector<double>& weights);
+void compute_gauss_radau_nodes_weights(int n, std::vector<double>& points, std::vector<double>& weights);
