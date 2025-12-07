@@ -68,13 +68,13 @@ protected:
     std::vector<double> gll_x;
     std::vector<double> gll_w;
 
-private:
-    static constexpr int nNodes = NODES * NODES;
+    double lagrange1D(int i, double x) const;
+    double dlagrange1D(int i, double x) const;
 
     void init_gll();
 
-    double lagrange1D(int i, double x) const;
-    double dlagrange1D(int i, double x) const;
+private:
+    static constexpr int nNodes = NODES * NODES;
 
     double len_edge(int edge);
 };

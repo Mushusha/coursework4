@@ -267,21 +267,21 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 
 				if (dim == 2) {
 					switch (NODES) {
-						case 2: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 2); break;
-						case 3: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 3); break;
-						case 4: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 4); break;
-						case 5: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 5); break;
-						case 6: CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 6); break;
+						case 2: { CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 2); break; }
+						case 3: { CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 3); break; }
+						case 4: { CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 4); break; }
+						case 5: { CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 5); break; }
+						case 6: { CREATE_SPECTRAL_INF_ELEM(SpectralInfQuad, INFQUADSEM, 6); break; }
 						default: throw std::runtime_error("Unsupported order for SpectralInfQuad");
 					}
 				}
 				else {
 					switch (NODES) {
-						case 2: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 2); break;
-						case 3: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 3); break;
-						case 4: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 4); break;
-						case 5: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 5); break;
-						case 6: CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 6); break;
+						case 2: { CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 2); break; }
+						case 3: { CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 3); break; }
+						case 4: { CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 4); break; }
+						case 5: { CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 5); break; }
+						case 6: { CREATE_SPECTRAL_INF_ELEM(SpectralInfHex, INFHEXSEM, 6); break; }
 						default: throw std::runtime_error("Unsupported order for SpectralInfHex");
 					}
 				}

@@ -67,7 +67,7 @@ private:
     std::vector<double> gr_x;
     std::vector<double> gr_w;
 
-    void init_gll() override;
+    void init_gll();
 
     double decay_function(int j, double ksi) const;
     double ddecay_function(int j, double ksi) const;

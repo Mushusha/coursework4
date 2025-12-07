@@ -67,7 +67,7 @@ private:
     std::vector<double> gr_x;
     std::vector<double> gr_w;
 
-    void init_gll() override;
+    void init_gll();
 
     double lagrange1D_ksi(int k, double ksi) const;
     double dlagrange1D_ksi(int k, double ksi) const;
