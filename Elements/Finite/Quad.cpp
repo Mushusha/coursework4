@@ -180,13 +180,12 @@ double Quad::weight(LocVar var, int i) {
 double Quad::Volume() {
 	std::complex<double> S = 0;
 
-	for (int i = 0; i < 4; i++)
-		for (int gp = 0; gp < 4; gp++) {
-			double ksi = gaussPoint(KSI, gp);
-			double eta = gaussPoint(ETA, gp);
+	for (int gp = 0; gp < 4; gp++) {
+		double ksi = gaussPoint(KSI, gp);
+		double eta = gaussPoint(ETA, gp);
 
-			S += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i] * std::abs(J(ksi, eta).determinant());
-		}
+		S += weight(KSI, gp) * weight(ETA, gp) * std::abs(J(ksi, eta).determinant());
+	}
 
 	return S.real();
 }

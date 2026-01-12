@@ -25,6 +25,7 @@ public:
 
 private:
 	Eigen::SparseMatrix <std::complex<double>> M;
+	Eigen::VectorX <std::complex<double>> M_diagonal;
 	//Eigen::SparseMatrix <double> C;
 	Eigen::VectorX <std::complex<double>> V;
 	Eigen::VectorX <std::complex<double>> A;

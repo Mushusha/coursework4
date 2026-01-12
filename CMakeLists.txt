@@ -121,11 +121,9 @@ Tests/Calc/MathMVTests.cpp
 Tests/Calc/DataTests.h
 Tests/Calc/DataTests.cpp)
 
-source_group(Tests\\Solve FILES
-Tests/Solve/SolveTests.h
-Tests/Solve/SolveTests.cpp
-Tests/Solve/IntegrationTests.h
-Tests/Solve/IntegrationTests.cpp)
+source_group(Tests\\Integration FILES
+Tests/Integration/StaticQuadTests.h
+Tests/Integration/StaticQuadTests.cpp)
 
 add_executable(Core
     Calc/main.cpp
@@ -213,10 +211,8 @@ add_executable(Core
     Tests/Calc/DataTests.h
     Tests/Calc/DataTests.cpp
     
-    Tests/Solve/SolveTests.h
-    Tests/Solve/SolveTests.cpp
-    Tests/Solve/IntegrationTests.cpp
-    Tests/Solve/IntegrationTests.h
+    Tests/Integration/StaticQuadTests.h
+    Tests/Integration/StaticQuadTests.cpp
 )
 
 target_link_libraries(Core PRIVATE 
@@ -246,7 +242,7 @@ target_include_directories(Core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests/Elements
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests/Node
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests/Calc
-    ${CMAKE_CURRENT_SOURCE_DIR}/Tests/Solve
+    ${CMAKE_CURRENT_SOURCE_DIR}/Tests/Integration
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${EIGEN3_INCLUDE_DIR}
 )

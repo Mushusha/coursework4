@@ -11,7 +11,8 @@ Data::Data(const Data& other)
 	omega(other.omega),
 	Amp(other.Amp),
 	elements(other.elements),
-	nodes(other.nodes) {
+	nodes(other.nodes),
+	node_id_old_to_new(other.node_id_old_to_new) {
 }
 Data& Data::operator=(const Data& other) {
 	if (this != &other) {
@@ -26,6 +27,7 @@ Data& Data::operator=(const Data& other) {
 		Amp = other.Amp;
 		elements = other.elements;
 		nodes = other.nodes;
+		node_id_old_to_new = other.node_id_old_to_new;
 	}
 	return *this;
 }
@@ -40,7 +42,8 @@ Data::Data(Data&& other) noexcept
 	omega(std::exchange(other.omega, 0)),
 	Amp(std::exchange(other.Amp, 0)),
 	elements(std::move(other.elements)),
-	nodes(std::move(other.nodes)) {
+	nodes(std::move(other.nodes)),
+	node_id_old_to_new(std::move(other.node_id_old_to_new)) {
 }
 Data& Data::operator=(Data&& other) noexcept {
 	if (this != &other) {
@@ -55,6 +58,7 @@ Data& Data::operator=(Data&& other) noexcept {
 		Amp = std::exchange(other.Amp, 0);
 		elements = std::move(other.elements);
 		nodes = std::move(other.nodes);
+		node_id_old_to_new = std::move(other.node_id_old_to_new);
 	}
 	return *this;
 }
@@ -75,9 +79,10 @@ Data::Data(std::shared_ptr <const Parser> parser) {
 	max_time = parser->settings.max_time;
 	max_iter = parser->settings.max_iter;
 	iter_res_output = parser->settings.iter_res_output;
-	omega = 10; // parser->
-	Amp = 1e+08;
 
+	omega = parser->settings.omega; // this params identical for all components
+	Amp = parser->settings.Amp;
+	
 	create_nodes(parser);
 	create_constraints(parser);
 	create_elements(parser);
@@ -188,7 +193,19 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 	if (parser->infinite.size() == 0)
 		return;
 
-	// Helper function to set pole coordinates for infinite elements
+	std::map<int, int> node_id_to_index;
+	for (size_t idx = 0; idx < nodes.size(); ++idx) {
+		node_id_to_index[nodes[idx]->getID()] = static_cast<int>(idx);
+	}
+
+	auto get_node_by_id = [&](int node_id) -> std::shared_ptr<Node> {
+		auto it = node_id_to_index.find(node_id);
+		if (it == node_id_to_index.end()) {
+			throw std::runtime_error("Node ID " + std::to_string(node_id) + " not found in node_id_to_index map");
+		}
+		return nodes[it->second];
+	};
+
 	auto set_pole = [](auto* elem, const std::array<double, 3>& point) {
 		elem->pole_x = point[0];
 		elem->pole_y = point[1];
@@ -219,19 +236,26 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 
 			for (int k = 1; k < NODES; ++k) {
 				for (size_t n = 0; n < boundary_glob_nodes.size(); ++n) {
-					int boundary_node = boundary_glob_nodes[n];
+					int boundary_node_id = boundary_glob_nodes[n];
+					auto boundary_node = get_node_by_id(boundary_node_id);
 					
 					double t = (gr_x[k] + 1.0) / 2.0;
 					std::array<double, 3> coords;
 					for (int j = 0; j < 3; j++) {
-						double x_boundary = this->nodes[boundary_node - 1]->getCoord(j);
+						double x_boundary = boundary_node->getCoord(j);
 						double x_pole = inf.point[j];
 						double x_inf = 2.0 * x_boundary - x_pole;
 						coords[j] = x_boundary + (x_inf - x_boundary) * t;
 					}
 
-					int new_node_id = nodes.size() + 1;
+					int max_node_id = 0;
+					for (const auto& node : nodes) {
+						max_node_id = std::max(max_node_id, node->getID());
+					}
+					int new_node_id = max_node_id + 1;
+					
 					this->nodes.push_back(std::make_shared<Node>(new_node_id, coords));
+					node_id_to_index[new_node_id] = static_cast<int>(nodes.size() - 1);
 					inf_layer_nodes[k].push_back(new_node_id);
 				}
 			}
@@ -244,10 +268,11 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 			}
 
 			std::vector<double> x1, y1, z1;
-			for (auto& node : inf_elem_nodes) {
-				x1.push_back(this->nodes[node - 1]->getX());
-				y1.push_back(this->nodes[node - 1]->getY());
-				z1.push_back(this->nodes[node - 1]->getZ());
+			for (auto& node_id : inf_elem_nodes) {
+				auto node = get_node_by_id(node_id);
+				x1.push_back(node->getX());
+				y1.push_back(node->getY());
+				z1.push_back(node->getZ());
 			}
 
 			std::shared_ptr<Element> new_elem;
@@ -294,10 +319,11 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 				};
 
 				std::vector<double> xq, yq, zq;
-				for (auto& node : inf_quad_nodes) {
-					xq.push_back(this->nodes[node - 1]->getX());
-					yq.push_back(this->nodes[node - 1]->getY());
-					zq.push_back(this->nodes[node - 1]->getZ());
+				for (auto& node_id : inf_quad_nodes) {
+					auto node = get_node_by_id(node_id);
+					xq.push_back(node->getX());
+					yq.push_back(node->getY());
+					zq.push_back(node->getZ());
 				}
 
 				new_elem = std::make_shared<InfQuad>(InfQuad(this->elements.size() + 1, INFQUAD, inf_quad_nodes));
@@ -314,16 +340,17 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 			}
 			else {
 				std::vector<int> inf_hex_nodes;
-				for (auto& node : inf_layer_nodes[0])  //boundary face
+				for (auto& node : inf_layer_nodes[0])
 					inf_hex_nodes.push_back(node);
-				for (auto& node : inf_layer_nodes[1])  //infinity face
+				for (auto& node : inf_layer_nodes[1])
 					inf_hex_nodes.push_back(node);
 
 				std::vector<double> xh, yh, zh;
-				for (auto& node : inf_hex_nodes) {
-					xh.push_back(this->nodes[node - 1]->getX());
-					yh.push_back(this->nodes[node - 1]->getY());
-					zh.push_back(this->nodes[node - 1]->getZ());
+				for (auto& node_id : inf_hex_nodes) {
+					auto node = get_node_by_id(node_id);
+					xh.push_back(node->getX());
+					yh.push_back(node->getY());
+					zh.push_back(node->getZ());
 				}
 
 				new_elem = std::make_shared<InfHex>(InfHex(this->elements.size() + 1, INFHEX, inf_hex_nodes));
@@ -339,9 +366,88 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 				}
 			}
 
+			transfer_pressure_to_infinite_element(parser, parent_elem, new_elem, elem_id, side);
+
 			this->elements.push_back(new_elem);
 			num_inf_elems++;
 		}
+	}
+}
+
+void Data::transfer_pressure_to_infinite_element(std::shared_ptr<const Parser> parser,
+	std::shared_ptr<Element> parent_elem, std::shared_ptr<Element> inf_elem,
+	int parent_elem_id, int parent_side) {
+	
+	double pressure_value = 0.0;
+	int pressure_type = PRESSURE;
+	bool found_pressure = false;
+	
+	for (const auto& load_entry : parser->load) {
+		if (load_entry.inf) continue;
+		if (load_entry.type != PRESSURE && load_entry.type != PRESSURESEM) continue;
+		
+		for (size_t j = 0; j < load_entry.apply_to.size() / 2; j++) {
+			int load_elem_id = load_entry.apply_to[2 * j];
+			int load_side = load_entry.apply_to[2 * j + 1];
+			
+			if (load_elem_id == parent_elem_id && load_side == parent_side) {
+				pressure_value = load_entry.data[0];
+				pressure_type = load_entry.type;
+				found_pressure = true;
+				break;
+			}
+		}
+		if (found_pressure) break;
+	}
+	
+	if (!found_pressure) {
+		return;
+	}
+	
+	int boundary_edge = -1;
+	if (this->dim == 2) {
+		boundary_edge = 3;
+	} else {
+		boundary_edge = 4;
+	}
+	
+	std::vector<int> parent_edge_nodes = parent_elem->edge_to_node(parent_side);
+	std::vector<int> inf_edge_nodes;
+	
+	const double tol = 1e-6;
+	
+	if (inf_elem->get_type() == INFQUADSEM || (inf_elem->get_type() == INFQUAD && parent_edge_nodes.size() > 2)) {
+		inf_edge_nodes.clear();
+		for (size_t i = 0; i < parent_edge_nodes.size(); i++) {
+			double px = parent_elem->get_coord(parent_edge_nodes[i], 0);
+			double py = parent_elem->get_coord(parent_edge_nodes[i], 1);
+			double pz = parent_elem->get_coord(parent_edge_nodes[i], 2);
+			
+			for (int j = 0; j < inf_elem->nodes_count(); j++) {
+				double ix = inf_elem->get_coord(j, 0);
+				double iy = inf_elem->get_coord(j, 1);
+				double iz = inf_elem->get_coord(j, 2);
+				
+				double dx = std::abs(px - ix);
+				double dy = std::abs(py - iy);
+				double dz = std::abs(pz - iz);
+				
+				if (dx < tol && dy < tol && dz < tol) {
+					if (std::find(inf_edge_nodes.begin(), inf_edge_nodes.end(), j) == inf_edge_nodes.end()) {
+						inf_edge_nodes.push_back(j);
+						break;
+					}
+				}
+			}
+		}
+	} else {
+		inf_edge_nodes = inf_elem->edge_to_node(boundary_edge);
+	}
+	
+	parent_elem->remove_load_on_edge(parent_side);
+	
+	if (boundary_edge >= 0) {
+		inf_elem->set_load(pressure_type, boundary_edge, {pressure_value, 0.0, 0.0, 0.0, 0.0, 0.0});
 	}
 }
 
@@ -373,8 +479,13 @@ void Data::create_load(std::shared_ptr <const Parser> parser) { // type - pressu
 					if (load.data[i] == 0.0) 
 						continue;
 					else
-						for (int node = 0; node < load.apply_to.size(); node += 2)
-							nodes[load.apply_to[node] - 1]->load[i] = load.data[i];
+						for (int node = 0; node < load.apply_to.size(); node += 2) {
+							int old_node_id = load.apply_to[node];
+							int new_node_id = node_id_old_to_new.count(old_node_id) 
+								? node_id_old_to_new[old_node_id] 
+								: old_node_id;
+							nodes[new_node_id - 1]->load[i] = load.data[i];
+						}
 		}
 }
 
@@ -514,54 +625,92 @@ void Data::build_spectral_quad_element(std::shared_ptr<Element> elem) {
 		}
 	}
 
-	for (int j = 0; j < nodes_per_side; j++) {
+	int total_nodes = nodes_per_side * nodes_per_side;
+	new_node_ids.reserve(total_nodes);
+	new_x.reserve(total_nodes);
+	new_y.reserve(total_nodes);
+	new_z.reserve(total_nodes);
+	
+	struct NodeData {
+		double x, y, z;
+		double xi, eta;
+		int i, j;
+		bool needs_constraints;
+		int existing_id;
+		bool node_exists;
+	};
+	
+	std::vector<NodeData> node_data_list(total_nodes);
+	
+	size_t initial_nodes_size = nodes.size();
+	
+	std::vector<int> indices(total_nodes);
+	std::iota(indices.begin(), indices.end(), 0);
+	
+	std::for_each(std::execution::par, indices.begin(), indices.end(), [&](int idx) {
+		int j = idx / nodes_per_side;
+		int i = idx % nodes_per_side;
 		double eta = gll_points[j];
-		for (int i = 0; i < nodes_per_side; i++) {
-			double xi = gll_points[i];
-
-			quad8_shape_functions(xi, eta, N);
-
-			double x = 0.0, y = 0.0, z = 0.0;
-			for (int k = 0; k < 8; k++) {
-				x += N[k] * orig_x[k];
-				y += N[k] * orig_y[k];
-				z += N[k] * orig_z[k];
+		double xi = gll_points[i];
+		
+		std::vector<double> N_local(8);
+		quad8_shape_functions(xi, eta, N_local);
+		
+		double x = 0.0, y = 0.0, z = 0.0;
+		for (int k = 0; k < 8; k++) {
+			x += N_local[k] * orig_x[k];
+			y += N_local[k] * orig_y[k];
+			z += N_local[k] * orig_z[k];
+		}
+		
+		bool node_exists = false;
+		int existing_id = -1;
+		const double tol_sq = 1e-8;
+		
+		for (size_t n_idx = 0; n_idx < initial_nodes_size; ++n_idx) {
+			const auto& node = nodes[n_idx];
+			double dx = node->getX() - x;
+			double dy = node->getY() - y;
+			double dz = node->getZ() - z;
+			double dist_sq = dx * dx + dy * dy + dz * dz;
+			if (dist_sq < tol_sq) {
+				node_exists = true;
+				existing_id = node->getID();
+				break;
 			}
-
-			bool node_exists = false;
-			int existing_id = -1;
-
-			for (const auto& node : nodes) {
-				double dx = node->getX() - x;
-				double dy = node->getY() - y;
-				double dz = node->getZ() - z;
-				double dist_sq = dx * dx + dy * dy + dz * dz;
-				if (dist_sq < 1e-8) {
-					node_exists = true;
-					existing_id = node->getID();
-					break;
-				}
+		}
+		
+		node_data_list[idx].x = x;
+		node_data_list[idx].y = y;
+		node_data_list[idx].z = z;
+		node_data_list[idx].xi = xi;
+		node_data_list[idx].eta = eta;
+		node_data_list[idx].i = i;
+		node_data_list[idx].j = j;
+		node_data_list[idx].needs_constraints = is_quad_node_on_constrained_edge(i, j, nodes_per_side, edge_fully_constrained);
+		node_data_list[idx].existing_id = existing_id;
+		node_data_list[idx].node_exists = node_exists;
+	});
+	
+	for (const auto& data : node_data_list) {
+		new_x.push_back(data.x);
+		new_y.push_back(data.y);
+		new_z.push_back(data.z);
+		
+		if (data.node_exists) {
+			new_node_ids.push_back(data.existing_id);
+		}
+		else {
+			new_node_ids.push_back(next_node_id);
+			std::array<double, 3> coords = { data.x, data.y, data.z };
+			auto new_node = std::make_shared<Node>(next_node_id, coords);
+			
+			if (data.needs_constraints) {
+				apply_constraints_new_quad_nodes(new_node, data.xi, data.eta, original_nodes, original_constraints);
 			}
-
-			if (node_exists) {
-				new_node_ids.push_back(existing_id);
-			}
-			else {
-				new_node_ids.push_back(next_node_id);
-				std::array<double, 3> coords = { x, y, z };
-				auto new_node = std::make_shared<Node>(next_node_id, coords);
-
-				if (is_quad_node_on_constrained_edge(i, j, nodes_per_side, edge_fully_constrained)) {
-					apply_constraints_new_quad_nodes(new_node, xi, eta, original_nodes, original_constraints);
-				}
-
-				nodes.push_back(new_node);
-				next_node_id++;
-			}
-
-			new_x.push_back(x);
-			new_y.push_back(y);
-			new_z.push_back(z);
+			
+			nodes.push_back(new_node);
+			next_node_id++;
 		}
 	}
 
@@ -704,57 +853,98 @@ void Data::build_spectral_hex_element(std::shared_ptr<Element> elem) {
 		}
 	}
 
-	for (int k = 0; k < nodes_per_side; k++) {
+	int total_nodes = nodes_per_side * nodes_per_side * nodes_per_side;
+	new_node_ids.reserve(total_nodes);
+	new_x.reserve(total_nodes);
+	new_y.reserve(total_nodes);
+	new_z.reserve(total_nodes);
+	
+	struct HexNodeData {
+		double x, y, z;
+		double xi, eta, zeta;
+		int i, j, k;
+		bool needs_constraints;
+		int existing_id;
+		bool node_exists;
+	};
+	
+	std::vector<HexNodeData> node_data_list(total_nodes);
+	
+	size_t initial_nodes_size = nodes.size();
+	
+	std::vector<int> indices(total_nodes);
+	std::iota(indices.begin(), indices.end(), 0);
+	
+	std::for_each(std::execution::par, indices.begin(), indices.end(), [&](int idx) {
+		int k = idx / (nodes_per_side * nodes_per_side);
+		int remainder = idx % (nodes_per_side * nodes_per_side);
+		int j = remainder / nodes_per_side;
+		int i = remainder % nodes_per_side;
+		
 		double zeta = gll_points[k];
-		for (int j = 0; j < nodes_per_side; j++) {
-			double eta = gll_points[j];
-			for (int i = 0; i < nodes_per_side; i++) {
-				double xi = gll_points[i];
-
-				hex20_shape_functions(xi, eta, zeta, N);
-
-				double x = 0.0, y = 0.0, z = 0.0;
-				for (int m = 0; m < 20; m++) {
-					x += N[m] * orig_x[m];
-					y += N[m] * orig_y[m];
-					z += N[m] * orig_z[m];
-				}
-
-				bool node_exists = false;
-				int existing_id = -1;
-
-				for (const auto& node : nodes) {
-					double dx = node->getX() - x;
-					double dy = node->getY() - y;
-					double dz = node->getZ() - z;
-					double dist_sq = dx * dx + dy * dy + dz * dz;
-					if (dist_sq < 1e-8) {
-						node_exists = true;
-						existing_id = node->getID();
-						break;
-					}
-				}
-
-				if (node_exists) {
-					new_node_ids.push_back(existing_id);
-				}
-				else {
-					new_node_ids.push_back(next_node_id);
-					std::array<double, 3> coords = { x, y, z };
-					auto new_node = std::make_shared<Node>(next_node_id, coords);
-
-					if (is_hex_node_on_constrained_face(i, j, k, nodes_per_side, face_fully_constrained)) {
-						apply_constraints_new_hex_nodes(new_node, xi, eta, zeta, original_nodes, original_constraints);
-					}
-
-					nodes.push_back(new_node);
-					next_node_id++;
-				}
-
-				new_x.push_back(x);
-				new_y.push_back(y);
-				new_z.push_back(z);
+		double eta = gll_points[j];
+		double xi = gll_points[i];
+		
+		std::vector<double> N_local(20);
+		hex20_shape_functions(xi, eta, zeta, N_local);
+		
+		double x = 0.0, y = 0.0, z = 0.0;
+		for (int m = 0; m < 20; m++) {
+			x += N_local[m] * orig_x[m];
+			y += N_local[m] * orig_y[m];
+			z += N_local[m] * orig_z[m];
+		}
+		
+		bool node_exists = false;
+		int existing_id = -1;
+		const double tol_sq = 1e-8;
+		
+		for (size_t n_idx = 0; n_idx < initial_nodes_size; ++n_idx) {
+			const auto& node = nodes[n_idx];
+			double dx = node->getX() - x;
+			double dy = node->getY() - y;
+			double dz = node->getZ() - z;
+			double dist_sq = dx * dx + dy * dy + dz * dz;
+			if (dist_sq < tol_sq) {
+				node_exists = true;
+				existing_id = node->getID();
+				break;
 			}
+		}
+		
+		node_data_list[idx].x = x;
+		node_data_list[idx].y = y;
+		node_data_list[idx].z = z;
+		node_data_list[idx].xi = xi;
+		node_data_list[idx].eta = eta;
+		node_data_list[idx].zeta = zeta;
+		node_data_list[idx].i = i;
+		node_data_list[idx].j = j;
+		node_data_list[idx].k = k;
+		node_data_list[idx].needs_constraints = is_hex_node_on_constrained_face(i, j, k, nodes_per_side, face_fully_constrained);
+		node_data_list[idx].existing_id = existing_id;
+		node_data_list[idx].node_exists = node_exists;
+	});
+	
+	for (const auto& data : node_data_list) {
+		new_x.push_back(data.x);
+		new_y.push_back(data.y);
+		new_z.push_back(data.z);
+		
+		if (data.node_exists) {
+			new_node_ids.push_back(data.existing_id);
+		}
+		else {
+			new_node_ids.push_back(next_node_id);
+			std::array<double, 3> coords = { data.x, data.y, data.z };
+			auto new_node = std::make_shared<Node>(next_node_id, coords);
+			
+			if (data.needs_constraints) {
+				apply_constraints_new_hex_nodes(new_node, data.xi, data.eta, data.zeta, original_nodes, original_constraints);
+			}
+			
+			nodes.push_back(new_node);
+			next_node_id++;
 		}
 	}
 
@@ -773,7 +963,7 @@ bool Data::is_hex_node_on_constrained_face(
 		return true;
 	if (j == nodes_per_side - 1 && face_fully_constrained[3])
 		return true;
-	if (k == nodes_per_side - 1 == 0 && face_fully_constrained[4])
+	if (k == nodes_per_side - 1 && face_fully_constrained[4])
 		return true;
 	if (k == 0 && face_fully_constrained[5])
 		return true;
@@ -835,6 +1025,8 @@ void Data::renumber_nodes() {
 	for (int old_id : used_nodes) {
 		old_to_new[old_id] = new_id++;
 	}
+
+	node_id_old_to_new = old_to_new;
 
 	for (auto& elem : elements) {
 		std::vector<int> new_nodes;

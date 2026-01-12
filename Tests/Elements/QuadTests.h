@@ -37,7 +37,7 @@ class infQuadTest : public ::testing::Test {
 protected:
     void SetUp() override {
         std::vector<int> nodes = { 1, 2, 3, 4 };
-        inf_quad = std::make_unique<infQuad>(1, ElemType::INFQUAD, nodes);
+        inf_quad = std::make_unique<InfQuad>(1, ElemType::INFQUAD, nodes);
 
         std::vector<double> x_coords = { 0.0, 1.0, 1.0, 0.0 };
         std::vector<double> y_coords = { 0.0, 0.0, 1.0, 1.0 };
@@ -49,5 +49,5 @@ protected:
         inf_quad->omega = 100.0;
     }
 
-    std::unique_ptr<infQuad> inf_quad;
+    std::unique_ptr<InfQuad> inf_quad;
 };

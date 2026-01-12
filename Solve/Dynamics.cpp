@@ -119,11 +119,14 @@ void Dynamics::updateM() {
 	result.makeCompressed();
 
 	M = result;
+	
+	M_diagonal = M.diagonal();
+	
 	log.print("End updating mass matrix");
 }
 
 void Dynamics::calcDelta_t(Data& data) {
-	double h_min = min_edge_length(data.get_elem(0)); // min edge length
+	double h_min = min_edge_length(data.get_elem(0));
 	double v_max = 0;
 	for (int i = 0; i < data.elements_count() - data.num_inf_elems; i++) {
 		double elem_min_edge = min_edge_length(data.get_elem(i));
@@ -133,7 +136,7 @@ void Dynamics::calcDelta_t(Data& data) {
 		double v_p = std::sqrt((E * nu / ((1 + nu) * (1 - 2 * nu)) + E / (2 * (1 + nu))) / data.get_elem(i)->get_rho());
 		v_max = (v_p > v_max) ? v_p : v_max;
 	}
-	delta_t = 0.8 * h_min / v_max;
+	delta_t = 0.001 * h_min / v_max;
 }
 
 void Dynamics::U_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev) {
@@ -145,21 +148,21 @@ void Dynamics::V_curr(Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev) {
 }
 
 void Dynamics::A_curr(Eigen::VectorXcd U_prev, Eigen::VectorXcd V_prev, Eigen::VectorXcd A_prev) {
-	Eigen::SparseMatrix <std::complex<double>> M1 = (1 + alpha * delta_t * beta1) * M;
-	Eigen::VectorXcd F1 = F - alpha * M *
-		(U_prev + A_prev * delta_t * (1 - beta1)) -
-		K * (U_prev + V_prev * delta_t + A_prev * pow(delta_t, 2) / 2);
+	Eigen::VectorXcd temp_U = U_prev + A_prev * delta_t * (1 - beta1);
+	Eigen::VectorXcd temp_K = U_prev + V_prev * delta_t + A_prev * pow(delta_t, 2) / 2;
+	
+	Eigen::VectorXcd F1;
+	F1.noalias() = F - alpha * M * temp_U - K * temp_K;
 
 	A.resize(A_0.size());
-	A.setZero();
-	//for (int i = 0; i < A.size(); i++)
-	//	A(i) = F1(i) / M1.coeffRef(i, i);
-
+	
+	const std::complex<double> M1_factor = 1.0 + alpha * delta_t * beta1;
+	
 	std::vector<int> ind(A.size());
 	std::iota(ind.begin(), ind.end(), 0);
 	
 	std::for_each(std::execution::par, ind.begin(), ind.end(), [&](int i) {
-		A(i) = F1(i) / M1.coeffRef(i, i);
+		A(i) = F1(i) / (M1_factor * M_diagonal(i));
 	});
 }
 
@@ -172,8 +175,8 @@ void Dynamics::calcDisp() {
 	Eigen::VectorXcd A_prev = A_0;
 
 	for (int i = 0; i < iter_count; i++) {
-		fillGlobalF(berlage(omega, Amp, delta_t *  i));
-		
+		fillGlobalF(berlage(omega, Amp, delta_t * i));
+
 		A_curr(U_prev, V_prev, A_prev);
 		V_curr(V_prev, A_prev);
 		U_curr(U_prev, V_prev, A_prev);

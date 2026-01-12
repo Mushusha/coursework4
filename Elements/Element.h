@@ -50,6 +50,7 @@ public:
 
 	void set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z);
 	void set_load(int type, int edge, std::array<double, 6> value); // nodes
+	void remove_load_on_edge(int edge);
 	void set_constants(double E, double nu, double rho);
 	void set_order(int order);
 	void set_nodes(const std::vector<int>& new_nodes);

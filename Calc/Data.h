@@ -2,6 +2,9 @@
 
 #include <cmath>
 #include <algorithm>
+#include <map>
+#include <execution>
+#include <numeric>
 
 #include "Parser.h"
 #include "log1.h"
@@ -60,6 +63,7 @@ private:
 
 	std::vector<shared_ptr<Element>> elements;
 	std::vector<shared_ptr<Node>> nodes;
+	std::map<int, int> node_id_old_to_new;
 
 	void create_nodes(std::shared_ptr <const Parser> parser);
 	void create_elements(std::shared_ptr <const Parser> parser);
@@ -84,6 +88,10 @@ private:
 	void apply_constraints_new_hex_nodes(std::shared_ptr<Node> new_node, 
 		double xi, double eta, double zeta, const std::vector<int>& original_nodes, 
 		const std::map<int, std::map<int, double>>& original_constraints);
+
+	void transfer_pressure_to_infinite_element(std::shared_ptr<const Parser> parser,
+		std::shared_ptr<Element> parent_elem, std::shared_ptr<Element> inf_elem,
+		int parent_elem_id, int parent_side);
 
 	void renumber_nodes();
 };

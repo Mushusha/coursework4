@@ -170,15 +170,15 @@ Eigen::MatrixXcd SpectralHex<NODES>::J(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd g = gradFF(ksi, eta, zeta);
 
 	for (int a = 0; a < nNodes; ++a) {
-		jac(0, 0) += g(0, a) * x[a];
-		jac(0, 1) += g(0, a) * y[a];
-		jac(0, 2) += g(0, a) * z[a];
-		jac(1, 0) += g(1, a) * x[a];
-		jac(1, 1) += g(1, a) * y[a];
-		jac(1, 2) += g(1, a) * z[a];
-		jac(2, 0) += g(2, a) * x[a];
-		jac(2, 1) += g(2, a) * y[a];
-		jac(2, 2) += g(2, a) * z[a];
+		jac(0, 0) += g(KSI, a) * x[a];
+		jac(0, 1) += g(KSI, a) * y[a];
+		jac(0, 2) += g(KSI, a) * z[a];
+		jac(1, 0) += g(ETA, a) * x[a];
+		jac(1, 1) += g(ETA, a) * y[a];
+		jac(1, 2) += g(ETA, a) * z[a];
+		jac(2, 0) += g(ZETA, a) * x[a];
+		jac(2, 1) += g(ZETA, a) * y[a];
+		jac(2, 2) += g(ZETA, a) * z[a];
 	}
 	return jac;
 }
@@ -190,9 +190,9 @@ Eigen::MatrixXcd SpectralHex<NODES>::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd dN = invJ * gradFF(ksi, eta, zeta);
 
 	for (int a = 0; a < nNodes; ++a) {
-		double dNx = dN(0, a).real();
-		double dNy = dN(1, a).real();
-		double dNz = dN(2, a).real();
+		double dNx = dN(X, a).real();
+		double dNy = dN(Y, a).real();
+		double dNz = dN(Z, a).real();
 
 		Bm(0, 3 * a) = dNx;
 		Bm(1, 3 * a + 1) = dNy;

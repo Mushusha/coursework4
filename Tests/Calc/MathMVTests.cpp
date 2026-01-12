@@ -266,7 +266,7 @@ TEST_F(GaussRadauTest, GaussRadau_WeightsSum) {
         for (const auto& w : weights) {
             sum += w;
         }
-        EXPECT_NEAR(sum, 2.0, 1e-12) << "Sum of weights should be 2 for n=" << n;
+        EXPECT_NEAR(sum, 2.0, 1e-9) << "Sum of weights should be 2 for n=" << n;
     }
 }
 

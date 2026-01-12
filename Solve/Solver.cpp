@@ -129,35 +129,40 @@ void Solver::fillGlobalK() {
 }
 
 void Solver::fillGlobalF(double mult) {
-	logger& log = logger::log();
-	log.print("Start filling right vector");
+	// logger& log = logger::log();
+	// log.print("Start filling right vector");
 
 	int nodes_count = calc_data.nodes_count();
 	int elems_count = calc_data.elements_count();
 	int dim = calc_data.dim;
 
-	F.resize(dim * nodes_count);
+	if (F.size() != dim * nodes_count) {
+		F.resize(dim * nodes_count);
+	}
+	F.setZero();
 
 	for (int i = 0; i < elems_count; i++) {
-		std::vector<double> loc_f = calc_data.get_elem(i)->localF(mult);
-		if (loc_f.size() != 0)
-			for (int j = 0; j < calc_data.get_elem(i)->nodes_count() * dim; j++)
-				F.coeffRef(dim * (calc_data.get_elem(i)->get_node(j / dim) - 1) + j % dim) += loc_f[j];
+		auto elem = calc_data.get_elem(i);
+		std::vector<double> loc_f = elem->localF(mult);
+		if (loc_f.size() != 0) {
+			int elem_nodes = elem->nodes_count();
+			const auto& elem_nodes_vec = elem->get_node();
+			for (int j = 0; j < elem_nodes * dim; j++) {
+				int node_idx = elem_nodes_vec[j / dim] - 1;
+				F(dim * node_idx + j % dim) += loc_f[j];
+			}
+		}
 	}
 
-	//for (int i = 0; i < calc_data.nodes_count(); i++)
-	//	for (auto pair : calc_data.get_node(i)->load)
-	//		F.coeffRef(dim * i + pair.first) += mult * pair.second;
-
-	std::vector<size_t> ind(calc_data.nodes_count());
+	std::vector<size_t> ind(nodes_count);
 	std::iota(ind.begin(), ind.end(), 0);
 
 	std::for_each(std::execution::par, ind.begin(), ind.end(), [&](size_t i) {
 		for (auto pair : calc_data.get_node(i)->load) {
-			F.coeffRef(dim * i + pair.first) += mult * pair.second;
+			F(dim * i + pair.first) += mult * pair.second;
 		}
 		});
-	log.print("End filling right vector");
+	// log.print("End filling right vector");
 }
 
 void Solver::fillConstraints() {
@@ -177,7 +182,7 @@ void Solver::fillConstraints() {
 					}
 					else if (((it.row() == node * dim + c.first) ||
 							  (it.col() == node * dim + c.first)) && (it.row() == it.col()))
-						F.coeffRef(it.row()) = c.second * it.value();
+						F(it.row()) = c.second * it.value();
 			}
 	log.print("End filling constraints");
 }
@@ -188,7 +193,7 @@ void Solver::addToGlobalK(int first_index, int second_index, double value) {
 }
 
 void Solver::addToGlobalF(int index, double value) {
-	F.coeffRef(index) = value;
+	F(index) = value;
 }
 
 void Solver::zeroDiagonalCheck() {

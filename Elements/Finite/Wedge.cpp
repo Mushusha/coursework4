@@ -53,13 +53,13 @@ Eigen::MatrixXcd Wedge::J(double ksi, double eta, double zeta) {
 
 	for (int i = 0; i < 6; i++) {
 		J(0, 0) += grad(KSI, i) * x[i];
-		J(0, 1) += grad(ETA, i) * x[i];
-		J(0, 2) += grad(ZETA, i) * x[i];
-		J(1, 0) += grad(KSI, i) * y[i];
+		J(0, 1) += grad(KSI, i) * y[i];
+		J(0, 2) += grad(KSI, i) * z[i];
+		J(1, 0) += grad(ETA, i) * x[i];
 		J(1, 1) += grad(ETA, i) * y[i];
-		J(1, 2) += grad(ZETA, i) * y[i];
-		J(2, 0) += grad(KSI, i) * z[i];
-		J(2, 1) += grad(ETA, i) * z[i];
+		J(1, 2) += grad(ETA, i) * z[i];
+		J(2, 0) += grad(ZETA, i) * x[i];
+		J(2, 1) += grad(ZETA, i) * y[i];
 		J(2, 2) += grad(ZETA, i) * z[i];
 	}
 	return J;
@@ -69,7 +69,7 @@ Eigen::MatrixXcd Wedge::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd B = Eigen::MatrixXcd::Zero(6, 18);
 	Eigen::Matrix3cd invJ;
 	invJ = J(ksi, eta, zeta).inverse();
-	Eigen::MatrixXcd dN = invJ.transpose() * gradFF(ksi, eta, zeta);
+	Eigen::MatrixXcd dN = invJ * gradFF(ksi, eta, zeta);
 
 	for (int i = 0; i < 6; i++) {
 		B(0, 3 * i) = dN(X, i);
@@ -253,15 +253,14 @@ void Wedge::set_pressure(int edge, double value) {
 double Wedge::Volume() {
 	std::complex<double> S = 0;
 
-	for (int i = 0; i < 6; i++)
-		for (int gp = 0; gp < 6; gp++) {
-			double ksi = gaussPoint(KSI, gp);
-			double eta = gaussPoint(ETA, gp);
-			double zeta = gaussPoint(ZETA, gp);
+	for (int gp = 0; gp < 6; gp++) {
+		double ksi = gaussPoint(KSI, gp);
+		double eta = gaussPoint(ETA, gp);
+		double zeta = gaussPoint(ZETA, gp);
 
-			S += weight(KSI, gp) * weight(ETA, gp) * weight(ZETA, gp) *
-				FF(ksi, eta, zeta)[i] * std::abs(J(ksi, eta, zeta).determinant());
-		}
+		S += weight(KSI, gp) * weight(ETA, gp) * weight(ZETA, gp) *
+			std::abs(J(ksi, eta, zeta).determinant());
+	}
 
 	return S.real();
 }
@@ -277,9 +276,13 @@ double Wedge::gaussPoint(LocVar var, int i) {
 }
 
 double Wedge::weight(LocVar var, int i) {
-	double tri_w[3] = { 1.0 / 6.0, 1.0 / 6.0, 1.0 / 6.0 };
-	// quad w = 1.0
-	return tri_w[i % 3];
+	if (var == KSI || var == ETA) {
+		double tri_w[3] = { 1.0 / 6.0, 1.0 / 6.0, 1.0 / 6.0 };
+		return tri_w[i % 3];
+	} else if (var == ZETA) {
+		return 1.0;
+	}
+	return 0.0;
 }
 
 bool Wedge::pointInElem(std::vector<double> point) {

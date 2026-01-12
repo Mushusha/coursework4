@@ -45,9 +45,11 @@ std::vector<std::complex<double>> InfHex::FF(double ksi, double eta, double zeta
 		double A_len = compute_A();
 		
 		std::complex<double> i(0.0, 1.0);
+
 		double decay_factor = std::sqrt(2.0 / one_minus_ksi);
+
 		std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
-		std::complex<double> phase2 = std::exp(i * k_wave * A_len / one_minus_ksi);
+		std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
 		std::complex<double> mult = decay_factor * phase1 * phase2;
 		
 		std::transform(N.begin(), N.end(), N.begin(), 
@@ -60,34 +62,84 @@ std::vector<std::complex<double>> InfHex::FF(double ksi, double eta, double zeta
 Eigen::MatrixXcd InfHex::gradFF(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd grad = Eigen::MatrixXcd::Zero(3, 8);
 	
-	double d = (1 - ksi) * (1 - ksi);
+	double one_minus_ksi = 1.0 - ksi;
+	double d = one_minus_ksi * one_minus_ksi;
 	
-	grad(KSI, 0) =  (1 - eta) * (1 - zeta) / (4 * d);
-	grad(KSI, 1) = -(1 - eta) * (1 - zeta) / (4 * d);
-	grad(KSI, 2) = -(1 + eta) * (1 - zeta) / (4 * d);
-	grad(KSI, 3) =  (1 + eta) * (1 - zeta) / (4 * d);
-	grad(KSI, 4) =  (1 - eta) * (1 + zeta) / (4 * d);
-	grad(KSI, 5) = -(1 - eta) * (1 + zeta) / (4 * d);
-	grad(KSI, 6) = -(1 + eta) * (1 + zeta) / (4 * d);
-	grad(KSI, 7) =  (1 + eta) * (1 + zeta) / (4 * d);
+	double dM0_dksi = 1.0 / d;
+	double dM1_dksi = -(1.0 + ksi) / d;
 	
-	grad(ETA, 0) = -(1 - zeta) / (4 * (1 - ksi));
-	grad(ETA, 1) =  ksi * (1 - zeta) / (4 * (1 - ksi));
-	grad(ETA, 2) = -ksi * (1 - zeta) / (4 * (1 - ksi));
-	grad(ETA, 3) =  (1 - zeta) / (4 * (1 - ksi));
-	grad(ETA, 4) = -(1 + zeta) / (4 * (1 - ksi));
-	grad(ETA, 5) =  ksi * (1 + zeta) / (4 * (1 - ksi));
-	grad(ETA, 6) = -ksi * (1 + zeta) / (4 * (1 - ksi));
-	grad(ETA, 7) =  (1 + zeta) / (4 * (1 - ksi));
+
+	grad(KSI, 0) =  dM0_dksi * (1 - eta) * (1 - zeta) / 4.0;
+	grad(KSI, 1) =  dM1_dksi * (1 - eta) * (1 - zeta) / 4.0;
+	grad(KSI, 2) =  dM1_dksi * (1 + eta) * (1 - zeta) / 4.0;
+	grad(KSI, 3) =  dM0_dksi * (1 + eta) * (1 - zeta) / 4.0;
+	grad(KSI, 4) =  dM0_dksi * (1 - eta) * (1 + zeta) / 4.0;
+	grad(KSI, 5) =  dM1_dksi * (1 - eta) * (1 + zeta) / 4.0;
+	grad(KSI, 6) =  dM1_dksi * (1 + eta) * (1 + zeta) / 4.0;
+	grad(KSI, 7) =  dM0_dksi * (1 + eta) * (1 + zeta) / 4.0;
 	
-	grad(ZETA, 0) = -(1 - eta) / (4 * (1 - ksi));
-	grad(ZETA, 1) =  ksi * (1 - eta) / (4 * (1 - ksi));
-	grad(ZETA, 2) =  ksi * (1 + eta) / (4 * (1 - ksi));
-	grad(ZETA, 3) = -(1 + eta) / (4 * (1 - ksi));
-	grad(ZETA, 4) =  (1 - eta) / (4 * (1 - ksi));
-	grad(ZETA, 5) = -ksi * (1 - eta) / (4 * (1 - ksi));
-	grad(ZETA, 6) = -ksi * (1 + eta) / (4 * (1 - ksi));
-	grad(ZETA, 7) =  (1 + eta) / (4 * (1 - ksi));
+	grad(ETA, 0) = -(1 - zeta) / (4 * one_minus_ksi);
+	grad(ETA, 1) =  ksi * (1 - zeta) / (4 * one_minus_ksi);
+	grad(ETA, 2) = -ksi * (1 - zeta) / (4 * one_minus_ksi);
+	grad(ETA, 3) =  (1 - zeta) / (4 * one_minus_ksi);
+	grad(ETA, 4) = -(1 + zeta) / (4 * one_minus_ksi);
+	grad(ETA, 5) =  ksi * (1 + zeta) / (4 * one_minus_ksi);
+	grad(ETA, 6) = -ksi * (1 + zeta) / (4 * one_minus_ksi);
+	grad(ETA, 7) =  (1 + zeta) / (4 * one_minus_ksi);
+	
+	grad(ZETA, 0) = -(1 - eta) / (4 * one_minus_ksi);
+	grad(ZETA, 1) =  ksi * (1 - eta) / (4 * one_minus_ksi);
+	grad(ZETA, 2) =  ksi * (1 + eta) / (4 * one_minus_ksi);
+	grad(ZETA, 3) = -(1 + eta) / (4 * one_minus_ksi);
+	grad(ZETA, 4) =  (1 - eta) / (4 * one_minus_ksi);
+	grad(ZETA, 5) = -ksi * (1 - eta) / (4 * one_minus_ksi);
+	grad(ZETA, 6) = -ksi * (1 + eta) / (4 * one_minus_ksi);
+	grad(ZETA, 7) =  (1 + eta) / (4 * one_minus_ksi);
+	
+
+	if (is_dyn && omega > 0.0) {
+		double lambda = Young * Poisson / ((1.0 + Poisson) * (1.0 - 2.0 * Poisson));
+		double mu = Young / (2.0 * (1.0 + Poisson));
+		double c = std::sqrt((lambda + 2.0 * mu) / density);
+		double k_wave = omega / c;
+		double A_len = compute_A();
+		
+		std::complex<double> i(0.0, 1.0);
+		double decay_factor = std::sqrt(2.0 / one_minus_ksi);
+		double ddecay_factor = 0.5 * std::sqrt(2.0) * std::pow(one_minus_ksi, -1.5);
+		
+
+		std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
+		std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
+		std::complex<double> dphase2 = phase2 * i * k_wave * A_len / 2.0;
+		
+		std::complex<double> dyn_mult = decay_factor * phase1 * phase2;
+		std::complex<double> ddyn_mult_dksi = ddecay_factor * phase1 * phase2 + decay_factor * phase1 * dphase2;		
+
+		double M0 = 1.0 / one_minus_ksi;
+		double M1 = -ksi / one_minus_ksi;
+		
+		double N_eta_minus = (1.0 - eta) / 2.0;
+		double N_eta_plus = (1.0 + eta) / 2.0;
+		double N_zeta_minus = (1.0 - zeta) / 2.0;
+		double N_zeta_plus = (1.0 + zeta) / 2.0;
+		
+		Eigen::MatrixXcd static_grad = grad;
+		
+		grad(KSI, 0) = ddyn_mult_dksi * M0 * N_eta_minus * N_zeta_minus + dyn_mult * static_grad(KSI, 0);
+		grad(KSI, 1) = ddyn_mult_dksi * M1 * N_eta_minus * N_zeta_minus + dyn_mult * static_grad(KSI, 1);
+		grad(KSI, 2) = ddyn_mult_dksi * M1 * N_eta_plus * N_zeta_minus + dyn_mult * static_grad(KSI, 2);
+		grad(KSI, 3) = ddyn_mult_dksi * M0 * N_eta_plus * N_zeta_minus + dyn_mult * static_grad(KSI, 3);
+		grad(KSI, 4) = ddyn_mult_dksi * M0 * N_eta_minus * N_zeta_plus + dyn_mult * static_grad(KSI, 4);
+		grad(KSI, 5) = ddyn_mult_dksi * M1 * N_eta_minus * N_zeta_plus + dyn_mult * static_grad(KSI, 5);
+		grad(KSI, 6) = ddyn_mult_dksi * M1 * N_eta_plus * N_zeta_plus + dyn_mult * static_grad(KSI, 6);
+		grad(KSI, 7) = ddyn_mult_dksi * M0 * N_eta_plus * N_zeta_plus + dyn_mult * static_grad(KSI, 7);
+		
+		for (int i = 0; i < 8; ++i) {
+			grad(ETA, i) = dyn_mult * static_grad(ETA, i);
+			grad(ZETA, i) = dyn_mult * static_grad(ZETA, i);
+		}
+	}
 	
 	return grad;
 }

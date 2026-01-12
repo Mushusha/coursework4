@@ -58,7 +58,6 @@ public:
 	bool is_dyn = false;
 	double omega = 0.0;
 	
-	// Pole coordinates (reference point for infinite direction)
 	double pole_x = 0.0, pole_y = 0.0, pole_z = 0.0;
 	void set_pole(double px, double py, double pz = 0.0) {
 		pole_x = px; pole_y = py; pole_z = pz;
@@ -72,9 +71,5 @@ protected:
 	Eigen::MatrixXcd gradFF(double ksi, double eta, double zeta = 0) override;
 
 private:
-	// Compute A = distance from pole to element centroid (characteristic length)
 	double compute_A() const;
 };
-
-// Backward compatibility alias
-using infQuad = InfQuad;

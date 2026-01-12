@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
 #include "Eigen/Core"
 #include "QuadSEM.h"
@@ -57,6 +58,9 @@ public:
 
     std::vector<std::complex<double>> FF(double ksi, double eta, double zeta = 0) override;
     Eigen::MatrixXcd gradFF(double ksi, double eta, double zeta = 0) override;
+    Eigen::MatrixXcd J(double ksi, double eta, double zeta = 0) override;
+    Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
+    Eigen::MatrixXcd localK() override;
 
     double gaussPoint(LocVar var, int i) override;
     double weight(LocVar var, int i) override;
@@ -76,6 +80,7 @@ private:
     double dlagrange1D_ksi(int j, double ksi) const;
 
     std::complex<double> dynamic_multiplier(double ksi, double eta) const;
+    std::complex<double> ddynamic_multiplier_dksi(double ksi, double eta) const;
 };
 
 
@@ -159,9 +164,48 @@ std::complex<double> SpectralInfQuad<NODES>::dynamic_multiplier(double ksi, doub
     std::complex<double> i(0.0, 1.0);
     double decay_factor = std::sqrt(2.0 / one_minus_ksi);
     std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
-    std::complex<double> phase2 = std::exp(i * k_wave * A_len / one_minus_ksi);
+    std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
     
-    return decay_factor * phase1 * phase2;
+    std::complex<double> result = decay_factor * phase1 * phase2;
+    return result;
+}
+
+template<int NODES>
+std::complex<double> SpectralInfQuad<NODES>::ddynamic_multiplier_dksi(double ksi, double eta) const {
+    if (!is_dynamic || omega <= 0.0) {
+        return std::complex<double>(0.0, 0.0);
+    }
+    
+    double lambda = this->Young * this->Poisson / ((1.0 + this->Poisson) * (1.0 - 2.0 * this->Poisson));
+    double mu = this->Young / (2.0 * (1.0 + this->Poisson));
+    double c = std::sqrt((lambda + 2.0 * mu) / this->density);
+    
+    double k_wave = omega / c;
+    
+    double cx = 0.0, cy = 0.0, cz = 0.0;
+    for (int j = 0; j < NODES; ++j) {
+        int idx = j * NODES;
+        cx += this->x[idx];
+        cy += this->y[idx];
+        cz += this->z[idx];
+    }
+    cx /= NODES; cy /= NODES; cz /= NODES;
+    double A_len = std::sqrt((cx - pole_x)*(cx - pole_x) + 
+                             (cy - pole_y)*(cy - pole_y) + 
+                             (cz - pole_z)*(cz - pole_z));
+    if (A_len < 1e-10) A_len = 1.0; 
+    
+    double one_minus_ksi = 1.0 - ksi;
+    std::complex<double> i(0.0, 1.0);
+    
+    double decay_factor = std::sqrt(2.0 / one_minus_ksi);
+    double ddecay_factor = 0.5 * std::sqrt(2.0) * std::pow(one_minus_ksi, -1.5);
+    
+    std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
+    std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
+    std::complex<double> dphase2 = phase2 * i * k_wave * A_len / 2.0;
+    
+    return ddecay_factor * phase1 * phase2 + decay_factor * phase1 * dphase2;
 }
 
 template<int NODES>
@@ -189,6 +233,7 @@ Eigen::MatrixXcd SpectralInfQuad<NODES>::gradFF(double ksi, double eta, double) 
     int idx = 0;
 
     std::complex<double> dyn_mult = dynamic_multiplier(ksi, eta);
+    std::complex<double> ddyn_mult_dksi = ddynamic_multiplier_dksi(ksi, eta);
 
     for (int j = 0; j < NODES; ++j) {
         double L_j = this->lagrange1D(j, eta);
@@ -197,11 +242,80 @@ Eigen::MatrixXcd SpectralInfQuad<NODES>::gradFF(double ksi, double eta, double) 
             double M_i = decay_function(i, ksi);
             double dM_i = ddecay_function(i, ksi);
 
-            grad(0, idx) = dyn_mult * dM_i * L_j;
+            grad(0, idx) = ddyn_mult_dksi * M_i * L_j + dyn_mult * dM_i * L_j;
             grad(1, idx) = dyn_mult * M_i * dL_j;
         }
     }
     return grad;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralInfQuad<NODES>::J(double ksi, double eta, double) {
+    Eigen::MatrixXcd jac = Eigen::MatrixXcd::Zero(2, 2);
+    
+    int idx = 0;
+    for (int j = 0; j < NODES; ++j) {
+        double L_j = this->lagrange1D(j, eta);
+        double dL_j = this->dlagrange1D(j, eta);
+        for (int i = 0; i < NODES; ++i, ++idx) {
+            double M_i = decay_function(i, ksi);
+            double dM_i = ddecay_function(i, ksi);
+            
+            double dN_dksi = dM_i * L_j;
+            double dN_deta = M_i * dL_j;
+            
+            jac(0, 0) += std::complex<double>(dN_dksi, 0.0) * this->x[idx];
+            jac(0, 1) += std::complex<double>(dN_dksi, 0.0) * this->y[idx];
+            jac(1, 0) += std::complex<double>(dN_deta, 0.0) * this->x[idx];
+            jac(1, 1) += std::complex<double>(dN_deta, 0.0) * this->y[idx];
+        }
+    }
+    return jac;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralInfQuad<NODES>::B(double ksi, double eta, double) {
+    Eigen::MatrixXcd Bm = Eigen::MatrixXcd::Zero(3, 2 * nNodes);
+    Eigen::Matrix2cd invJ = this->J(ksi, eta).inverse();
+    Eigen::MatrixXcd dN = invJ * gradFF(ksi, eta);
+
+    for (int a = 0; a < nNodes; ++a) {
+        std::complex<double> dNx = dN(X, a);
+        std::complex<double> dNy = dN(Y, a);
+
+        Bm(0, 2 * a) = dNx;
+        Bm(1, 2 * a + 1) = dNy;
+        Bm(2, 2 * a) = dNy;
+        Bm(2, 2 * a + 1) = dNx;
+    }
+    return Bm;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralInfQuad<NODES>::localK() {
+    Eigen::MatrixXcd K = Eigen::MatrixXcd::Zero(2 * nNodes, 2 * nNodes);
+    
+    for (int j = 0; j < NODES; ++j) {
+        for (int i = 0; i < NODES; ++i) {
+            int node_idx = i + j * NODES;
+            double ksi = gaussPoint(KSI, node_idx);
+            double eta = gaussPoint(ETA, node_idx);
+            double w_ksi = weight(KSI, node_idx);
+            double w_eta = weight(ETA, node_idx);
+
+            Eigen::MatrixXcd Bm = B(ksi, eta);
+            Eigen::MatrixXcd Jm = this->J(ksi, eta);
+
+            double detJ = std::abs(Jm.determinant());
+
+            Eigen::MatrixXcd BtDB = Bm.transpose() * this->D * Bm;
+            Eigen::MatrixXcd contribution = (w_ksi * w_eta) * BtDB * detJ;
+            
+            K += contribution;
+        }
+    }
+    
+    return K;
 }
 
 template<int NODES>

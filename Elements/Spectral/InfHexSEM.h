@@ -57,6 +57,8 @@ public:
 
     std::vector<std::complex<double>> FF(double ksi, double eta, double zeta) override;
     Eigen::MatrixXcd gradFF(double ksi, double eta, double zeta) override;
+    Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
+    Eigen::MatrixXcd localK() override;
 
     double gaussPoint(LocVar var, int i) override;
     double weight(LocVar var, int i) override;
@@ -76,6 +78,7 @@ private:
     double ddecay_function(int k, double ksi) const;
 
     std::complex<double> dynamic_multiplier(double ksi, double eta, double zeta) const;
+    std::complex<double> ddynamic_multiplier_dksi(double ksi, double eta, double zeta) const;
 };
 
 
@@ -160,9 +163,48 @@ std::complex<double> SpectralInfHex<NODES>::dynamic_multiplier(
     std::complex<double> i(0.0, 1.0);
     double decay_factor = std::sqrt(2.0 / one_minus_ksi);
     std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
-    std::complex<double> phase2 = std::exp(i * k_wave * A_len / one_minus_ksi);
+    std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
     
     return decay_factor * phase1 * phase2;
+}
+
+template<int NODES>
+std::complex<double> SpectralInfHex<NODES>::ddynamic_multiplier_dksi(
+    double ksi, double eta, double zeta) const {
+    if (!is_dynamic || omega <= 0.0) {
+        return std::complex<double>(0.0, 0.0);
+    }
+
+    double lambda = this->Young * this->Poisson / ((1.0 + this->Poisson) * (1.0 - 2.0 * this->Poisson));
+    double mu = this->Young / (2.0 * (1.0 + this->Poisson));
+    double c = std::sqrt((lambda + 2.0 * mu) / this->density);
+    
+    double k_wave = omega / c;
+    
+    double cx = 0.0, cy = 0.0, cz = 0.0;
+    int face_nodes = NODES * NODES;
+    for (int i = 0; i < face_nodes; ++i) {
+        cx += this->x[i];
+        cy += this->y[i];
+        cz += this->z[i];
+    }
+    cx /= face_nodes; cy /= face_nodes; cz /= face_nodes;
+    double A_len = std::sqrt((cx - pole_x)*(cx - pole_x) + 
+                             (cy - pole_y)*(cy - pole_y) + 
+                             (cz - pole_z)*(cz - pole_z));
+    if (A_len < 1e-10) A_len = 1.0;
+    
+    double one_minus_ksi = 1.0 - ksi;
+    std::complex<double> i(0.0, 1.0);
+    
+    double decay_factor = std::sqrt(2.0 / one_minus_ksi);
+    double ddecay_factor = 0.5 * std::sqrt(2.0) * std::pow(one_minus_ksi, -1.5);
+    
+    std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
+    std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
+    std::complex<double> dphase2 = phase2 * i * k_wave * A_len / 2.0;
+    
+    return ddecay_factor * phase1 * phase2 + decay_factor * phase1 * dphase2;
 }
 
 template<int NODES>
@@ -195,6 +237,7 @@ Eigen::MatrixXcd SpectralInfHex<NODES>::gradFF(
     int idx = 0;
 
     std::complex<double> dyn_mult = dynamic_multiplier(ksi, eta, zeta);
+    std::complex<double> ddyn_mult_dksi = ddynamic_multiplier_dksi(ksi, eta, zeta);
 
     for (int k = 0; k < NODES; ++k) {
         double L_k = this->lagrange1D(k, zeta);
@@ -206,13 +249,69 @@ Eigen::MatrixXcd SpectralInfHex<NODES>::gradFF(
                 double M_i = decay_function(i, ksi);
                 double dM_i = ddecay_function(i, ksi);
 
-                grad(0, idx) = dyn_mult * dM_i * L_j * L_k;
+                grad(0, idx) = ddyn_mult_dksi * M_i * L_j * L_k + dyn_mult * dM_i * L_j * L_k;
                 grad(1, idx) = dyn_mult * M_i * dL_j * L_k;
                 grad(2, idx) = dyn_mult * M_i * L_j * dL_k;
             }
         }
     }
     return grad;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralInfHex<NODES>::B(double ksi, double eta, double zeta) {
+    Eigen::MatrixXcd Bm = Eigen::MatrixXcd::Zero(6, 3 * nNodes);
+    Eigen::Matrix3cd invJ = this->J(ksi, eta, zeta).inverse();
+    Eigen::MatrixXcd dN = invJ * gradFF(ksi, eta, zeta);
+
+    for (int a = 0; a < nNodes; ++a) {
+        std::complex<double> dNx = dN(X, a);
+        std::complex<double> dNy = dN(Y, a);
+        std::complex<double> dNz = dN(Z, a);
+
+        Bm(0, 3 * a) = dNx;
+        Bm(1, 3 * a + 1) = dNy;
+        Bm(2, 3 * a + 2) = dNz;
+
+        Bm(3, 3 * a) = dNy;
+        Bm(3, 3 * a + 1) = dNx;
+
+        Bm(4, 3 * a + 1) = dNz;
+        Bm(4, 3 * a + 2) = dNy;
+
+        Bm(5, 3 * a) = dNz;
+        Bm(5, 3 * a + 2) = dNx;
+    }
+    return Bm;
+}
+
+template<int NODES>
+Eigen::MatrixXcd SpectralInfHex<NODES>::localK() {
+    Eigen::MatrixXcd K = Eigen::MatrixXcd::Zero(3 * nNodes, 3 * nNodes);
+
+    for (int k = 0; k < NODES; ++k) {
+        for (int j = 0; j < NODES; ++j) {
+            for (int i = 0; i < NODES; ++i) {
+                int node_idx = i + j * NODES + k * NODES * NODES;
+                double ksi = gaussPoint(KSI, node_idx);
+                double eta = gaussPoint(ETA, node_idx);
+                double zeta = gaussPoint(ZETA, node_idx);
+                double w_ksi = weight(KSI, node_idx);
+                double w_eta = weight(ETA, node_idx);
+                double w_zeta = weight(ZETA, node_idx);
+
+                Eigen::MatrixXcd Bm = B(ksi, eta, zeta);
+                Eigen::MatrixXcd Jm = this->J(ksi, eta, zeta);
+
+                double detJ = std::abs(Jm.determinant());
+
+                Eigen::MatrixXcd BtDB = Bm.transpose() * this->D * Bm;
+                K += (w_ksi * w_eta * w_zeta) * BtDB * detJ;
+            }
+        }
+    }
+    
+    return K;
 }
 
 template<int NODES>

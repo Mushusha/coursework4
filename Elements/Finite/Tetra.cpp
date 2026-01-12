@@ -53,11 +53,11 @@ Eigen::MatrixXcd Tetra::B(double ksi, double eta, double zeta) {
 		B(5, i * 3 + 2) = coef(1, i);
 	}
 
-	return B / C().determinant();
+	return B / std::abs(C().determinant());
 }
 
 Eigen::MatrixXcd Tetra::localK() {
-	return B().transpose() * D * B() * C().determinant() / 6;
+	return B().transpose() * D * B() * std::abs(C().determinant()) / 6;
 }
 
 std::vector<double> Tetra::localF(double mult) {
@@ -67,7 +67,7 @@ std::vector<double> Tetra::localF(double mult) {
 	// l.first.first - edge, l.first.second - comp, l.second - value
 	for (auto const& l : load) {
 		std::vector<int> node = edge_to_node(l.first.first);
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < 3; i++)
 			F[3 * node[i] + l.first.second] += mult * l.second / 3;
 	}
 	return F;

@@ -54,6 +54,7 @@ struct load {
 	int cs;
 	std::array<double, 6> data;
 	std::array<double, 6> dep_type;
+	std::array<std::string, 6> data_str;
 	int type;
 	bool inf = false;
 	void read(json load);
@@ -124,6 +125,8 @@ struct settings {
 	int max_iter;
 	int iter_res_output;
 	double d;
+	double omega;
+	double Amp;
 };
 
 class Parser {

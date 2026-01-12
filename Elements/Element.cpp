@@ -71,6 +71,9 @@ Element& Element::operator=(Element&& other) noexcept {
 }
 
 void Element::set_coords(std::vector <double> x, std::vector <double> y, std::vector <double> z) {
+	this->x.clear();
+	this->y.clear();
+	this->z.clear();
 	for (int i = 0; i < x.size(); i++) {
 		this->x.push_back(x[i]);
 		this->y.push_back(y[i]);
@@ -115,4 +118,14 @@ void Element::set_load(int type, int apply_to, std::array<double, 6> value) {
 			//std::pair <int, int> pair(apply_to, i);
 			//load.insert({ pair, value[i] });
 		}
+}
+
+void Element::remove_load_on_edge(int edge) {
+	for (auto it = load.begin(); it != load.end();) {
+		if (it->first.first == edge) {
+			it = load.erase(it);
+		} else {
+			++it;
+		}
+	}
 }

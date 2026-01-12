@@ -54,13 +54,13 @@ Eigen::MatrixXcd Hex::J(double ksi, double eta, double zeta) {
 
 	for (int i = 0; i < 8; i++) {
 		J(0, 0) += grad(KSI, i) * x[i];
-		J(0, 1) += grad(ETA, i) * x[i];
-		J(0, 2) += grad(ZETA, i) * x[i];
-		J(1, 0) += grad(KSI, i) * y[i];
+		J(0, 1) += grad(KSI, i) * y[i];
+		J(0, 2) += grad(KSI, i) * z[i];
+		J(1, 0) += grad(ETA, i) * x[i];
 		J(1, 1) += grad(ETA, i) * y[i];
-		J(1, 2) += grad(ZETA, i) * y[i];
-		J(2, 0) += grad(KSI, i) * z[i];
-		J(2, 1) += grad(ETA, i) * z[i];
+		J(1, 2) += grad(ETA, i) * z[i];
+		J(2, 0) += grad(ZETA, i) * x[i];
+		J(2, 1) += grad(ZETA, i) * y[i];
 		J(2, 2) += grad(ZETA, i) * z[i];
 	}
 	return J;
@@ -70,7 +70,7 @@ Eigen::MatrixXcd Hex::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd B = Eigen::MatrixXcd::Zero(6, 24);
 	Eigen::Matrix3cd invJ;
 	invJ = J(ksi, eta, zeta).inverse();
-	Eigen::MatrixXcd dN = invJ.transpose() * gradFF(ksi, eta, zeta);
+	Eigen::MatrixXcd dN = invJ * gradFF(ksi, eta, zeta);
 
 	for (int i = 0; i < 8; i++) {
 		B(0, 3 * i) = dN(X, i);
@@ -250,15 +250,14 @@ void Hex::set_pressure(int edge, double value) {
 double Hex::Volume() {
 	std::complex<double> S = 0;
 
-	for (int i = 0; i < 8; i++)
-		for (int gp = 0; gp < 8; gp++) {
-			double ksi = gaussPoint(KSI, gp);
-			double eta = gaussPoint(ETA, gp);
-			double zeta = gaussPoint(ZETA, gp);
+	for (int gp = 0; gp < 8; gp++) {
+		double ksi = gaussPoint(KSI, gp);
+		double eta = gaussPoint(ETA, gp);
+		double zeta = gaussPoint(ZETA, gp);
 
-			S += weight(KSI, gp) * weight(ETA, gp) * weight(ZETA, gp) * 
-				FF(ksi, eta, zeta)[i] * std::abs(J(ksi, eta, zeta).determinant());
-		}
+		S += weight(KSI, gp) * weight(ETA, gp) * weight(ZETA, gp) * 
+			std::abs(J(ksi, eta, zeta).determinant());
+	}
 
 	return S.real();
 }
@@ -267,9 +266,9 @@ double Hex::gaussPoint(LocVar var, int i) {
 	static const double gauss_coord = 1.0 / std::sqrt(3.0);
 	
 	static const std::array<std::array<double, 8>, 3> gp = {{
-		{ -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord }, // KSI
-		{ -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord }, // ETA
-		{ -gauss_coord, -gauss_coord, -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord,  gauss_coord,  gauss_coord }  // ZETA
+		{ -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord },
+		{ -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord, -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord },
+		{ -gauss_coord, -gauss_coord, -gauss_coord, -gauss_coord,  gauss_coord,  gauss_coord,  gauss_coord,  gauss_coord }
 	}};
 
 	return gp[static_cast<int>(var)][i];

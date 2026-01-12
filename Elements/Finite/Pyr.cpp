@@ -44,13 +44,13 @@ Eigen::MatrixXcd Pyr::J(double ksi, double eta, double zeta) {
 	
 	for (int i = 0; i < 5; i++) {
 		J(0, 0) += grad(KSI, i) * x[i];
-		J(0, 1) += grad(ETA, i) * x[i];
-		J(0, 2) += grad(ZETA, i) * x[i];
-		J(1, 0) += grad(KSI, i) * y[i];
+		J(0, 1) += grad(KSI, i) * y[i];
+		J(0, 2) += grad(KSI, i) * z[i];
+		J(1, 0) += grad(ETA, i) * x[i];
 		J(1, 1) += grad(ETA, i) * y[i];
-		J(1, 2) += grad(ZETA, i) * y[i];
-		J(2, 0) += grad(KSI, i) * z[i];
-		J(2, 1) += grad(ETA, i) * z[i];
+		J(1, 2) += grad(ETA, i) * z[i];
+		J(2, 0) += grad(ZETA, i) * x[i];
+		J(2, 1) += grad(ZETA, i) * y[i];
 		J(2, 2) += grad(ZETA, i) * z[i];
 	}
 	return J;
@@ -60,7 +60,7 @@ Eigen::MatrixXcd Pyr::B(double ksi, double eta, double zeta) {
 	Eigen::MatrixXcd B = Eigen::MatrixXcd::Zero(6, 15);
 	Eigen::Matrix3cd invJ;
 	invJ = J(ksi, eta, zeta).inverse();
-	Eigen::MatrixXcd dN = invJ.transpose() * gradFF(ksi, eta, zeta);
+	Eigen::MatrixXcd dN = invJ * gradFF(ksi, eta, zeta);
 	
 	for (int i = 0; i < 5; i++) {
 		B(0, 3 * i) = dN(X, i);
@@ -84,8 +84,9 @@ Eigen::MatrixXcd Pyr::localK() {
 		double eta = gaussPoint(ETA, gp);
 		double zeta = gaussPoint(ZETA, gp);
 		
-		k += weight(KSI, gp) * B(ksi, eta, zeta).transpose() *
-			D * B(ksi, eta, zeta) * std::abs(J(ksi, eta, zeta).determinant());
+		k += weight(KSI, gp) * weight(ETA, gp) * weight(ZETA, gp) *
+			B(ksi, eta, zeta).transpose() * D * B(ksi, eta, zeta) *
+			std::abs(J(ksi, eta, zeta).determinant());
 	}
 	return k;
 }
@@ -114,8 +115,9 @@ Eigen::MatrixXd Pyr::localC() {
 				double eta = gaussPoint(ETA, gp);
 				double zeta = gaussPoint(ZETA, gp);
 				
-				c(i, j) += weight(KSI, gp) * FF(ksi, eta, zeta)[i].real() *
-					FF(ksi, eta, zeta)[j].real() * std::abs(J(ksi, eta, zeta).determinant());
+				c(i, j) += weight(KSI, gp) * weight(ETA, gp) * weight(ZETA, gp) *
+					FF(ksi, eta, zeta)[i].real() * FF(ksi, eta, zeta)[j].real() *
+					std::abs(J(ksi, eta, zeta).determinant());
 			}
 	return c;
 }
@@ -130,7 +132,7 @@ std::vector<double> Pyr::localR(std::vector<double> value) {
 			double eta = gaussPoint(ETA, gp);
 			double zeta = gaussPoint(ZETA, gp);
 			
-			R[i] += value[i] * weight(KSI, gp) *
+			R[i] += value[i] * weight(KSI, gp) * weight(ETA, gp) * weight(ZETA, gp) *
 				FF(ksi, eta, zeta)[i].real() * std::abs(J(ksi, eta, zeta).determinant());
 		}
 	return R;
@@ -149,7 +151,7 @@ Eigen::MatrixXcd Pyr::localM() {
 		
 		for (int i = 0; i < 5; i++)
 			for (int j = 0; j < 5; j++) {
-				complex<double> M_ij = weight(KSI, gp) *
+				complex<double> M_ij = weight(KSI, gp) * weight(ETA, gp) * weight(ZETA, gp) *
 					FF(ksi, eta, zeta)[i] * FF(ksi, eta, zeta)[j] * std::abs(J(ksi, eta, zeta).determinant());
 				
 				m(3 * i, 3 * j) += M_ij;
@@ -249,7 +251,8 @@ double Pyr::Volume() {
 		double eta = gaussPoint(ETA, gp);
 		double zeta = gaussPoint(ZETA, gp);
 		
-		S += weight(KSI, gp) * std::abs(J(ksi, eta, zeta).determinant());
+		S += weight(KSI, gp) * weight(ETA, gp) * weight(ZETA, gp) *
+			std::abs(J(ksi, eta, zeta).determinant());
 	}
 	
 	return S.real();
@@ -274,7 +277,7 @@ double Pyr::weight(LocVar var, int i) {
 	static const double w0 = 81.0 / 200.0; 
 	static const double w1 = 125.0 / 27.0 / 8.0;
 	
-	double weights[] = { w0, w1, w1, w1, w1 };
+	static const double weights[] = { w0, w1, w1, w1, w1 };
 	return weights[i];
 }
 

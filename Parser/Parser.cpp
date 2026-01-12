@@ -104,8 +104,64 @@ void load::read(json load) {
 
 	for (uint8_t i = 0; i < load["data"].size(); i++) {
 		std::string s_data = load["data"][i];
-		base64_decode(s_data);
-		this->data[i] = ReadDouble(s_data, 0);
+
+		this->data_str[i] = s_data;
+
+		bool is_base64_string = true;
+		if (s_data.find("berlage") != std::string::npos || 
+		    s_data.find("(") != std::string::npos ||
+		    s_data.find("*") != std::string::npos ||
+		    s_data.find("-") == 0) {
+
+			is_base64_string = false;
+		} else {
+
+			for (char c : s_data) {
+				if (c != '=' && !is_base64(c)) {
+					is_base64_string = false;
+					break;
+				}
+			}
+		}
+		if (is_base64_string && s_data.length() > 0) {
+			std::string decoded = s_data;
+			base64_decode(decoded);
+			this->data[i] = ReadDouble(decoded, 0);
+		} else {
+			if (s_data.find("berlage") != std::string::npos) {
+				size_t berlage_pos = s_data.find("berlage");
+				if (berlage_pos > 0) {
+					std::string before_berlage = s_data.substr(0, berlage_pos);
+
+					size_t mult_end = before_berlage.find_last_of("*");
+					if (mult_end != std::string::npos) {
+
+						std::string mult_str = before_berlage.substr(0, mult_end);
+
+						mult_str.erase(0, mult_str.find_first_not_of(" \t("));
+						mult_str.erase(mult_str.find_last_not_of(" \t)") + 1);
+						if (!mult_str.empty()) {
+							this->data[i] = std::stod(mult_str);
+						} else {
+							this->data[i] = 1.0;
+						}
+					} else {
+						std::string mult_str = before_berlage;
+						mult_str.erase(0, mult_str.find_first_not_of(" \t("));
+						mult_str.erase(mult_str.find_last_not_of(" \t)") + 1);
+						if (!mult_str.empty() && (mult_str[0] == '-' || mult_str[0] == '+' || isdigit(mult_str[0]) || mult_str[0] == '.')) {
+							this->data[i] = std::stod(mult_str);
+						} else {
+							this->data[i] = 1.0;
+						}
+					}
+				} else {
+					this->data[i] = 1.0;
+				}
+			} else {
+				this->data[i] = 0.0;
+			}
+		}
 	}
 }
 
@@ -281,6 +337,9 @@ void settings::read(json block) {
 		if (block.contains("damping"))
 			this->d = block["damping"]["mass_matrix"];
 	}
+
+	this->omega = 10.0;
+	this->Amp = 1e+08;
 }
 
 void Parser::read(string name) {
@@ -304,6 +363,54 @@ void Parser::read(string name) {
 	this->load.resize(_root["loads"].size());
 	for (int i = 0; i < this->load.size(); i++) {
 		this->load[i].read(_root["loads"][i]);
+	}
+
+	for (int id = 0; id < this->load.size(); id++) {
+		auto& load_obj = this->load[id];
+		for (uint8_t i = 0; i < 6; i++) {
+			std::string s_data = load_obj.data_str[i];
+			if (s_data.find("berlage") != std::string::npos) {
+				size_t berlage_pos = s_data.find("berlage(");
+				if (berlage_pos != std::string::npos) {
+					size_t start = berlage_pos + 8;
+					size_t end = s_data.find(")", start);
+					if (end != std::string::npos) {
+						std::string params = s_data.substr(start, end - start);
+						size_t comma1 = params.find(",");
+						size_t comma2 = params.find(",", comma1 + 1);
+						if (comma1 != std::string::npos && comma2 != std::string::npos) {
+							std::string amp_str = params.substr(0, comma1);
+							std::string omega_str = params.substr(comma1 + 1, comma2 - comma1 - 1);
+
+							size_t amp_start = amp_str.find_first_not_of(" \t");
+							if (amp_start != std::string::npos) {
+								amp_str = amp_str.substr(amp_start);
+								size_t amp_end = amp_str.find_last_not_of(" \t");
+								if (amp_end != std::string::npos) {
+									amp_str = amp_str.substr(0, amp_end + 1);
+								}
+							}
+							size_t omega_start = omega_str.find_first_not_of(" \t");
+							if (omega_start != std::string::npos) {
+								omega_str = omega_str.substr(omega_start);
+								size_t omega_end = omega_str.find_last_not_of(" \t");
+								if (omega_end != std::string::npos) {
+									omega_str = omega_str.substr(0, omega_end + 1);
+								}
+							}
+
+							if (!amp_str.empty()) {
+								this->settings.Amp = std::stod(amp_str);
+							}
+							if (!omega_str.empty()) {
+								this->settings.omega = std::stod(omega_str);
+							}
+						}
+					}
+				}
+				break;
+			}
+		}
 	}
 
 	this->nodesets.resize(_root["sets"]["nodesets"].size());

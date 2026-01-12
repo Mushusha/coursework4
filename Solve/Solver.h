@@ -30,9 +30,9 @@ protected:
 	Data calc_data;
 
 	Eigen::SparseMatrix <std::complex<double>> K;
-	Eigen::SparseVector <std::complex<double>> F;
+	Eigen::VectorX <std::complex<double>> F;
 
-	Eigen::VectorX <std::complex<double>> U; // displacement
+	Eigen::VectorX <std::complex<double>> U;
 
 	void fillGlobalF(double mult = 1);
 

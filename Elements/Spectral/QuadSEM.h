@@ -158,10 +158,10 @@ Eigen::MatrixXcd SpectralQuad<NODES>::J(double ksi, double eta, double) {
     Eigen::MatrixXcd g = gradFF(ksi, eta);
 
     for (int a = 0; a < nNodes; ++a) {
-        jac(0, 0) += g(0, a) * x[a];
-        jac(0, 1) += g(0, a) * y[a];
-        jac(1, 0) += g(1, a) * x[a];
-        jac(1, 1) += g(1, a) * y[a];
+        jac(0, 0) += g(KSI, a) * x[a];
+        jac(0, 1) += g(KSI, a) * y[a];
+        jac(1, 0) += g(ETA, a) * x[a];
+        jac(1, 1) += g(ETA, a) * y[a];
     }
     return jac;
 }
@@ -173,8 +173,8 @@ Eigen::MatrixXcd SpectralQuad<NODES>::B(double ksi, double eta, double) {
     Eigen::MatrixXcd dN = invJ * gradFF(ksi, eta);
 
     for (int a = 0; a < nNodes; ++a) {
-        double dNx = dN(0, a).real();
-        double dNy = dN(1, a).real();
+        double dNx = dN(X, a).real();
+        double dNy = dN(Y, a).real();
 
         Bm(0, 2 * a) = dNx;
         Bm(1, 2 * a + 1) = dNy;

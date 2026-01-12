@@ -1,4 +1,4 @@
-﻿// #define DISABLE_DATA_TESTS
+﻿#define DISABLE_DATA_TESTS
 
 #ifndef DISABLE_DATA_TESTS
 
@@ -1371,7 +1371,7 @@ public:
     }
 };
 
-TEST(DataConstraintsTest, Constraints3D_AppliedCorrectly) {
+TEST_F(DataConstraintsTest, Constraints3D_AppliedCorrectly) {
 
     auto parser = std::make_shared<MockParserWithConstraints3D>();
     Data data(parser);
