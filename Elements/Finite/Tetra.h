@@ -5,6 +5,7 @@
 #include "Eigen/Core"
 
 #include "Element.h"
+#include "Data.h"
 
 
 class Tetra : public Element {
@@ -39,6 +40,7 @@ public:
 	Eigen::MatrixXd localC() override;
 	std::vector <double> localR(std::vector<double> value) override;
 	Eigen::MatrixXcd localM() override;
+	Eigen::MatrixXd localDamping() override;
 
 	double gaussPoint(LocVar var, int i) override;
 	double weight(LocVar var, int i) override;

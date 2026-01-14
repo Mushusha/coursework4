@@ -35,7 +35,8 @@ std::vector<std::complex<double>> InfHex::FF(double ksi, double eta, double zeta
 	N[5] = M1 * N_eta_minus * N_zeta_plus;
 	N[6] = M1 * N_eta_plus * N_zeta_plus;
 	
-	if (is_dyn && omega > 0.0) {
+	/* 
+	if (is_dynamic && omega > 0.0) {
 		double lambda = Young * Poisson / ((1.0 + Poisson) * (1.0 - 2.0 * Poisson));
 		double mu = Young / (2.0 * (1.0 + Poisson));
 		double c = std::sqrt((lambda + 2.0 * mu) / density);
@@ -44,17 +45,13 @@ std::vector<std::complex<double>> InfHex::FF(double ksi, double eta, double zeta
 		
 		double A_len = compute_A();
 		
-		std::complex<double> i(0.0, 1.0);
-
 		double decay_factor = std::sqrt(2.0 / one_minus_ksi);
-
-		std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
-		std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
-		std::complex<double> mult = decay_factor * phase1 * phase2;
+		std::complex<double> mult(decay_factor, 0.0);
 		
 		std::transform(N.begin(), N.end(), N.begin(), 
 			[&mult](std::complex<double> a) { return a * mult; });
 	}
+	*/
 	
 	return N;
 }
@@ -97,24 +94,19 @@ Eigen::MatrixXcd InfHex::gradFF(double ksi, double eta, double zeta) {
 	grad(ZETA, 7) =  (1 + eta) / (4 * one_minus_ksi);
 	
 
-	if (is_dyn && omega > 0.0) {
+	/* 
+	if (is_dynamic && omega > 0.0) {
 		double lambda = Young * Poisson / ((1.0 + Poisson) * (1.0 - 2.0 * Poisson));
 		double mu = Young / (2.0 * (1.0 + Poisson));
 		double c = std::sqrt((lambda + 2.0 * mu) / density);
 		double k_wave = omega / c;
 		double A_len = compute_A();
 		
-		std::complex<double> i(0.0, 1.0);
 		double decay_factor = std::sqrt(2.0 / one_minus_ksi);
 		double ddecay_factor = 0.5 * std::sqrt(2.0) * std::pow(one_minus_ksi, -1.5);
 		
-
-		std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
-		std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
-		std::complex<double> dphase2 = phase2 * i * k_wave * A_len / 2.0;
-		
-		std::complex<double> dyn_mult = decay_factor * phase1 * phase2;
-		std::complex<double> ddyn_mult_dksi = ddecay_factor * phase1 * phase2 + decay_factor * phase1 * dphase2;		
+		std::complex<double> dyn_mult(decay_factor, 0.0);
+		std::complex<double> ddyn_mult_dksi(ddecay_factor, 0.0);		
 
 		double M0 = 1.0 / one_minus_ksi;
 		double M1 = -ksi / one_minus_ksi;
@@ -140,6 +132,7 @@ Eigen::MatrixXcd InfHex::gradFF(double ksi, double eta, double zeta) {
 			grad(ZETA, i) = dyn_mult * static_grad(ZETA, i);
 		}
 	}
+	*/
 	
 	return grad;
 }

@@ -1,6 +1,5 @@
 #include "Tetra.h"
 
-
 Eigen::MatrixXd Tetra::C() {
 
 	Eigen::Matrix4d C;
@@ -79,6 +78,12 @@ Eigen::MatrixXd Tetra::localC() {
 		for (int j = 0; j < 4; j++)
 			c(i, j) = (i == j) ? (std::abs(C().determinant() / 60)) : std::abs((C().determinant() / 120));
 	return c;
+}
+
+Eigen::MatrixXd Tetra::localDamping() {
+	if (density <= 0.0) 
+		return Eigen::MatrixXd::Zero(4, 4);
+	return Data::damping * density * localC();
 }
 
 std::vector<double> Tetra::localR(std::vector<double> value) {

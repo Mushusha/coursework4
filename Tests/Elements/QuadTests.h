@@ -45,7 +45,6 @@ protected:
         inf_quad->set_coords(x_coords, y_coords, z_coords);
 
         inf_quad->set_constants(210e9, 0.3, 7850.0);
-        inf_quad->is_dyn = true;
         inf_quad->omega = 100.0;
     }
 

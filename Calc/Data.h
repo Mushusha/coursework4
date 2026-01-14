@@ -48,7 +48,6 @@ public:
 
 	std::string filename;
 
-	double damping;
 	double max_time;
 	int max_iter;
 	int iter_res_output;
@@ -57,6 +56,10 @@ public:
 
 	double omega;
 	double Amp;
+	
+	static bool is_dynamic;
+	static double reference_element_size;
+	static double damping;
 	  
 private:
 	Data() = default;
@@ -94,4 +97,6 @@ private:
 		int parent_elem_id, int parent_side);
 
 	void renumber_nodes();
+	
+	void compute_reference_element_size();
 };

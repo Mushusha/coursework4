@@ -1,5 +1,5 @@
 #include "Hex.h"
-
+#include "Data.h"
 
 std::vector<std::complex<double>> Hex::FF(double ksi, double eta, double zeta) {
 	std::vector<std::complex<double>> FF;
@@ -128,6 +128,12 @@ Eigen::MatrixXd Hex::localC() {
 					FF(ksi, eta, zeta)[j].real() * std::abs(J(ksi, eta, zeta).determinant());
 			}
 	return c;
+}
+
+Eigen::MatrixXd Hex::localDamping() {
+	if (density <= 0.0) 
+		return Eigen::MatrixXd::Zero(8, 8);
+	return Data::damping * density * localC();
 }
 
 std::vector<double> Hex::localR(std::vector<double> value) {

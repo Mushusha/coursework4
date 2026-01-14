@@ -65,7 +65,7 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
         cell = vtkSmartPointer<vtkPyramid>::New();
         break;
     case ElemType::QUADSEM:
-    case ElemType::INFQUADSEM: {
+    /*case ElemType::INFQUADSEM:*/ {
         int NODES = static_cast<int>(std::sqrt(nodeIds.size()));
 
         if (NODES * NODES != static_cast<int>(nodeIds.size()))
@@ -94,7 +94,7 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
         return polygon;
     }
     case ElemType::HEXSEM:
-    case ElemType::INFHEXSEM: {
+    /*case ElemType::INFHEXSEM:*/ {
         int NODES = static_cast<int>(std::cbrt(nodeIds.size()));
 
         if (NODES * NODES * NODES != static_cast<int>(nodeIds.size()))

@@ -1,10 +1,13 @@
 ﻿#include "Data.h"
 
+bool Data::is_dynamic = false;
+double Data::reference_element_size = 1.0;
+double Data::damping = 0.0;
+
 Data::Data(const Data& other)
 	: dim(other.dim),
 	filename(other.filename),
 	analisys_type(other.analisys_type),
-	damping(other.damping),
 	max_time(other.max_time),
 	max_iter(other.max_iter),
 	iter_res_output(other.iter_res_output),
@@ -19,7 +22,6 @@ Data& Data::operator=(const Data& other) {
 		dim = other.dim;
 		filename = other.filename;
 		analisys_type = other.analisys_type;
-		damping = other.damping;
 		max_time = other.max_time;
 		max_iter = other.max_iter;
 		iter_res_output = other.iter_res_output;
@@ -35,7 +37,6 @@ Data::Data(Data&& other) noexcept
 	: dim(std::exchange(other.dim, 0)),
 	filename(std::move(other.filename)),
 	analisys_type(std::exchange(other.analisys_type, 0)),
-	damping(std::exchange(other.damping, 0)),
 	max_time(std::exchange(other.max_time, 0)),
 	max_iter(std::exchange(other.max_iter, 0)),
 	iter_res_output(std::exchange(other.iter_res_output, 0)),
@@ -75,7 +76,6 @@ Data::Data(std::shared_ptr <const Parser> parser) {
 	filename = parser->get_filename();
 
 	analisys_type = parser->settings.analisys_type;
-	damping = parser->settings.d;
 	max_time = parser->settings.max_time;
 	max_iter = parser->settings.max_iter;
 	iter_res_output = parser->settings.iter_res_output;
@@ -83,12 +83,17 @@ Data::Data(std::shared_ptr <const Parser> parser) {
 	omega = parser->settings.omega; // this params identical for all components
 	Amp = parser->settings.Amp;
 	
+	is_dynamic = parser->settings.analisys_type == "dynamic";
+	damping = parser->settings.d;
+	
 	create_nodes(parser);
 	create_constraints(parser);
 	create_elements(parser);
 	create_constants(parser);
 	create_load(parser);
 	create_D(parser);
+	
+	compute_reference_element_size();
 
 	log.print("End parsing");
 }
@@ -261,9 +266,13 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 			}
 
 			std::vector<int> inf_elem_nodes;
-			for (int k = 0; k < NODES; ++k) {
-				for (auto& node : inf_layer_nodes[k]) {
-					inf_elem_nodes.push_back(node);
+			int num_nodes_per_layer = static_cast<int>(boundary_glob_nodes.size());
+			for (int j = 0; j < num_nodes_per_layer; ++j) {
+				for (int i = 0; i < NODES; ++i) {
+					if (i < static_cast<int>(inf_layer_nodes.size()) && 
+					    j < static_cast<int>(inf_layer_nodes[i].size())) {
+						inf_elem_nodes.push_back(inf_layer_nodes[i][j]);
+					}
 				}
 			}
 
@@ -285,9 +294,10 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 					new_elem->set_order(parent_order); \
 					auto* elem_ptr = dynamic_cast<ElemType<N>*>(new_elem.get()); \
 					set_pole(elem_ptr, inf.point); \
-					if (parser->settings.analisys_type == "dynamic") { \
-						dynamic_cast<ElemType<N>*>(new_elem.get())->is_dynamic = true; \
-						dynamic_cast<ElemType<N>*>(new_elem.get())->omega = omega; \
+					if (is_dynamic) { \
+						auto* inf_elem = dynamic_cast<ElemType<N>*>(new_elem.get()); \
+						inf_elem->omega = omega; \
+						inf_elem->is_dynamic = true; \
 					}
 
 				if (dim == 2) {
@@ -333,8 +343,7 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 				auto* iq = dynamic_cast<InfQuad*>(new_elem.get());
 				set_pole(iq, inf.point);
 				
-				if (parser->settings.analisys_type == "dynamic") {
-					iq->is_dyn = true;
+				if (is_dynamic) {
 					iq->omega = omega;
 				}
 			}
@@ -360,8 +369,7 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 				auto* ih = dynamic_cast<InfHex*>(new_elem.get());
 				set_pole(ih, inf.point);
 
-				if (parser->settings.analisys_type == "dynamic") {
-					ih->is_dyn = true;
+				if (is_dynamic) {
 					ih->omega = omega;
 				}
 			}
@@ -1057,4 +1065,30 @@ void Data::renumber_nodes() {
 	nodes = std::move(new_nodes_list);
 
 	log.print("Node renumbering completed. Total nodes: " + std::to_string(nodes.size()));
+}
+
+void Data::compute_reference_element_size() {
+	double total_size = 0.0;
+	int finite_elem_count = 0;
+	
+	for (int i = 0; i < elements_count() - num_inf_elems; i++) {
+		double vol = elements[i]->Volume();
+		if (vol > 0.0) {
+			if (dim == 2) {
+				total_size += std::sqrt(vol);
+			} else {
+				total_size += std::cbrt(vol);
+			}
+			finite_elem_count++;
+		}
+	}
+	
+	if (finite_elem_count > 0) {
+		reference_element_size = total_size / finite_elem_count;
+	} else {
+		reference_element_size = 1.0;
+	}
+	
+	if (reference_element_size < 1e-10) reference_element_size = 1e-10;
+	if (reference_element_size > 1e10) reference_element_size = 1e10;
 }

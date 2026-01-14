@@ -1,6 +1,5 @@
 #include "Pyr.h"
 
-
 std::vector<std::complex<double>> Pyr::FF(double ksi, double eta, double zeta) {
 	std::vector<std::complex<double>> FF;
 	FF.resize(5);
@@ -120,6 +119,12 @@ Eigen::MatrixXd Pyr::localC() {
 					std::abs(J(ksi, eta, zeta).determinant());
 			}
 	return c;
+}
+
+Eigen::MatrixXd Pyr::localDamping() {
+	if (density <= 0.0) 
+		return Eigen::MatrixXd::Zero(5, 5);
+	return Data::damping * density * localC();
 }
 
 std::vector<double> Pyr::localR(std::vector<double> value) {

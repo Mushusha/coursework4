@@ -12,32 +12,29 @@
 
 class InfHex : public Hex {
 public:
-	InfHex() : Hex(), is_dyn(false), omega(0.0) {}
+	InfHex() : Hex(), omega(0.0) {}
 	InfHex(int id, ElemType type, std::vector<int> nodes)
-		: Hex(id, type, nodes), is_dyn(false), omega(0.0) {}
+		: Hex(id, type, nodes), omega(0.0) {}
 	InfHex(const InfHex& other)
-		: Hex(other), is_dyn(other.is_dyn), omega(other.omega) {}
+		: Hex(other), omega(other.omega) {}
 	InfHex& operator=(const InfHex& other) {
 		if (this != &other) {
 			Hex::operator=(other);
-			is_dyn = other.is_dyn;
 			omega = other.omega;
 		}
 		return *this;
 	}
 	InfHex(InfHex&& other) noexcept
-		: Hex(std::move(other)), is_dyn(other.is_dyn), omega(other.omega) {}
+		: Hex(std::move(other)), omega(other.omega) {}
 	InfHex& operator=(InfHex&& other) noexcept {
 		if (this != &other) {
 			Hex::operator=(std::move(other));
-			is_dyn = other.is_dyn;
 			omega = other.omega;
 		}
 		return *this;
 	}
 	virtual ~InfHex() = default;
 
-	bool is_dyn = false;
 	double omega = 0.0;
 	
 	double pole_x = 0.0, pole_y = 0.0, pole_z = 0.0;

@@ -1,7 +1,4 @@
 #include "Tri.h"
-#include "Data.h"
-
-#include <math.h>
 
 Eigen::MatrixXd Tri::C() {
 	Eigen::Matrix3d C;
@@ -50,6 +47,12 @@ Eigen::MatrixXd Tri::localC() {
 		for (int j = 0; j < 3; j++)
 			c(i, j) = (i == j) ? (std::abs(C().determinant() / 12)) : std::abs((C().determinant() / 24));
 	return c;
+}
+
+Eigen::MatrixXd Tri::localDamping() {
+	if (density <= 0.0) 
+		return Eigen::MatrixXd::Zero(3, 3);
+	return Data::damping * density * localC();
 }
 
 std::vector<double> Tri::localR(std::vector<double> value) {

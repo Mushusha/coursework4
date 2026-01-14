@@ -37,7 +37,9 @@ public:
 
 	virtual Eigen::MatrixXd localC() = 0; // agreed resultants
 	virtual std::vector <double> localR(std::vector<double> value) = 0;
+
 	virtual Eigen::MatrixXcd localM() = 0;
+	virtual Eigen::MatrixXd localDamping() = 0;
 
 	std::complex<double> Jac(double ksi, double eta, double zeta = 0);
 	virtual double gaussPoint(LocVar var, int i) = 0;

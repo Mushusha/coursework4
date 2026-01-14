@@ -26,13 +26,16 @@ public:
 private:
 	Eigen::SparseMatrix <std::complex<double>> M;
 	Eigen::VectorX <std::complex<double>> M_diagonal;
-	//Eigen::SparseMatrix <double> C;
+	Eigen::SparseMatrix <std::complex<double>> Damp;
+	Eigen::VectorX <std::complex<double>> Damp_diagonal;
 	Eigen::VectorX <std::complex<double>> V;
 	Eigen::VectorX <std::complex<double>> A;
 
 	void fillGlobalM();
 	void updateM();
-	// void fillGlobalC();
+	
+	void fillGlobalDamping();
+	void updateDamping();
 
 	std::string filename;
 

@@ -59,6 +59,7 @@ public:
     Eigen::MatrixXcd gradFF(double ksi, double eta, double zeta) override;
     Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
     Eigen::MatrixXcd localK() override;
+    Eigen::MatrixXd localDamping() override;
 
     double gaussPoint(LocVar var, int i) override;
     double weight(LocVar var, int i) override;
@@ -136,6 +137,9 @@ double SpectralInfHex<NODES>::ddecay_function(int k, double ksi) const {
 template<int NODES>
 std::complex<double> SpectralInfHex<NODES>::dynamic_multiplier(
     double ksi, double eta, double zeta) const {
+    return std::complex<double>(1.0, 0.0);
+    
+    /*
     if (!is_dynamic || omega <= 0.0) {
         return std::complex<double>(1.0, 0.0);
     }
@@ -160,17 +164,18 @@ std::complex<double> SpectralInfHex<NODES>::dynamic_multiplier(
     if (A_len < 1e-10) A_len = 1.0;
     
     double one_minus_ksi = 1.0 - ksi;
-    std::complex<double> i(0.0, 1.0);
     double decay_factor = std::sqrt(2.0 / one_minus_ksi);
-    std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
-    std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
     
-    return decay_factor * phase1 * phase2;
+    return std::complex<double>(decay_factor, 0.0);
+    */
 }
 
 template<int NODES>
 std::complex<double> SpectralInfHex<NODES>::ddynamic_multiplier_dksi(
     double ksi, double eta, double zeta) const {
+    return std::complex<double>(0.0, 0.0);
+    
+    /* 
     if (!is_dynamic || omega <= 0.0) {
         return std::complex<double>(0.0, 0.0);
     }
@@ -195,16 +200,60 @@ std::complex<double> SpectralInfHex<NODES>::ddynamic_multiplier_dksi(
     if (A_len < 1e-10) A_len = 1.0;
     
     double one_minus_ksi = 1.0 - ksi;
-    std::complex<double> i(0.0, 1.0);
     
     double decay_factor = std::sqrt(2.0 / one_minus_ksi);
     double ddecay_factor = 0.5 * std::sqrt(2.0) * std::pow(one_minus_ksi, -1.5);
     
-    std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
-    std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
-    std::complex<double> dphase2 = phase2 * i * k_wave * A_len / 2.0;
-    
-    return ddecay_factor * phase1 * phase2 + decay_factor * phase1 * dphase2;
+    return std::complex<double>(ddecay_factor, 0.0);
+    */
+}
+
+template<int NODES>
+Eigen::MatrixXd SpectralInfHex<NODES>::localDamping() {
+    Eigen::MatrixXd Dmp = Eigen::MatrixXd::Zero(nNodes, nNodes);
+
+    if (!Data::is_dynamic || omega <= 0.0) return Dmp;
+
+    const double nu = this->Poisson;
+    const double E = this->Young;
+    const double rho = this->density;
+    if (rho <= 0.0) return Dmp;
+
+    const double lambda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu));
+    const double mu = E / (2.0 * (1.0 + nu));
+    const double c_p = std::sqrt((lambda + 2.0 * mu) / rho);
+    const double c_eff = rho * c_p;
+
+    const double ksi = -1.0;
+
+    for (int j = 0; j < NODES; ++j) {
+        const double eta = this->gll_x[j];
+        const double w_eta = this->gll_w[j];
+        for (int k = 0; k < NODES; ++k) {
+            const double zeta = this->gll_x[k];
+            const double w_zeta = this->gll_w[k];
+
+            Eigen::MatrixXcd Jm = this->J(ksi, eta, zeta);
+            Eigen::Vector3d dEta(Jm(0, 1).real(), Jm(1, 1).real(), Jm(2, 1).real());
+            Eigen::Vector3d dZeta(Jm(0, 2).real(), Jm(1, 2).real(), Jm(2, 2).real());
+            const double detJ_surf = dEta.cross(dZeta).norm();
+
+            auto Nvals = FF(ksi, eta, zeta);
+
+            const double w = w_eta * w_zeta * detJ_surf * c_eff;
+            for (int a = 0; a < nNodes; ++a) {
+                const double Na = Nvals[a].real();
+                if (Na == 0.0) continue;
+                for (int b = 0; b < nNodes; ++b) {
+                    const double Nb = Nvals[b].real();
+                    if (Nb == 0.0) continue;
+                    Dmp(a, b) += w * Na * Nb;
+                }
+            }
+        }
+    }
+
+    return Dmp;
 }
 
 template<int NODES>
@@ -305,7 +354,7 @@ Eigen::MatrixXcd SpectralInfHex<NODES>::localK() {
 
                 double detJ = std::abs(Jm.determinant());
 
-                Eigen::MatrixXcd BtDB = Bm.transpose() * this->D * Bm;
+                Eigen::MatrixXcd BtDB = Bm.adjoint() * this->D.template cast<std::complex<double>>() * Bm;
                 K += (w_ksi * w_eta * w_zeta) * BtDB * detJ;
             }
         }

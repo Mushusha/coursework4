@@ -5,10 +5,49 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cassert>
+#include <sstream>
+#include <iomanip>
+#include <limits>
 
 #include "Eigen/Core"
 #include "Element.h"
 #include "MathMV.h"
+#include "Data.h"
+
+namespace {
+    inline std::string format_k_matrix_stats(const Eigen::MatrixXcd& K, int elem_id, const char* elem_name) {
+        const int rows = static_cast<int>(K.rows());
+        const int cols = static_cast<int>(K.cols());
+        const int total = rows * cols;
+
+        int non_zero = 0;
+        double max_abs = 0.0;
+        double min_abs = std::numeric_limits<double>::infinity();
+        double sum_abs = 0.0;
+
+        for (int r = 0; r < rows; ++r) {
+            for (int c = 0; c < cols; ++c) {
+                const double a = std::abs(K(r, c));
+                if (a != 0.0) ++non_zero;
+                if (a > max_abs) max_abs = a;
+                if (a < min_abs) min_abs = a;
+                sum_abs += a;
+            }
+        }
+        if (!std::isfinite(min_abs)) min_abs = 0.0;
+
+        std::ostringstream oss;
+        oss.setf(std::ios::fixed);
+        oss << std::setprecision(6);
+        oss << elem_name << " element ID=" << elem_id
+            << " K matrix: size=" << rows << "x" << cols
+            << ", non_zero=" << non_zero
+            << ", max_abs=" << max_abs
+            << ", min_abs=" << min_abs
+            << ", avg_abs=" << (total > 0 ? (sum_abs / static_cast<double>(total)) : 0.0);
+        return oss.str();
+    }
+}
 
 template <int NODES>
 class SpectralQuad : public Element {
@@ -16,21 +55,21 @@ class SpectralQuad : public Element {
 
 public:
     SpectralQuad() : Element() {
-        init_gll(); 
+        init_gll();
     }
     SpectralQuad(int id, ElemType type, std::vector<int> nodes)
         : Element(id, type, nodes) {
         init_gll();
     }
     SpectralQuad(const SpectralQuad& other) : Element(other) {
-        init_gll(); 
+        init_gll();
     }
     SpectralQuad& operator=(const SpectralQuad& other) {
         if (this != &other) Element::operator=(other);
         return *this;
     }
     SpectralQuad(SpectralQuad&& other) noexcept : Element(std::move(other)) {
-        init_gll(); 
+        init_gll();
     }
     SpectralQuad& operator=(SpectralQuad&& other) noexcept {
         if (this != &other) Element::operator=(std::move(other));
@@ -49,6 +88,7 @@ public:
     Eigen::MatrixXd localC() override;
     std::vector<double> localR(std::vector<double> value) override;
     Eigen::MatrixXcd localM() override;
+    Eigen::MatrixXd localDamping() override;
 
     std::vector<int> edge_to_node(int edge) override;
 
@@ -64,7 +104,7 @@ public:
 
 protected:
     void set_pressure(int edge, double value) override;
-    
+
     std::vector<double> gll_x;
     std::vector<double> gll_w;
 
@@ -82,7 +122,7 @@ private:
 
 template<int NODES>
 void SpectralQuad<NODES>::init_gll() {
-    if (gll_x.empty() || gll_w.empty()) 
+    if (gll_x.empty() || gll_w.empty())
         compute_gll_nodes_weights(NODES - 1, gll_x, gll_w);
 }
 
@@ -100,13 +140,13 @@ template<int NODES>
 double SpectralQuad<NODES>::dlagrange1D(int i, double x) const {
     double sum = 0.0;
     for (int m = 0; m < NODES; ++m) {
-        if (m == i) 
+        if (m == i)
             continue;
 
         double prod = 1.0 / (gll_x[i] - gll_x[m]);
 
         for (int k = 0; k < NODES; ++k) {
-            if (k == i || k == m) 
+            if (k == i || k == m)
                 continue;
 
             prod *= (x - gll_x[k]) / (gll_x[i] - gll_x[k]);
@@ -188,22 +228,23 @@ template<int NODES>
 Eigen::MatrixXcd SpectralQuad<NODES>::localK() {
     Eigen::MatrixXcd K = Eigen::MatrixXcd::Zero(2 * nNodes, 2 * nNodes);
 
-	for (int j = 0; j < NODES; ++j) {
-		for (int i = 0; i < NODES; ++i) {
-			int node_idx = i + j * NODES;
-			double ksi = gaussPoint(KSI, node_idx);
-			double eta = gaussPoint(ETA, node_idx);
-			double w_ksi = weight(KSI, node_idx);
-			double w_eta = weight(ETA, node_idx);
+    for (int j = 0; j < NODES; ++j) {
+        for (int i = 0; i < NODES; ++i) {
+            int node_idx = i + j * NODES;
+            double ksi = gaussPoint(KSI, node_idx);
+            double eta = gaussPoint(ETA, node_idx);
+            double w_ksi = weight(KSI, node_idx);
+            double w_eta = weight(ETA, node_idx);
 
-			Eigen::MatrixXcd Bm = B(ksi, eta);
-			Eigen::MatrixXcd Jm = J(ksi, eta);
+            Eigen::MatrixXcd Bm = B(ksi, eta);
+            Eigen::MatrixXcd Jm = J(ksi, eta);
 
-			double detJ = std::abs(Jm.determinant());
+            double detJ = std::abs(Jm.determinant());
 
             K += (w_ksi * w_eta) * (Bm.adjoint() * D.template cast<std::complex<double>>() * Bm * detJ);
         }
     }
+
     return K;
 }
 
@@ -297,6 +338,13 @@ Eigen::MatrixXd SpectralQuad<NODES>::localC() {
 }
 
 template<int NODES>
+Eigen::MatrixXd SpectralQuad<NODES>::localDamping() {
+    if (density <= 0.0)
+        return Eigen::MatrixXd::Zero(nNodes, nNodes);
+    return Data::damping * density * localC();
+}
+
+template<int NODES>
 std::vector<double> SpectralQuad<NODES>::localR(std::vector<double> value) {
 
     std::vector<double> R(nNodes, 0.0);
@@ -321,7 +369,7 @@ std::vector<double> SpectralQuad<NODES>::localR(std::vector<double> value) {
 
 template<int NODES>
 Eigen::MatrixXcd SpectralQuad<NODES>::localM() {
-    if (density == 0.0) 
+    if (density == 0.0)
         throw std::runtime_error("Error: density is zero in element " + std::to_string(id));
 
     Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(2 * nNodes, 2 * nNodes);

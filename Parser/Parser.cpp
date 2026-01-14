@@ -334,8 +334,8 @@ void settings::read(json block) {
 		this->max_time = block["dynamics"]["max_time"];
 		this->max_iter = block["dynamics"]["max_steps_count"];
 		this->iter_res_output = block["dynamics"]["result_output_iter"];
-		if (block.contains("damping"))
-			this->d = block["damping"]["mass_matrix"];
+		if (block["dynamics"].contains("damping"))
+			this->d = block["dynamics"]["damping"]["mass_matrix"];
 	}
 
 	this->omega = 10.0;

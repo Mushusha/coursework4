@@ -1,6 +1,5 @@
 #include "Wedge.h"
 
-
 std::vector<std::complex<double>> Wedge::FF(double ksi, double eta, double zeta) {
 	std::vector<std::complex<double>> FF;
 	FF.resize(6);
@@ -127,6 +126,12 @@ Eigen::MatrixXd Wedge::localC() {
 					FF(ksi, eta, zeta)[j].real() * std::abs(J(ksi, eta, zeta).determinant());
 			}
 	return c;
+}
+
+Eigen::MatrixXd Wedge::localDamping() {
+	if (density <= 0.0) 
+		return Eigen::MatrixXd::Zero(6, 6);
+	return Data::damping * density * localC();
 }
 
 std::vector<double> Wedge::localR(std::vector<double> value) {

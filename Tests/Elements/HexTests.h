@@ -78,7 +78,6 @@ protected:
         inf_hex->set_coords(x_coords, y_coords, z_coords);
 
         inf_hex->set_constants(210e9, 0.3, 7850.0);
-        inf_hex->is_dyn = false;
         inf_hex->omega = 100.0;
     }
 

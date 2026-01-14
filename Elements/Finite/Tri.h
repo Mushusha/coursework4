@@ -5,6 +5,7 @@
 #include "Eigen/Core"
 
 #include "Element.h"
+#include "Data.h"
 
 
 class Tri : public Element {
@@ -37,6 +38,7 @@ public:
 	Eigen::MatrixXd localC() override;
 	std::vector <double> localR(std::vector<double> value) override;
 	Eigen::MatrixXcd localM() override;
+	Eigen::MatrixXd localDamping() override;
 
 	std::vector<int> edge_to_node(int edge) final;
 

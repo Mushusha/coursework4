@@ -9,6 +9,7 @@
 #include "Eigen/Core"
 #include "Element.h"
 #include "MathMV.h"
+#include "Data.h"
 
 template <int NODES>
 class SpectralHex : public Element {
@@ -48,6 +49,7 @@ public:
 	Eigen::MatrixXd localC() override;
 	std::vector<double> localR(std::vector<double> value) override;
 	Eigen::MatrixXcd localM() override;
+	Eigen::MatrixXd localDamping() override;
 
 	std::vector<int> edge_to_node(int edge) override;
 
@@ -351,6 +353,13 @@ Eigen::MatrixXd SpectralHex<NODES>::localC() {
 		}
 	}
 	return C;
+}
+
+template<int NODES>
+Eigen::MatrixXd SpectralHex<NODES>::localDamping() {
+	if (density <= 0.0) 
+		return Eigen::MatrixXd::Zero(nNodes, nNodes);
+	return Data::damping * density * localC();
 }
 
 template<int NODES>

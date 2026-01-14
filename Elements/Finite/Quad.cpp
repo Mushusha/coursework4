@@ -1,4 +1,5 @@
 #include "Quad.h"
+#include "Data.h"
 
 std::vector<std::complex<double>> Quad::FF(double ksi, double eta, double zeta) {
 	std::vector<std::complex<double>> FF;
@@ -63,6 +64,7 @@ Eigen::MatrixXcd Quad::localK() {
 
 		k += weight(KSI, gp) * weight(ETA, gp) * B(ksi, eta).transpose() * D * B(ksi, eta) * std::abs(J(ksi, eta).determinant());
 	}
+	
 	return k;
 }
 
@@ -92,6 +94,13 @@ Eigen::MatrixXd Quad::localC() {
 				c(i, j) += weight(KSI, gp) * weight(ETA, gp) * FF(ksi, eta)[i].real() * FF(ksi, eta)[j].real() * std::abs(J(ksi, eta).determinant());
 			}
 	return c;
+}
+
+Eigen::MatrixXd Quad::localDamping() {
+	if (density <= 0.0) 
+		return Eigen::MatrixXd::Zero(4, 4);
+	
+	return Data::damping * density * localC();
 }
 
 std::vector<double> Quad::localR(std::vector<double> value) {

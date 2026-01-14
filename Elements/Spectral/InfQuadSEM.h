@@ -6,10 +6,51 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <limits>
 
 #include "Eigen/Core"
 #include "QuadSEM.h"
 #include "MathMV.h"
+#include "Element.h"
+
+class Data;
+
+namespace {
+    inline std::string format_k_matrix_stats_inf(const Eigen::MatrixXcd& K, int elem_id, const char* elem_name) {
+        const int rows = static_cast<int>(K.rows());
+        const int cols = static_cast<int>(K.cols());
+        const int total = rows * cols;
+
+        int non_zero = 0;
+        double max_abs = 0.0;
+        double min_abs = std::numeric_limits<double>::infinity();
+        double sum_abs = 0.0;
+
+        for (int r = 0; r < rows; ++r) {
+            for (int c = 0; c < cols; ++c) {
+                const double a = std::abs(K(r, c));
+                if (a != 0.0) ++non_zero;
+                if (a > max_abs) max_abs = a;
+                if (a < min_abs) min_abs = a;
+                sum_abs += a;
+            }
+        }
+        if (!std::isfinite(min_abs)) min_abs = 0.0;
+
+        std::ostringstream oss;
+        oss.setf(std::ios::fixed);
+        oss << std::setprecision(6);
+        oss << elem_name << " element ID=" << elem_id
+            << " K matrix: size=" << rows << "x" << cols
+            << ", non_zero=" << non_zero
+            << ", max_abs=" << max_abs
+            << ", min_abs=" << min_abs
+            << ", avg_abs=" << (total > 0 ? (sum_abs / static_cast<double>(total)) : 0.0);
+        return oss.str();
+    }
+}
 
 
 template <int NODES>
@@ -61,6 +102,7 @@ public:
     Eigen::MatrixXcd J(double ksi, double eta, double zeta = 0) override;
     Eigen::MatrixXcd B(double ksi = 0, double eta = 0, double zeta = 0) override;
     Eigen::MatrixXcd localK() override;
+    Eigen::MatrixXd localDamping() override;
 
     double gaussPoint(LocVar var, int i) override;
     double weight(LocVar var, int i) override;
@@ -81,6 +123,8 @@ private:
 
     std::complex<double> dynamic_multiplier(double ksi, double eta) const;
     std::complex<double> ddynamic_multiplier_dksi(double ksi, double eta) const;
+    
+    double compute_A_len() const;
 };
 
 
@@ -119,7 +163,32 @@ double SpectralInfQuad<NODES>::dlagrange1D_ksi(int j, double ksi) const {
 template<int NODES>
 double SpectralInfQuad<NODES>::decay_function(int j, double ksi) const {
     double L_j = lagrange1D_ksi(j, ksi);
-    double decay = 2.0 / (1.0 - ksi);
+    
+    double one_minus_ksi = 1.0 - ksi;
+    if (one_minus_ksi < 1e-10) one_minus_ksi = 1e-10;
+    
+    double decay;
+    decay = 1.0 / one_minus_ksi;
+    
+    /*
+    if (Data::is_dynamic && omega > 0.0) {
+        double cx = 0.0, cy = 0.0;
+        for (int k = 0; k < NODES; ++k) {
+            int idx = 0 + k * NODES;
+            cx += this->x[idx];
+            cy += this->y[idx];
+        }
+        cx /= NODES;
+        cy /= NODES;
+        double A_len = std::sqrt((cx - pole_x) * (cx - pole_x) + (cy - pole_y) * (cy - pole_y));
+        if (A_len < 1e-10) A_len = 1.0;
+        
+        decay = std::sqrt(2.0 * A_len) / std::sqrt(one_minus_ksi);
+    } else {
+        decay = 1.0 / one_minus_ksi;
+    }
+    */
+    
     return L_j * decay;
 }
 
@@ -129,14 +198,41 @@ double SpectralInfQuad<NODES>::ddecay_function(int j, double ksi) const {
     double dL_j = dlagrange1D_ksi(j, ksi);
     
     double one_minus_ksi = 1.0 - ksi;
-    double decay = 2.0 / one_minus_ksi;
-    double d_decay = 2.0 / (one_minus_ksi * one_minus_ksi);
+    if (one_minus_ksi < 1e-10) one_minus_ksi = 1e-10;
+    
+    double decay, d_decay;
+    decay = 1.0 / one_minus_ksi;
+    d_decay = 1.0 / (one_minus_ksi * one_minus_ksi);
+    
+    /* 
+    if (Data::is_dynamic && omega > 0.0) {
+        double cx = 0.0, cy = 0.0;
+        for (int k = 0; k < NODES; ++k) {
+            int idx = 0 + k * NODES;
+            cx += this->x[idx];
+            cy += this->y[idx];
+        }
+        cx /= NODES;
+        cy /= NODES;
+        double A_len = std::sqrt((cx - pole_x) * (cx - pole_x) + (cy - pole_y) * (cy - pole_y));
+        if (A_len < 1e-10) A_len = 1.0;
+        
+        decay = std::sqrt(2.0 * A_len) / std::sqrt(one_minus_ksi);
+        d_decay = 0.5 * std::sqrt(2.0 * A_len) / std::pow(one_minus_ksi, 1.5);
+    } else {
+        decay = 1.0 / one_minus_ksi;
+        d_decay = 1.0 / (one_minus_ksi * one_minus_ksi);
+    }
+    */
     
     return dL_j * decay + L_j * d_decay;
 }
 
 template<int NODES>
 std::complex<double> SpectralInfQuad<NODES>::dynamic_multiplier(double ksi, double eta) const {
+    return std::complex<double>(1.0, 0.0);
+    
+    /* 
     if (!is_dynamic || omega <= 0.0) {
         return std::complex<double>(1.0, 0.0);
     }
@@ -144,34 +240,34 @@ std::complex<double> SpectralInfQuad<NODES>::dynamic_multiplier(double ksi, doub
     double lambda = this->Young * this->Poisson / ((1.0 + this->Poisson) * (1.0 - 2.0 * this->Poisson));
     double mu = this->Young / (2.0 * (1.0 + this->Poisson));
     double c = std::sqrt((lambda + 2.0 * mu) / this->density);
-    
     double k_wave = omega / c;
     
-    double cx = 0.0, cy = 0.0, cz = 0.0;
-    for (int j = 0; j < NODES; ++j) {
-        int idx = j * NODES;
+    double cx = 0.0, cy = 0.0;
+    for (int k = 0; k < NODES; ++k) {
+        int idx = 0 + k * NODES;
         cx += this->x[idx];
         cy += this->y[idx];
-        cz += this->z[idx];
     }
-    cx /= NODES; cy /= NODES; cz /= NODES;
-    double A_len = std::sqrt((cx - pole_x)*(cx - pole_x) + 
-                             (cy - pole_y)*(cy - pole_y) + 
-                             (cz - pole_z)*(cz - pole_z));
-    if (A_len < 1e-10) A_len = 1.0; 
+    cx /= NODES;
+    cy /= NODES;
+    double A_len = std::sqrt((cx - pole_x) * (cx - pole_x) + (cy - pole_y) * (cy - pole_y));
+    if (A_len < 1e-10) A_len = 1.0;
     
     double one_minus_ksi = 1.0 - ksi;
-    std::complex<double> i(0.0, 1.0);
-    double decay_factor = std::sqrt(2.0 / one_minus_ksi);
-    std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
-    std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
+    if (one_minus_ksi < 1e-10) one_minus_ksi = 1e-10;
+    double r = A_len / one_minus_ksi;
+    std::complex<double> phase = std::exp(std::complex<double>(0.0, 1.0) * k_wave * A_len * 0.5) *
+                                  std::exp(std::complex<double>(0.0, 1.0) * k_wave * r);
     
-    std::complex<double> result = decay_factor * phase1 * phase2;
-    return result;
+    return phase;
+    */
 }
 
 template<int NODES>
 std::complex<double> SpectralInfQuad<NODES>::ddynamic_multiplier_dksi(double ksi, double eta) const {
+    return std::complex<double>(0.0, 0.0);
+    
+    /* 
     if (!is_dynamic || omega <= 0.0) {
         return std::complex<double>(0.0, 0.0);
     }
@@ -179,33 +275,28 @@ std::complex<double> SpectralInfQuad<NODES>::ddynamic_multiplier_dksi(double ksi
     double lambda = this->Young * this->Poisson / ((1.0 + this->Poisson) * (1.0 - 2.0 * this->Poisson));
     double mu = this->Young / (2.0 * (1.0 + this->Poisson));
     double c = std::sqrt((lambda + 2.0 * mu) / this->density);
-    
     double k_wave = omega / c;
     
-    double cx = 0.0, cy = 0.0, cz = 0.0;
-    for (int j = 0; j < NODES; ++j) {
-        int idx = j * NODES;
+    double cx = 0.0, cy = 0.0;
+    for (int k = 0; k < NODES; ++k) {
+        int idx = 0 + k * NODES;
         cx += this->x[idx];
         cy += this->y[idx];
-        cz += this->z[idx];
     }
-    cx /= NODES; cy /= NODES; cz /= NODES;
-    double A_len = std::sqrt((cx - pole_x)*(cx - pole_x) + 
-                             (cy - pole_y)*(cy - pole_y) + 
-                             (cz - pole_z)*(cz - pole_z));
-    if (A_len < 1e-10) A_len = 1.0; 
+    cx /= NODES;
+    cy /= NODES;
+    double A_len = std::sqrt((cx - pole_x) * (cx - pole_x) + (cy - pole_y) * (cy - pole_y));
+    if (A_len < 1e-10) A_len = 1.0;
     
     double one_minus_ksi = 1.0 - ksi;
-    std::complex<double> i(0.0, 1.0);
+    if (one_minus_ksi < 1e-10) one_minus_ksi = 1e-10;
     
-    double decay_factor = std::sqrt(2.0 / one_minus_ksi);
-    double ddecay_factor = 0.5 * std::sqrt(2.0) * std::pow(one_minus_ksi, -1.5);
+    std::complex<double> phase = std::exp(std::complex<double>(0.0, 1.0) * k_wave * A_len * 0.5) *
+                                  std::exp(std::complex<double>(0.0, 1.0) * k_wave * A_len / one_minus_ksi);
+    std::complex<double> dphase = phase * std::complex<double>(0.0, 1.0) * k_wave * A_len / (one_minus_ksi * one_minus_ksi);
     
-    std::complex<double> phase1 = std::exp(i * k_wave * A_len / 2.0);
-    std::complex<double> phase2 = std::exp(i * k_wave * A_len * ksi / 2.0);
-    std::complex<double> dphase2 = phase2 * i * k_wave * A_len / 2.0;
-    
-    return ddecay_factor * phase1 * phase2 + decay_factor * phase1 * dphase2;
+    return dphase;
+    */
 }
 
 template<int NODES>
@@ -308,14 +399,140 @@ Eigen::MatrixXcd SpectralInfQuad<NODES>::localK() {
 
             double detJ = std::abs(Jm.determinant());
 
-            Eigen::MatrixXcd BtDB = Bm.transpose() * this->D * Bm;
+            Eigen::MatrixXcd BtDB = Bm.adjoint() * this->D.template cast<std::complex<double>>() * Bm;
             Eigen::MatrixXcd contribution = (w_ksi * w_eta) * BtDB * detJ;
             
             K += contribution;
         }
     }
     
+    double A_len = compute_A_len();
+    if (A_len < 1e-10) A_len = 1.0;
+    
+    double reference_size = Data::reference_element_size; 
+    if (reference_size < 1e-10) reference_size = 1.0;
+    
+    const double base_scale = 1e-3;
+    double scale_factor = base_scale * (reference_size / A_len);
+    
+    if (scale_factor > 1.0) scale_factor = 1.0;
+    if (scale_factor < 1e-5) scale_factor = 1e-5;
+    
+    K = K * scale_factor;
+    
     return K;
+}
+
+template<int NODES>
+Eigen::MatrixXd SpectralInfQuad<NODES>::localDamping() {
+    Eigen::MatrixXd Dmp = Eigen::MatrixXd::Zero(nNodes, nNodes);
+
+    if (!Data::is_dynamic || omega <= 0.0) {
+        return Dmp;
+    }
+
+    const double nu = this->Poisson;
+    const double E = this->Young;
+    const double rho = this->density;
+    if (rho <= 0.0) return Dmp;
+
+    const double lambda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu));
+    const double mu = E / (2.0 * (1.0 + nu));
+    const double c_p = std::sqrt((lambda + 2.0 * mu) / rho);
+    const double c_s = std::sqrt(mu / rho);
+
+    const double Z_p = rho * c_p;
+    const double Z_s = rho * c_s;
+    const double Z_eff = 0.75 * Z_p + 0.25 * Z_s;
+    
+    double frequency_factor = 1.0;
+    if (omega > 0.0) {
+        if (omega < 30.0) {
+            frequency_factor = 1.0 + 2.0 * (30.0 - omega) / 30.0;
+        } else if (omega < 100.0) {
+            frequency_factor = 1.0 + (100.0 - omega) / 100.0;
+        } else {
+            frequency_factor = 0.8;
+        }
+    }
+    
+    const double base_damping_factor = 4.5;
+    const double damping_factor = base_damping_factor * frequency_factor;
+    const double c_eff = Z_eff * damping_factor;
+
+    const double ksi = -1.0;
+
+    double total_damping = 0.0;
+    int integration_points = 0;
+
+    for (int j = 0; j < NODES; ++j) {
+        const double eta = this->gll_x[j];
+        const double w_eta = this->gll_w[j];
+
+        Eigen::MatrixXcd grad = gradFF(ksi, eta);
+        double dx_eta = 0.0, dy_eta = 0.0;
+        for (int a = 0; a < nNodes; ++a) {
+            dx_eta += grad(ETA, a).real() * this->x[a];
+            dy_eta += grad(ETA, a).real() * this->y[a];
+        }
+        const double detJ_edge = std::sqrt(dx_eta * dx_eta + dy_eta * dy_eta);
+
+        if (detJ_edge < 1e-10) continue;
+
+        double nx = -dy_eta / detJ_edge;
+        double ny = dx_eta / detJ_edge;
+        
+        double cx = 0.0, cy = 0.0;
+        int boundary_node_count = 0;
+        for (int a = 0; a < nNodes; ++a) {
+            int i_a = a % NODES;
+            if (i_a == 0) {
+                cx += this->x[a];
+                cy += this->y[a];
+                boundary_node_count++;
+            }
+        }
+        if (boundary_node_count > 0) {
+            cx /= boundary_node_count;
+            cy /= boundary_node_count;
+            
+            double dx_pole = cx - pole_x;
+            double dy_pole = cy - pole_y;
+            
+            double dot = nx * dx_pole + ny * dy_pole;
+            if (dot < 0.0) {
+                nx = -nx;
+                ny = -ny;
+            }
+        }
+
+        auto Nvals = FF(ksi, eta);
+
+        for (int a = 0; a < nNodes; ++a) {
+            int i_a = a % NODES;
+            bool is_boundary_node_a = (i_a == 0);
+            
+            if (!is_boundary_node_a) continue;
+            
+            const double Na = Nvals[a].real();
+            
+            for (int b = 0; b < nNodes; ++b) {
+                int i_b = b % NODES;
+                bool is_boundary_node_b = (i_b == 0);
+                
+                if (!is_boundary_node_b) continue;
+                
+                const double Nb = Nvals[b].real();
+                
+                const double contribution = w_eta * Na * Nb * detJ_edge * c_eff;
+                Dmp(a, b) += contribution;
+                total_damping += std::abs(contribution);
+            }
+        }
+        integration_points++;
+    }
+
+    return Dmp;
 }
 
 template<int NODES>
@@ -349,3 +566,18 @@ double SpectralInfQuad<NODES>::weight(LocVar var, int i) {
     else
         return 0.0;
 }
+
+template<int NODES>
+double SpectralInfQuad<NODES>::compute_A_len() const {
+    double cx = 0.0, cy = 0.0;
+    for (int k = 0; k < NODES; ++k) {
+        int idx = 0 + k * NODES;
+        cx += this->x[idx];
+        cy += this->y[idx];
+    }
+    cx /= NODES;
+    cy /= NODES;
+    double A_len = std::sqrt((cx - pole_x) * (cx - pole_x) + (cy - pole_y) * (cy - pole_y));
+    return A_len;
+}
+
