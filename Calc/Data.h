@@ -77,7 +77,6 @@ private:
 	void create_D(std::shared_ptr <const Parser> parser);
 
 	void build_spectral_quad_element(std::shared_ptr<Element> elem);
-
 	bool is_quad_node_on_constrained_edge(int i, int j, int nodes_per_side,
 		const std::vector<bool>& edge_fully_constrained);
 	void apply_constraints_new_quad_nodes(
@@ -92,7 +91,7 @@ private:
 		double xi, double eta, double zeta, const std::vector<int>& original_nodes, 
 		const std::map<int, std::map<int, double>>& original_constraints);
 
-	void transfer_pressure_to_infinite_element(std::shared_ptr<const Parser> parser,
+	void transfer_bc_to_infinite_element(std::shared_ptr<const Parser> parser,
 		std::shared_ptr<Element> parent_elem, std::shared_ptr<Element> inf_elem,
 		int parent_elem_id, int parent_side);
 

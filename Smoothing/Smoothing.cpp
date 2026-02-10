@@ -40,16 +40,20 @@ void Smoothing::fillGlobalC() {
 	const int PARALLEL_THRESHOLD = 100;
 	
 	if (elems_count < PARALLEL_THRESHOLD) {
+		int avg_nodes_per_elem = elems_count > 0 ? calc_data.get_elem(0)->nodes_count() : 8;
+		tripl_vec.reserve(elems_count * avg_nodes_per_elem * avg_nodes_per_elem);
+		
 		for (int i = 0; i < elems_count; i++) {
 			auto elem = calc_data.get_elem(i);
 			Eigen::MatrixXd loc_c = elem->localC();
 			int elem_nodes = elem->nodes_count();
+			const auto& elem_nodes_vec = elem->get_node();
 			
 			for (int j = 0; j < elem_nodes; j++)
 				for (int k = 0; k < elem_nodes; k++) {
 					tripl_vec.push_back(Eigen::Triplet<double>(
-						elem->get_node(j) - 1, 
-						elem->get_node(k) - 1, 
+						elem_nodes_vec[j] - 1, 
+						elem_nodes_vec[k] - 1, 
 						loc_c(j, k)));
 				}
 		}
@@ -75,12 +79,13 @@ void Smoothing::fillGlobalC() {
 				auto elem = calc_data.get_elem(i);
 				Eigen::MatrixXd loc_c = elem->localC();
 				int elem_nodes = elem->nodes_count();
+				const auto& elem_nodes_vec = elem->get_node();
 				
 				for (int j = 0; j < elem_nodes; j++)
 					for (int k = 0; k < elem_nodes; k++) {
 						local_triplets.push_back(Eigen::Triplet<double>(
-							elem->get_node(j) - 1, 
-							elem->get_node(k) - 1, 
+							elem_nodes_vec[j] - 1, 
+							elem_nodes_vec[k] - 1, 
 							loc_c(j, k)));
 					}
 			}
@@ -105,13 +110,58 @@ void Smoothing::fillGlobalR(ResType type, int comp) {
 	int elems_count = calc_data.elements_count();
 
 	R.resize(nodes_count);
-	for (int i = 0; i < elems_count; i++) {
-		std::vector<double> value;
-		for (int j = 0; j < calc_data.get_elem(i)->nodes_count(); j++)
-			value.push_back(calc_data.get_elem(i)->results[j][type](comp).real());
-		std::vector<double> loc_r = calc_data.get_elem(i)->localR(value);
-		for (int j = 0; j < calc_data.get_elem(i)->nodes_count(); j++)
-			R.coeffRef(calc_data.get_elem(i)->get_node(j) - 1) += loc_r[j];
+	R.setZero();
+	
+	const int PARALLEL_THRESHOLD = 100;
+	if (elems_count >= PARALLEL_THRESHOLD) {
+		unsigned int num_threads = std::max(1u, std::thread::hardware_concurrency());
+		std::vector<std::vector<std::pair<int, double>>> thread_local_R(num_threads);
+		
+		std::vector<unsigned int> chunk_indices(num_threads);
+		std::iota(chunk_indices.begin(), chunk_indices.end(), 0);
+		int chunk_size = (elems_count + num_threads - 1) / num_threads;
+		
+		std::for_each(std::execution::par, chunk_indices.begin(), chunk_indices.end(), [&](unsigned int chunk_id) {
+			int start = chunk_id * chunk_size;
+			int end = std::min(start + chunk_size, elems_count);
+			
+			if (start >= end) return;
+			
+			auto& local_R = thread_local_R[chunk_id];
+			
+			for (int i = start; i < end; i++) {
+				auto elem = calc_data.get_elem(i);
+				int elem_nodes = elem->nodes_count();
+				std::vector<double> value;
+				value.reserve(elem_nodes);
+				for (int j = 0; j < elem_nodes; j++)
+					value.push_back(elem->results[j][type](comp).real());
+				std::vector<double> loc_r = elem->localR(value);
+				const auto& elem_nodes_vec = elem->get_node();
+				for (int j = 0; j < elem_nodes; j++)
+					local_R.emplace_back(elem_nodes_vec[j] - 1, loc_r[j]);
+			}
+		});
+		
+		for (auto& local_R : thread_local_R) {
+			for (auto& pair : local_R) {
+				R.coeffRef(pair.first) += pair.second;
+			}
+		}
+	}
+	else {
+		for (int i = 0; i < elems_count; i++) {
+			auto elem = calc_data.get_elem(i);
+			int elem_nodes = elem->nodes_count();
+			std::vector<double> value;
+			value.reserve(elem_nodes);
+			for (int j = 0; j < elem_nodes; j++)
+				value.push_back(elem->results[j][type](comp).real());
+			std::vector<double> loc_r = elem->localR(value);
+			const auto& elem_nodes_vec = elem->get_node();
+			for (int j = 0; j < elem_nodes; j++)
+				R.coeffRef(elem_nodes_vec[j] - 1) += loc_r[j];
+		}
 	}
 }
 
@@ -131,9 +181,13 @@ void Smoothing::solve() {
 			Eigen::MatrixXd Result;
 			Result = solver.solve(R);
 
-			for (int i = 0; i < calc_data.nodes_count(); i++) {
+			int nodes_count = calc_data.nodes_count();
+			std::vector<size_t> node_indices(nodes_count);
+			std::iota(node_indices.begin(), node_indices.end(), 0);
+			
+			std::for_each(std::execution::par, node_indices.begin(), node_indices.end(), [&](size_t i) {
 				calc_data.get_node(i)->set_result(Result(i), t);
-			}
+			});
 		}
 	}
 	log.print("End smoothing");

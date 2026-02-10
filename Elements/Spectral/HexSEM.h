@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <vector>
 #include <complex>
 #include <cmath>
@@ -245,7 +245,7 @@ std::vector<double> SpectralHex<NODES>::localF(double mult) {
 	if (load.empty()) return F;
 
 	for (auto const& l : load) {
-		int face = l.first.first;
+		const int face = l.first.first;
 		int comp = l.first.second;
 		double value = l.second;
 
@@ -261,55 +261,40 @@ std::vector<double> SpectralHex<NODES>::localF(double mult) {
 				double w_v = gll_w[j];
 
 				double ksi, eta, zeta;
-
+				// Порядок как в сетке: 0=zeta=-1, 1=eta=-1, 2=ksi=+1, 3=eta=+1, 4=ksi=-1, 5=zeta=+1
 				switch (face) {
-				case 0: ksi = u; eta = -1.0; zeta = v; break;
-				case 1: ksi = -1.0; eta = u; zeta = v; break;
+				case 0: ksi = u; eta = v; zeta = -1.0; break;
+				case 1: ksi = u; eta = -1.0; zeta = v; break;
 				case 2: ksi = 1.0; eta = u; zeta = v; break;
 				case 3: ksi = u; eta = 1.0; zeta = v; break;
-				case 4: ksi = u; eta = v; zeta = 1.0; break;
-				case 5: ksi = u; eta = v; zeta = -1.0; break;
+				case 4: ksi = -1.0; eta = u; zeta = v; break;
+				case 5: ksi = u; eta = v; zeta = 1.0; break;
+				default: ksi = u; eta = v; zeta = -1.0; break;
 				}
 
 				Eigen::MatrixXcd grad = gradFF(ksi, eta, zeta);
 				Eigen::Vector3d dX_du(0, 0, 0), dX_dv(0, 0, 0);
-
+				// 0,5 — zeta; 1,3 — eta; 2,4 — ksi
 				switch (face) {
-				case 0: case 3:
+				case 0: case 5:
 					for (int a = 0; a < nNodes; ++a) {
-						dX_du[0] += grad(0, a).real() * x[a];
-						dX_du[1] += grad(0, a).real() * y[a];
-						dX_du[2] += grad(0, a).real() * z[a];
-
-						dX_dv[0] += grad(2, a).real() * x[a];
-						dX_dv[1] += grad(2, a).real() * y[a];
-						dX_dv[2] += grad(2, a).real() * z[a];
+						dX_du[0] += grad(0, a).real() * x[a]; dX_du[1] += grad(0, a).real() * y[a]; dX_du[2] += grad(0, a).real() * z[a];
+						dX_dv[0] += grad(1, a).real() * x[a]; dX_dv[1] += grad(1, a).real() * y[a]; dX_dv[2] += grad(1, a).real() * z[a];
 					}
 					break;
-
-				case 5: case 4:
+				case 1: case 3:
 					for (int a = 0; a < nNodes; ++a) {
-						dX_du[0] += grad(0, a).real() * x[a];
-						dX_du[1] += grad(0, a).real() * y[a];
-						dX_du[2] += grad(0, a).real() * z[a];
-
-						dX_dv[0] += grad(1, a).real() * x[a];
-						dX_dv[1] += grad(1, a).real() * y[a];
-						dX_dv[2] += grad(1, a).real() * z[a];
+						dX_du[0] += grad(0, a).real() * x[a]; dX_du[1] += grad(0, a).real() * y[a]; dX_du[2] += grad(0, a).real() * z[a];
+						dX_dv[0] += grad(2, a).real() * x[a]; dX_dv[1] += grad(2, a).real() * y[a]; dX_dv[2] += grad(2, a).real() * z[a];
 					}
 					break;
-
-				case 2: case 1:
+				case 2: case 4:
 					for (int a = 0; a < nNodes; ++a) {
-						dX_du[0] += grad(1, a).real() * x[a];
-						dX_du[1] += grad(1, a).real() * y[a];
-						dX_du[2] += grad(1, a).real() * z[a];
-
-						dX_dv[0] += grad(2, a).real() * x[a];
-						dX_dv[1] += grad(2, a).real() * y[a];
-						dX_dv[2] += grad(2, a).real() * z[a];
+						dX_du[0] += grad(1, a).real() * x[a]; dX_du[1] += grad(1, a).real() * y[a]; dX_du[2] += grad(1, a).real() * z[a];
+						dX_dv[0] += grad(2, a).real() * x[a]; dX_dv[1] += grad(2, a).real() * y[a]; dX_dv[2] += grad(2, a).real() * z[a];
 					}
 					break;
+				default: break;
 				}
 
 				Eigen::Vector3d normal_vec = dX_du.cross(dX_dv);
@@ -425,53 +410,48 @@ Eigen::MatrixXcd SpectralHex<NODES>::localM() {
 template<int NODES>
 std::vector<int> SpectralHex<NODES>::edge_to_node(int face) {
 	std::vector<int> res;
-
+	// Порядок граней как в сетке (Gmsh/solver): 0=zeta=-1, 1=eta=-1, 2=ksi=+1, 3=eta=+1, 4=ksi=-1, 5=zeta=+1
+	// idx = i + j*NODES + k*NODES*NODES (i=ksi, j=eta, k=zeta)
 	switch (face) {
-	case 0:
-		for (int j = 0; j < NODES; ++j) {
-			for (int i = 0; i < NODES; ++i) {
-				int idx = i + j * NODES + (NODES - 1) * NODES * NODES;
-				res.push_back(idx);
+	case 0: // mesh 0 = zeta = -1, k = 0
+		for (int i = 0; i < NODES; ++i) {
+			for (int j = 0; j < NODES; ++j) {
+				res.push_back(i + j * NODES + 0 * NODES * NODES);
 			}
 		}
 		break;
-	case 1:
+	case 1: // mesh 1 = eta = -1, j = 0
+		for (int i = 0; i < NODES; ++i) {
+			for (int k = 0; k < NODES; ++k) {
+				res.push_back(i + 0 * NODES + k * NODES * NODES);
+			}
+		}
+		break;
+	case 2: // mesh 2 = ksi = +1, i = NODES-1
 		for (int k = 0; k < NODES; ++k) {
 			for (int j = 0; j < NODES; ++j) {
-				int idx = 0 + j * NODES + k * NODES * NODES;
-				res.push_back(idx);
+				res.push_back((NODES - 1) + j * NODES + k * NODES * NODES);
 			}
 		}
 		break;
-	case 2:
-		for (int k = 0; k < NODES; ++k) {
-			for (int j = 0; j < NODES; ++j) {
-				int idx = (NODES - 1) + j * NODES + k * NODES * NODES;
-				res.push_back(idx);
-			}
-		}
-		break;
-	case 3:
+	case 3: // mesh 3 = eta = +1, j = NODES-1
 		for (int k = 0; k < NODES; ++k) {
 			for (int i = 0; i < NODES; ++i) {
-				int idx = i + (NODES - 1) * NODES + k * NODES * NODES;
-				res.push_back(idx);
+				res.push_back(i + (NODES - 1) * NODES + k * NODES * NODES);
 			}
 		}
 		break;
-	case 4:
+	case 4: // mesh 4 = ksi = -1, i = 0
 		for (int k = 0; k < NODES; ++k) {
 			for (int j = 0; j < NODES; ++j) {
-				int idx = 0 + j * NODES + k * NODES * NODES;
-				res.push_back(idx);
+				res.push_back(0 + j * NODES + k * NODES * NODES);
 			}
 		}
 		break;
-	case 5:
-		for (int k = 0; k < NODES; ++k) {
-			for (int i = 0; i < NODES; ++i) {
-				int idx = i + 0 * NODES + k * NODES * NODES;
-				res.push_back(idx);
+	case 5: // mesh 5 = zeta = +1, k = NODES-1
+		for (int i = 0; i < NODES; ++i) {
+			for (int j = 0; j < NODES; ++j) {
+				res.push_back(i + j * NODES + (NODES - 1) * NODES * NODES);
 			}
 		}
 		break;

@@ -5,6 +5,7 @@
 #include <numeric>
 #include <vector>
 #include <thread>
+#include <unordered_set>
 
 #include "Eigen/Dense"
 #include "Eigen/Sparse"

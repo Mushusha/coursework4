@@ -63,16 +63,20 @@ void Solver::fillGlobalK() {
 	const int PARALLEL_THRESHOLD = 100;
 	
 	if (elems_count < PARALLEL_THRESHOLD) {
+		int avg_nodes_per_elem = elems_count > 0 ? calc_data.get_elem(0)->nodes_count() : 8;
+		tripl_vec.reserve(elems_count * avg_nodes_per_elem * avg_nodes_per_elem * dim * dim);
+		
 		for (int i = 0; i < elems_count; i++) {
 			auto elem = calc_data.get_elem(i);
 			Eigen::MatrixXcd loc_k = elem->localK();
 			int elem_nodes = elem->nodes_count();
+			const auto& elem_nodes_vec = elem->get_node();
 			
 			for (int j = 0; j < elem_nodes * dim; j++)
 				for (int k = 0; k < elem_nodes * dim; k++) {
 					tripl_vec.push_back(Eigen::Triplet<std::complex<double>>(
-						dim * (elem->get_node(j / dim) - 1) + j % dim,
-						dim * (elem->get_node(k / dim) - 1) + k % dim, 
+						dim * (elem_nodes_vec[j / dim] - 1) + j % dim,
+						dim * (elem_nodes_vec[k / dim] - 1) + k % dim, 
 						loc_k(j, k)));
 				}
 		}
@@ -98,19 +102,20 @@ void Solver::fillGlobalK() {
 			auto& local_triplets = chunk_triplets[chunk_id];
 			local_triplets.reserve((end - start) * triplets_per_elem);
 			
-			for (int i = start; i < end; i++) {
-				auto elem = calc_data.get_elem(i);
-				Eigen::MatrixXcd loc_k = elem->localK();
-				int elem_nodes = elem->nodes_count();
-				
-				for (int j = 0; j < elem_nodes * dim; j++)
-					for (int k = 0; k < elem_nodes * dim; k++) {
-						local_triplets.push_back(Eigen::Triplet<std::complex<double>>(
-							dim * (elem->get_node(j / dim) - 1) + j % dim,
-							dim * (elem->get_node(k / dim) - 1) + k % dim, 
-							loc_k(j, k)));
-					}
-			}
+		for (int i = start; i < end; i++) {
+			auto elem = calc_data.get_elem(i);
+			Eigen::MatrixXcd loc_k = elem->localK();
+			int elem_nodes = elem->nodes_count();
+			const auto& elem_nodes_vec = elem->get_node();
+			
+			for (int j = 0; j < elem_nodes * dim; j++)
+				for (int k = 0; k < elem_nodes * dim; k++) {
+					local_triplets.push_back(Eigen::Triplet<std::complex<double>>(
+						dim * (elem_nodes_vec[j / dim] - 1) + j % dim,
+						dim * (elem_nodes_vec[k / dim] - 1) + k % dim, 
+						loc_k(j, k)));
+				}
+		}
 		});
 		
 		size_t total_size = 0;
@@ -141,15 +146,53 @@ void Solver::fillGlobalF(double mult) {
 	}
 	F.setZero();
 
-	for (int i = 0; i < elems_count; i++) {
-		auto elem = calc_data.get_elem(i);
-		std::vector<double> loc_f = elem->localF(mult);
-		if (loc_f.size() != 0) {
-			int elem_nodes = elem->nodes_count();
-			const auto& elem_nodes_vec = elem->get_node();
-			for (int j = 0; j < elem_nodes * dim; j++) {
-				int node_idx = elem_nodes_vec[j / dim] - 1;
-				F(dim * node_idx + j % dim) += loc_f[j];
+	const int PARALLEL_THRESHOLD = 100;
+	if (elems_count >= PARALLEL_THRESHOLD) {
+		unsigned int num_threads = std::max(1u, std::thread::hardware_concurrency());
+		std::vector<Eigen::VectorXcd> thread_local_F(num_threads, Eigen::VectorXcd::Zero(dim * nodes_count));
+		
+		std::vector<unsigned int> chunk_indices(num_threads);
+		std::iota(chunk_indices.begin(), chunk_indices.end(), 0);
+		int chunk_size = (elems_count + num_threads - 1) / num_threads;
+		
+		std::for_each(std::execution::par, chunk_indices.begin(), chunk_indices.end(), [&](unsigned int chunk_id) {
+			int start = chunk_id * chunk_size;
+			int end = std::min(start + chunk_size, elems_count);
+			
+			if (start >= end) return;
+			
+			auto& local_F = thread_local_F[chunk_id];
+			
+			for (int i = start; i < end; i++) {
+				auto elem = calc_data.get_elem(i);
+				std::vector<double> loc_f = elem->localF(mult);
+				if (loc_f.size() != 0) {
+					int elem_nodes = elem->nodes_count();
+					const auto& elem_nodes_vec = elem->get_node();
+					for (int j = 0; j < elem_nodes * dim; j++) {
+						int node_idx = elem_nodes_vec[j / dim] - 1;
+						local_F(dim * node_idx + j % dim) += loc_f[j];
+					}
+				}
+			}
+		});
+		
+		// Merge thread-local results
+		for (auto& local_F : thread_local_F) {
+			F += local_F;
+		}
+	}
+	else {
+		for (int i = 0; i < elems_count; i++) {
+			auto elem = calc_data.get_elem(i);
+			std::vector<double> loc_f = elem->localF(mult);
+			if (loc_f.size() != 0) {
+				int elem_nodes = elem->nodes_count();
+				const auto& elem_nodes_vec = elem->get_node();
+				for (int j = 0; j < elem_nodes * dim; j++) {
+					int node_idx = elem_nodes_vec[j / dim] - 1;
+					F(dim * node_idx + j % dim) += loc_f[j];
+				}
 			}
 		}
 	}
@@ -170,20 +213,50 @@ void Solver::fillConstraints() {
 	log.print("Start filling constraints");
 
 	int dim = calc_data.dim;
-
-	// c.first - comp, c.second - value 
-	for (int node = 0; node < calc_data.nodes_count(); node++)
-		for (auto const& c : calc_data.get_node(node)->constraints)
-			for (int i = 0; i < K.outerSize(); i++) {
-				for (Eigen::SparseMatrix<std::complex<double>>::InnerIterator it(K, i); it; ++it)
-					if (((it.row() == node * dim + c.first) ||
-						 (it.col() == node * dim + c.first)) && (it.row() != it.col())) {
-						it.valueRef() = 0.0;
-					}
-					else if (((it.row() == node * dim + c.first) ||
-							  (it.col() == node * dim + c.first)) && (it.row() == it.col()))
-						F(it.row()) = c.second * it.value();
+	int nodes_count = calc_data.nodes_count();
+	
+	std::vector<std::pair<int, double>> constrained_dofs;
+	constrained_dofs.reserve(nodes_count * dim);
+	
+	std::unordered_set<int> constrained_dof_set;
+	
+	for (int node = 0; node < nodes_count; node++) {
+		for (auto const& c : calc_data.get_node(node)->constraints) {
+			int dof = node * dim + c.first;
+			constrained_dofs.emplace_back(dof, c.second);
+			constrained_dof_set.insert(dof);
+		}
+	}
+	
+	if (constrained_dofs.empty()) {
+		log.print("End filling constraints (no constraints found)");
+		return;
+	}
+	
+	std::vector<int> col_indices(K.outerSize());
+	std::iota(col_indices.begin(), col_indices.end(), 0);
+	
+	std::for_each(std::execution::par, col_indices.begin(), col_indices.end(), [&](int col) {
+		for (Eigen::SparseMatrix<std::complex<double>>::InnerIterator it(K, col); it; ++it) {
+			int row = it.row();
+			int col_idx = it.col();
+			
+			if (row != col_idx && 
+				(constrained_dof_set.count(row) > 0 || constrained_dof_set.count(col_idx) > 0)) {
+				it.valueRef() = 0.0;
 			}
+		}
+	});
+	
+	std::for_each(std::execution::par, constrained_dofs.begin(), constrained_dofs.end(), [&](const auto& dof_pair) {
+		int dof = dof_pair.first;
+		double constraint_value = dof_pair.second;
+		
+		std::complex<double> diagonal_value = K.coeff(dof, dof);
+		
+		F(dof) = constraint_value * diagonal_value;
+	});
+	
 	log.print("End filling constraints");
 }
 
@@ -197,11 +270,17 @@ void Solver::addToGlobalF(int index, double value) {
 }
 
 void Solver::zeroDiagonalCheck() {
-	for (int i = 0; i < calc_data.nodes_count() * calc_data.dim; i++)
+	int total_dofs = calc_data.nodes_count() * calc_data.dim;
+	int dim = calc_data.dim;
+	
+	std::vector<size_t> dof_indices(total_dofs);
+	std::iota(dof_indices.begin(), dof_indices.end(), 0);
+	
+	std::for_each(std::execution::par, dof_indices.begin(), dof_indices.end(), [&](size_t i) {
 		if (K.coeffRef(i, i) == std::complex<double>(0, 0)) {
-			throw runtime_error("Zero on diagonal: node " + std::to_string(static_cast<int>(i / calc_data.dim + 1)) + " dof " + std::to_string(static_cast<int>(i % calc_data.dim)));
-			break;
+			throw runtime_error("Zero on diagonal: node " + std::to_string(static_cast<int>(i / dim + 1)) + " dof " + std::to_string(static_cast<int>(i % dim)));
 		}
+	});
 }
 
 void Solver::dispToElem() {
@@ -213,24 +292,34 @@ void Solver::dispToElem() {
 	
 	std::for_each(std::execution::par, elem_indices.begin(), elem_indices.end(), [&](size_t elem) {
 		auto el = calc_data.get_elem(elem);
-		el->results.resize(el->nodes_count());
-		el->displacements.resize(dim * el->nodes_count());
+		int elem_nodes = el->nodes_count();
+		el->results.resize(elem_nodes);
+		el->displacements.resize(dim * elem_nodes);
+		const auto& elem_nodes_vec = el->get_node();
 		
-		for (int node = 0; node < el->nodes_count(); node++) {
-			el->displacements[dim * node] = U(dim * (el->get_node(node) - 1)).real();
-			el->displacements[dim * node + 1] = U(dim * (el->get_node(node) - 1) + 1).real();
+		for (int node = 0; node < elem_nodes; node++) {
+			int global_node_idx = elem_nodes_vec[node] - 1;
+			int base_idx = dim * global_node_idx;
+			el->displacements[dim * node] = U(base_idx).real();
+			el->displacements[dim * node + 1] = U(base_idx + 1).real();
 			if (dim == 3)
-				el->displacements[dim * node + 2] = U(dim * (el->get_node(node) - 1) + 2).real();
+				el->displacements[dim * node + 2] = U(base_idx + 2).real();
 		}
 	});
 }
 
 void Solver::dispToNode() {
-	for (int node = 0; node < calc_data.nodes_count(); node++) {
+	int nodes_count = calc_data.nodes_count();
+	int dim = calc_data.dim;
+	
+	std::vector<size_t> node_indices(nodes_count);
+	std::iota(node_indices.begin(), node_indices.end(), 0);
+	
+	std::for_each(std::execution::par, node_indices.begin(), node_indices.end(), [&](size_t node) {
 		calc_data.get_node(node)->results[DISPLACEMENT].clear();
-		for (int i = 0; i < calc_data.dim; i++)
-			calc_data.get_node(node)->set_result(U(calc_data.dim * node + i).real(), DISPLACEMENT);
-	}
+		for (int i = 0; i < dim; i++)
+			calc_data.get_node(node)->set_result(U(dim * node + i).real(), DISPLACEMENT);
+	});
 }
 
 void Solver::calcStrain() {

@@ -1,4 +1,10 @@
-﻿#include "Data.h"
+#include "Data.h"
+#include <algorithm>
+#include <set>
+#include <tuple>
+#include <cmath>
+#include <cstdio>
+#include <iostream>
 
 bool Data::is_dynamic = false;
 double Data::reference_element_size = 1.0;
@@ -218,20 +224,49 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 	};
 
 	for (const auto& inf : parser->infinite) {
+		std::map<std::pair<int, int>, int> extruded_node_cache;
+
+		struct InfTask { int elem_id; std::shared_ptr<Element> parent_elem; int side_used; std::vector<int> boundary_glob_nodes; ElemType parent_type; };
+		std::vector<InfTask> tasks;
 		for (int i = 0; i < inf.size; i++) {
 			const int elem_id = inf.apply_to[2 * i];
 			const int side = inf.apply_to[2 * i + 1];
-			
 			auto parent_elem = this->elements[elem_id - 1];
 			ElemType parent_type = parent_elem->get_type();
+			std::vector<int> side_nodes = parent_elem->edge_to_node(side);
+			std::vector<int> bgn;
+			for (int ln : side_nodes) bgn.push_back(parent_elem->get_node(ln));
+			tasks.push_back({ elem_id, parent_elem, side, std::move(bgn), parent_type });
+		}
+
+		for (const InfTask& task : tasks) {
+			const int elem_id = task.elem_id;
+			auto parent_elem = task.parent_elem;
+			const int side_used = task.side_used;
+			std::vector<int> boundary_glob_nodes = task.boundary_glob_nodes;
+			ElemType parent_type = task.parent_type;
+
 			int parent_order = parent_elem->get_order();
 			int NODES = parent_order + 1;
 
-			std::vector<int> side_nodes = parent_elem->edge_to_node(side);
-			std::vector<int> boundary_glob_nodes;
-			for (int& local_node : side_nodes) {
-				boundary_glob_nodes.push_back(parent_elem->get_node(local_node));
+			bool skip_degenerate = false;
+			if (parent_type == HEXSEM && boundary_glob_nodes.size() >= 4) {
+				const double tol = 1e-12;
+				auto n0 = get_node_by_id(boundary_glob_nodes[0]);
+				double bx = n0->getX(), by = n0->getY(), bz = n0->getZ();
+				bool same_x = true, same_y = true, same_z = true;
+				for (size_t ii = 1; ii < boundary_glob_nodes.size(); ++ii) {
+					auto n = get_node_by_id(boundary_glob_nodes[ii]);
+					if (std::abs(n->getX() - bx) > tol) same_x = false;
+					if (std::abs(n->getY() - by) > tol) same_y = false;
+					if (std::abs(n->getZ() - bz) > tol) same_z = false;
+				}
+				if ((same_x && std::abs(bx - inf.point[0]) < tol) ||
+					(same_y && std::abs(by - inf.point[1]) < tol) ||
+					(same_z && std::abs(bz - inf.point[2]) < tol))
+					skip_degenerate = true;
 			}
+			if (skip_degenerate) continue;
 
 			std::vector<double> gr_x, gr_w;
 			compute_gauss_radau_nodes_weights(NODES, gr_x, gr_w);
@@ -239,12 +274,23 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 			std::vector<std::vector<int>> inf_layer_nodes(NODES);
 			inf_layer_nodes[0] = boundary_glob_nodes;
 
+			bool use_cache = !(parent_type == HEXSEM);
+
 			for (int k = 1; k < NODES; ++k) {
+				double t = (gr_x[k] + 1.0) / 2.0;
 				for (size_t n = 0; n < boundary_glob_nodes.size(); ++n) {
 					int boundary_node_id = boundary_glob_nodes[n];
+					auto key = std::make_pair(boundary_node_id, k);
+					if (use_cache) {
+						auto it = extruded_node_cache.find(key);
+						if (it != extruded_node_cache.end()) {
+							inf_layer_nodes[k].push_back(it->second);
+							continue;
+						}
+					}
+
 					auto boundary_node = get_node_by_id(boundary_node_id);
-					
-					double t = (gr_x[k] + 1.0) / 2.0;
+
 					std::array<double, 3> coords;
 					for (int j = 0; j < 3; j++) {
 						double x_boundary = boundary_node->getCoord(j);
@@ -258,22 +304,26 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 						max_node_id = std::max(max_node_id, node->getID());
 					}
 					int new_node_id = max_node_id + 1;
-					
+
 					this->nodes.push_back(std::make_shared<Node>(new_node_id, coords));
 					node_id_to_index[new_node_id] = static_cast<int>(nodes.size() - 1);
+					if (use_cache)
+						extruded_node_cache[key] = new_node_id;
 					inf_layer_nodes[k].push_back(new_node_id);
 				}
 			}
 
 			std::vector<int> inf_elem_nodes;
 			int num_nodes_per_layer = static_cast<int>(boundary_glob_nodes.size());
-			for (int j = 0; j < num_nodes_per_layer; ++j) {
-				for (int i = 0; i < NODES; ++i) {
-					if (i < static_cast<int>(inf_layer_nodes.size()) && 
-					    j < static_cast<int>(inf_layer_nodes[i].size())) {
+
+			if (parent_type == HEXSEM) {
+				for (int layer = 0; layer < NODES; ++layer)
+					for (int face_idx = 0; face_idx < NODES * NODES; ++face_idx)
+						inf_elem_nodes.push_back(inf_layer_nodes[layer][face_idx]);
+			} else {
+				for (int j = 0; j < num_nodes_per_layer; ++j)
+					for (int i = 0; i < NODES; ++i)
 						inf_elem_nodes.push_back(inf_layer_nodes[i][j]);
-					}
-				}
 			}
 
 			std::vector<double> x1, y1, z1;
@@ -288,17 +338,14 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 			
 			if (parent_type == QUADSEM || parent_type == HEXSEM) {
 				#define CREATE_SPECTRAL_INF_ELEM(ElemType, ElemTypeEnum, N) \
-					new_elem = std::make_shared<ElemType<N>>( \
-						ElemType<N>(this->elements.size() + 1, ElemTypeEnum, inf_elem_nodes)); \
-					new_elem->set_coords(x1, y1, z1); \
-					new_elem->set_order(parent_order); \
-					auto* elem_ptr = dynamic_cast<ElemType<N>*>(new_elem.get()); \
-					set_pole(elem_ptr, inf.point); \
-					if (is_dynamic) { \
-						auto* inf_elem = dynamic_cast<ElemType<N>*>(new_elem.get()); \
-						inf_elem->omega = omega; \
-						inf_elem->is_dynamic = true; \
-					}
+					do { \
+						new_elem = std::make_shared<ElemType<N>>(ElemType<N>(this->elements.size() + 1, ElemTypeEnum, inf_elem_nodes)); \
+						new_elem->set_coords(x1, y1, z1); \
+						new_elem->set_order(parent_order); \
+						auto* _ep = dynamic_cast<ElemType<N>*>(new_elem.get()); \
+						set_pole(_ep, inf.point); \
+						if (is_dynamic) { _ep->omega = omega; _ep->is_dynamic = true; } \
+					} while (0)
 
 				if (dim == 2) {
 					switch (NODES) {
@@ -374,7 +421,7 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 				}
 			}
 
-			transfer_pressure_to_infinite_element(parser, parent_elem, new_elem, elem_id, side);
+			transfer_bc_to_infinite_element(parser, parent_elem, new_elem, elem_id, side_used);
 
 			this->elements.push_back(new_elem);
 			num_inf_elems++;
@@ -382,7 +429,7 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 	}
 }
 
-void Data::transfer_pressure_to_infinite_element(std::shared_ptr<const Parser> parser,
+void Data::transfer_bc_to_infinite_element(std::shared_ptr<const Parser> parser,
 	std::shared_ptr<Element> parent_elem, std::shared_ptr<Element> inf_elem,
 	int parent_elem_id, int parent_side) {
 	
@@ -408,10 +455,6 @@ void Data::transfer_pressure_to_infinite_element(std::shared_ptr<const Parser> p
 		if (found_pressure) break;
 	}
 	
-	if (!found_pressure) {
-		return;
-	}
-	
 	int boundary_edge = -1;
 	if (this->dim == 2) {
 		boundary_edge = 3;
@@ -424,7 +467,16 @@ void Data::transfer_pressure_to_infinite_element(std::shared_ptr<const Parser> p
 	
 	const double tol = 1e-6;
 	
-	if (inf_elem->get_type() == INFQUADSEM || (inf_elem->get_type() == INFQUAD && parent_edge_nodes.size() > 2)) {
+	bool is_spectral_or_high_order = false;
+	if (this->dim == 2) {
+		is_spectral_or_high_order = (inf_elem->get_type() == INFQUADSEM || 
+			(inf_elem->get_type() == INFQUAD && parent_edge_nodes.size() > 2));
+	} else {
+		is_spectral_or_high_order = (inf_elem->get_type() == INFHEXSEM || 
+			(inf_elem->get_type() == INFHEX && parent_edge_nodes.size() > 4));
+	}
+	
+	if (is_spectral_or_high_order) {
 		inf_edge_nodes.clear();
 		for (size_t i = 0; i < parent_edge_nodes.size(); i++) {
 			double px = parent_elem->get_coord(parent_edge_nodes[i], 0);
@@ -452,10 +504,36 @@ void Data::transfer_pressure_to_infinite_element(std::shared_ptr<const Parser> p
 		inf_edge_nodes = inf_elem->edge_to_node(boundary_edge);
 	}
 	
-	parent_elem->remove_load_on_edge(parent_side);
+	if (found_pressure) {
+		parent_elem->remove_load_on_edge(parent_side);
+		
+		if (boundary_edge >= 0) {
+			inf_elem->set_load(pressure_type, boundary_edge, {pressure_value, 0.0, 0.0, 0.0, 0.0, 0.0});
+		}
+	}
 	
-	if (boundary_edge >= 0) {
-		inf_elem->set_load(pressure_type, boundary_edge, {pressure_value, 0.0, 0.0, 0.0, 0.0, 0.0});
+	for (size_t i = 0; i < parent_edge_nodes.size() && i < inf_edge_nodes.size(); i++) {
+		int parent_node_id = parent_elem->get_node(parent_edge_nodes[i]);
+		int inf_node_local = inf_edge_nodes[i];
+		int inf_node_id = inf_elem->get_node(inf_node_local);
+		
+		if (parent_node_id == inf_node_id) {
+			continue;
+		}
+		
+		auto parent_node_it = std::find_if(nodes.begin(), nodes.end(),
+			[parent_node_id](const std::shared_ptr<Node>& n) { return n->getID() == parent_node_id; });
+		auto inf_node_it = std::find_if(nodes.begin(), nodes.end(),
+			[inf_node_id](const std::shared_ptr<Node>& n) { return n->getID() == inf_node_id; });
+		
+		if (parent_node_it != nodes.end() && inf_node_it != nodes.end()) {
+			auto& parent_node = *parent_node_it;
+			auto& inf_node = *inf_node_it;
+			
+			for (const auto& constraint : parent_node->constraints) {
+				inf_node->set_constraints(constraint.first, constraint.second);
+			}
+		}
 	}
 }
 
