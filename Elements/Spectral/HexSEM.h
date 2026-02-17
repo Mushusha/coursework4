@@ -261,7 +261,7 @@ std::vector<double> SpectralHex<NODES>::localF(double mult) {
 				double w_v = gll_w[j];
 
 				double ksi, eta, zeta;
-				// Порядок как в сетке: 0=zeta=-1, 1=eta=-1, 2=ksi=+1, 3=eta=+1, 4=ksi=-1, 5=zeta=+1
+
 				switch (face) {
 				case 0: ksi = u; eta = v; zeta = -1.0; break;
 				case 1: ksi = u; eta = -1.0; zeta = v; break;
@@ -274,7 +274,7 @@ std::vector<double> SpectralHex<NODES>::localF(double mult) {
 
 				Eigen::MatrixXcd grad = gradFF(ksi, eta, zeta);
 				Eigen::Vector3d dX_du(0, 0, 0), dX_dv(0, 0, 0);
-				// 0,5 — zeta; 1,3 — eta; 2,4 — ksi
+
 				switch (face) {
 				case 0: case 5:
 					for (int a = 0; a < nNodes; ++a) {
@@ -410,45 +410,44 @@ Eigen::MatrixXcd SpectralHex<NODES>::localM() {
 template<int NODES>
 std::vector<int> SpectralHex<NODES>::edge_to_node(int face) {
 	std::vector<int> res;
-	// Порядок граней как в сетке (Gmsh/solver): 0=zeta=-1, 1=eta=-1, 2=ksi=+1, 3=eta=+1, 4=ksi=-1, 5=zeta=+1
-	// idx = i + j*NODES + k*NODES*NODES (i=ksi, j=eta, k=zeta)
+
 	switch (face) {
-	case 0: // mesh 0 = zeta = -1, k = 0
+	case 0:
 		for (int i = 0; i < NODES; ++i) {
 			for (int j = 0; j < NODES; ++j) {
 				res.push_back(i + j * NODES + 0 * NODES * NODES);
 			}
 		}
 		break;
-	case 1: // mesh 1 = eta = -1, j = 0
+	case 1:
 		for (int i = 0; i < NODES; ++i) {
 			for (int k = 0; k < NODES; ++k) {
 				res.push_back(i + 0 * NODES + k * NODES * NODES);
 			}
 		}
 		break;
-	case 2: // mesh 2 = ksi = +1, i = NODES-1
+	case 2:
 		for (int k = 0; k < NODES; ++k) {
 			for (int j = 0; j < NODES; ++j) {
 				res.push_back((NODES - 1) + j * NODES + k * NODES * NODES);
 			}
 		}
 		break;
-	case 3: // mesh 3 = eta = +1, j = NODES-1
+	case 3:
 		for (int k = 0; k < NODES; ++k) {
 			for (int i = 0; i < NODES; ++i) {
 				res.push_back(i + (NODES - 1) * NODES + k * NODES * NODES);
 			}
 		}
 		break;
-	case 4: // mesh 4 = ksi = -1, i = 0
+	case 4:
 		for (int k = 0; k < NODES; ++k) {
 			for (int j = 0; j < NODES; ++j) {
 				res.push_back(0 + j * NODES + k * NODES * NODES);
 			}
 		}
 		break;
-	case 5: // mesh 5 = zeta = +1, k = NODES-1
+	case 5:
 		for (int i = 0; i < NODES; ++i) {
 			for (int j = 0; j < NODES; ++j) {
 				res.push_back(i + j * NODES + (NODES - 1) * NODES * NODES);

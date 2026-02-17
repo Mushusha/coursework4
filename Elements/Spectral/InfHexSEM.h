@@ -80,6 +80,8 @@ private:
 
     std::complex<double> dynamic_multiplier(double ksi, double eta, double zeta) const;
     std::complex<double> ddynamic_multiplier_dksi(double ksi, double eta, double zeta) const;
+
+    double compute_A_len() const;
 };
 
 
@@ -118,7 +120,9 @@ double SpectralInfHex<NODES>::dlagrange1D_ksi(int k, double ksi) const {
 template<int NODES>
 double SpectralInfHex<NODES>::decay_function(int k, double ksi) const {
     double L_k = lagrange1D_ksi(k, ksi);
-    double decay = 2.0 / (1.0 - ksi);
+    double one_minus_ksi = 1.0 - ksi;
+    if (one_minus_ksi < 1e-10) one_minus_ksi = 1e-10;
+    double decay = 1.0 / one_minus_ksi;
     return L_k * decay;
 }
 
@@ -128,6 +132,7 @@ double SpectralInfHex<NODES>::ddecay_function(int k, double ksi) const {
     double dL_k = dlagrange1D_ksi(k, ksi);
 
     double one_minus_ksi = 1.0 - ksi;
+    if (one_minus_ksi < 1e-10) one_minus_ksi = 1e-10;
     double decay = 2.0 / one_minus_ksi;
     double d_decay = 2.0 / (one_minus_ksi * one_minus_ksi);
 
@@ -137,75 +142,60 @@ double SpectralInfHex<NODES>::ddecay_function(int k, double ksi) const {
 template<int NODES>
 std::complex<double> SpectralInfHex<NODES>::dynamic_multiplier(
     double ksi, double eta, double zeta) const {
-    return std::complex<double>(1.0, 0.0);
-    
-    /*
-    if (!is_dynamic || omega <= 0.0) {
+    (void)eta; (void)zeta;
+    if (!is_dynamic || omega <= 0.0)
         return std::complex<double>(1.0, 0.0);
-    }
 
-    double lambda = this->Young * this->Poisson / ((1.0 + this->Poisson) * (1.0 - 2.0 * this->Poisson));
-    double mu = this->Young / (2.0 * (1.0 + this->Poisson));
-    double c = std::sqrt((lambda + 2.0 * mu) / this->density);
-    
-    double k_wave = omega / c;
-    
-    double cx = 0.0, cy = 0.0, cz = 0.0;
-    int face_nodes = NODES * NODES;
-    for (int i = 0; i < face_nodes; ++i) {
-        cx += this->x[i];
-        cy += this->y[i];
-        cz += this->z[i];
-    }
-    cx /= face_nodes; cy /= face_nodes; cz /= face_nodes;
-    double A_len = std::sqrt((cx - pole_x)*(cx - pole_x) + 
-                             (cy - pole_y)*(cy - pole_y) + 
-                             (cz - pole_z)*(cz - pole_z));
-    if (A_len < 1e-10) A_len = 1.0;
-    
+    const double nu = this->Poisson;
+    const double E = this->Young;
+    const double rho = this->density;
+    if (rho <= 0.0) return std::complex<double>(1.0, 0.0);
+
+    const double lambda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu));
+    const double mu = E / (2.0 * (1.0 + nu));
+    const double c_p = std::sqrt((lambda + 2.0 * mu) / rho);
+
+    const double pi = 3.14159265358979323846;
+    const double k = (2.0 * pi * omega) / c_p;
+
+    double A = compute_A_len();
+    if (A < 1e-10) A = 1.0;
+
     double one_minus_ksi = 1.0 - ksi;
-    double decay_factor = std::sqrt(2.0 / one_minus_ksi);
-    
-    return std::complex<double>(decay_factor, 0.0);
-    */
+    if (one_minus_ksi < 1e-10) one_minus_ksi = 1e-10;
+
+    double arg = k * A * (1.0 / one_minus_ksi - 0.5);
+    return std::complex<double>(std::cos(arg), std::sin(arg));
 }
 
 template<int NODES>
 std::complex<double> SpectralInfHex<NODES>::ddynamic_multiplier_dksi(
     double ksi, double eta, double zeta) const {
-    return std::complex<double>(0.0, 0.0);
-    
-    /* 
-    if (!is_dynamic || omega <= 0.0) {
+    (void)eta; (void)zeta;
+    if (!is_dynamic || omega <= 0.0)
         return std::complex<double>(0.0, 0.0);
-    }
 
-    double lambda = this->Young * this->Poisson / ((1.0 + this->Poisson) * (1.0 - 2.0 * this->Poisson));
-    double mu = this->Young / (2.0 * (1.0 + this->Poisson));
-    double c = std::sqrt((lambda + 2.0 * mu) / this->density);
-    
-    double k_wave = omega / c;
-    
-    double cx = 0.0, cy = 0.0, cz = 0.0;
-    int face_nodes = NODES * NODES;
-    for (int i = 0; i < face_nodes; ++i) {
-        cx += this->x[i];
-        cy += this->y[i];
-        cz += this->z[i];
-    }
-    cx /= face_nodes; cy /= face_nodes; cz /= face_nodes;
-    double A_len = std::sqrt((cx - pole_x)*(cx - pole_x) + 
-                             (cy - pole_y)*(cy - pole_y) + 
-                             (cz - pole_z)*(cz - pole_z));
-    if (A_len < 1e-10) A_len = 1.0;
-    
+    const double nu = this->Poisson;
+    const double E = this->Young;
+    const double rho = this->density;
+    if (rho <= 0.0) return std::complex<double>(0.0, 0.0);
+
+    const double lambda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu));
+    const double mu = E / (2.0 * (1.0 + nu));
+    const double c_p = std::sqrt((lambda + 2.0 * mu) / rho);
+    const double pi = 3.14159265358979323846;
+    const double k = (2.0 * pi * omega) / c_p;
+
+    double A = compute_A_len();
+    if (A < 1e-10) A = 1.0;
+
     double one_minus_ksi = 1.0 - ksi;
-    
-    double decay_factor = std::sqrt(2.0 / one_minus_ksi);
-    double ddecay_factor = 0.5 * std::sqrt(2.0) * std::pow(one_minus_ksi, -1.5);
-    
-    return std::complex<double>(ddecay_factor, 0.0);
-    */
+    if (one_minus_ksi < 1e-10) one_minus_ksi = 1e-10;
+
+    std::complex<double> mult = dynamic_multiplier(ksi, eta, zeta);
+
+    double d_arg_d_ksi = k * A / (one_minus_ksi * one_minus_ksi);
+    return mult * std::complex<double>(0.0, d_arg_d_ksi);
 }
 
 template<int NODES>
@@ -224,34 +214,37 @@ Eigen::MatrixXd SpectralInfHex<NODES>::localDamping() {
     const double c_p = std::sqrt((lambda + 2.0 * mu) / rho);
     const double c_eff = rho * c_p;
 
-    const double ksi = -1.0;
+    auto add_face_damping = [&](double ksi_face) {
+        for (int j = 0; j < NODES; ++j) {
+            const double eta = this->gll_x[j];
+            const double w_eta = this->gll_w[j];
+            for (int k = 0; k < NODES; ++k) {
+                const double zeta = this->gll_x[k];
+                const double w_zeta = this->gll_w[k];
 
-    for (int j = 0; j < NODES; ++j) {
-        const double eta = this->gll_x[j];
-        const double w_eta = this->gll_w[j];
-        for (int k = 0; k < NODES; ++k) {
-            const double zeta = this->gll_x[k];
-            const double w_zeta = this->gll_w[k];
+                Eigen::MatrixXcd Jm = this->J(ksi_face, eta, zeta);
+                Eigen::Vector3d dEta(Jm(0, 1).real(), Jm(1, 1).real(), Jm(2, 1).real());
+                Eigen::Vector3d dZeta(Jm(0, 2).real(), Jm(1, 2).real(), Jm(2, 2).real());
+                const double detJ_surf = dEta.cross(dZeta).norm();
 
-            Eigen::MatrixXcd Jm = this->J(ksi, eta, zeta);
-            Eigen::Vector3d dEta(Jm(0, 1).real(), Jm(1, 1).real(), Jm(2, 1).real());
-            Eigen::Vector3d dZeta(Jm(0, 2).real(), Jm(1, 2).real(), Jm(2, 2).real());
-            const double detJ_surf = dEta.cross(dZeta).norm();
+                auto Nvals = FF(ksi_face, eta, zeta);
 
-            auto Nvals = FF(ksi, eta, zeta);
-
-            const double w = w_eta * w_zeta * detJ_surf * c_eff;
-            for (int a = 0; a < nNodes; ++a) {
-                const double Na = Nvals[a].real();
-                if (Na == 0.0) continue;
-                for (int b = 0; b < nNodes; ++b) {
-                    const double Nb = Nvals[b].real();
-                    if (Nb == 0.0) continue;
-                    Dmp(a, b) += w * Na * Nb;
+                const double w = w_eta * w_zeta * detJ_surf * c_eff;
+                for (int a = 0; a < nNodes; ++a) {
+                    const double Na = Nvals[a].real();
+                    if (Na == 0.0) continue;
+                    for (int b = 0; b < nNodes; ++b) {
+                        const double Nb = Nvals[b].real();
+                        if (Nb == 0.0) continue;
+                        Dmp(a, b) += w * Na * Nb;
+                    }
                 }
             }
         }
-    }
+    };
+
+    add_face_damping(-1.0);
+    add_face_damping(gr_x[NODES - 1]);
 
     return Dmp;
 }
@@ -359,7 +352,21 @@ Eigen::MatrixXcd SpectralInfHex<NODES>::localK() {
             }
         }
     }
-    
+
+    double A_len = compute_A_len();
+    if (A_len < 1e-10) A_len = 1.0;
+
+    double reference_size = Data::reference_element_size;
+    if (reference_size < 1e-10) reference_size = 1.0;
+
+    const double base_scale = 1e-6;
+    double scale_factor = base_scale * (reference_size / A_len);
+
+    if (scale_factor > 1.0) scale_factor = 1.0;
+    if (scale_factor < 1e-8) scale_factor = 1e-8;
+
+    K = K * scale_factor;
+
     return K;
 }
 
@@ -399,4 +406,24 @@ double SpectralInfHex<NODES>::weight(LocVar var, int i) {
         return this->gll_w[idx_zeta];
     else
         return 0.0;
+}
+
+template<int NODES>
+double SpectralInfHex<NODES>::compute_A_len() const {
+    double cx = 0.0, cy = 0.0, cz = 0.0;
+    int face_nodes = NODES * NODES;
+    for (int j = 0; j < NODES; ++j) {
+        for (int k = 0; k < NODES; ++k) {
+            int idx = 0 + j * NODES + k * NODES * NODES;
+            cx += this->x[idx];
+            cy += this->y[idx];
+            cz += this->z[idx];
+        }
+    }
+    cx /= face_nodes;
+    cy /= face_nodes;
+    cz /= face_nodes;
+    return std::sqrt((cx - pole_x) * (cx - pole_x) +
+                     (cy - pole_y) * (cy - pole_y) +
+                     (cz - pole_z) * (cz - pole_z));
 }

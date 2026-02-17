@@ -1,4 +1,62 @@
 #include "VTUWriter.h"
+#include <array>
+#include <functional>
+
+namespace {
+    std::vector<int> buildHexSemToVtkMapping(int NODES) {
+        const int N = NODES - 1;  // order
+        const int nPts = NODES * NODES * NODES;
+        std::vector<int> vtkToOurs(nPts);
+
+        auto ourIdx = [NODES](int i, int j, int k) {
+            return i + j * NODES + k * NODES * NODES;
+        };
+
+        int vtkIdx = 0;
+
+        std::array<std::array<int, 3>, 8> corners = {{
+            {0, 0, 0}, {N, 0, 0}, {N, N, 0}, {0, N, 0},
+            {0, 0, N}, {N, 0, N}, {N, N, N}, {0, N, N}
+        }};
+        for (const auto& c : corners)
+            vtkToOurs[vtkIdx++] = ourIdx(c[0], c[1], c[2]);
+
+        std::array<std::pair<std::array<int, 3>, std::array<int, 3>>, 12> edges = {{
+            {{0, 0, 0}, {N, 0, 0}}, {{N, 0, 0}, {N, N, 0}}, {{0, N, 0}, {N, N, 0}}, {{0, 0, 0}, {0, N, 0}},
+            {{0, 0, N}, {N, 0, N}}, {{N, 0, N}, {N, N, N}}, {{0, N, N}, {N, N, N}}, {{0, 0, N}, {0, N, N}},
+            {{0, 0, 0}, {0, 0, N}}, {{N, 0, 0}, {N, 0, N}}, {{N, N, 0}, {N, N, N}}, {{0, N, 0}, {0, N, N}}
+        }};
+        const int nEdge = (N > 1) ? (N - 1) : 0;
+        for (const auto& e : edges) {
+            for (int t = 1; t <= nEdge; ++t) {
+                int i = e.first[0] + t * (e.second[0] - e.first[0]) / N;
+                int j = e.first[1] + t * (e.second[1] - e.first[1]) / N;
+                int k = e.first[2] + t * (e.second[2] - e.first[2]) / N;
+                vtkToOurs[vtkIdx++] = ourIdx(i, j, k);
+            }
+        }
+
+        std::array<std::function<void()>, 6> faceFns = {{
+            [&]() { for (int v = 1; v <= nEdge; ++v) for (int u = 1; u <= nEdge; ++u) vtkToOurs[vtkIdx++] = ourIdx(0, u, v); },
+            [&]() { for (int v = 1; v <= nEdge; ++v) for (int u = 1; u <= nEdge; ++u) vtkToOurs[vtkIdx++] = ourIdx(N, u, v); },
+            [&]() { for (int v = 1; v <= nEdge; ++v) for (int u = 1; u <= nEdge; ++u) vtkToOurs[vtkIdx++] = ourIdx(u, 0, v); },
+            [&]() { for (int v = 1; v <= nEdge; ++v) for (int u = 1; u <= nEdge; ++u) vtkToOurs[vtkIdx++] = ourIdx(u, N, v); },
+            [&]() { for (int v = 1; v <= nEdge; ++v) for (int u = 1; u <= nEdge; ++u) vtkToOurs[vtkIdx++] = ourIdx(u, v, 0); },
+            [&]() { for (int v = 1; v <= nEdge; ++v) for (int u = 1; u <= nEdge; ++u) vtkToOurs[vtkIdx++] = ourIdx(u, v, N); }
+        }};
+        for (const auto& fn : faceFns) fn();
+
+        for (int k = 1; k <= nEdge; ++k) {
+            for (int j = 1; j <= nEdge; ++j) {
+                for (int i = 1; i <= nEdge; ++i) {
+                    vtkToOurs[vtkIdx++] = ourIdx(i, j, k);
+                }
+            }
+        }
+
+        return vtkToOurs;
+    }
+}
 
 bool VTUWriter::write(const std::string& filename) {
     vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid =
@@ -65,7 +123,8 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
         cell = vtkSmartPointer<vtkPyramid>::New();
         break;
     case ElemType::QUADSEM:
-    case ElemType::INFQUADSEM: {
+    //case ElemType::INFQUADSEM: 
+    {
         int NODES = static_cast<int>(std::sqrt(nodeIds.size()));
 
         if (NODES * NODES != static_cast<int>(nodeIds.size()))
@@ -94,27 +153,22 @@ vtkSmartPointer<vtkCell> VTUWriter::createCell(ElemType type, const std::vector<
         return polygon;
     }
     case ElemType::HEXSEM:
-    case ElemType::INFHEXSEM: {
+    //case ElemType::INFHEXSEM: 
+    {
         int NODES = static_cast<int>(std::cbrt(nodeIds.size()));
+        int nPts = static_cast<int>(nodeIds.size());
 
-        if (NODES * NODES * NODES != static_cast<int>(nodeIds.size()))
+        if (NODES * NODES * NODES != nPts)
             throw std::runtime_error("VTUWriter: HEXSEM/INFHEXSEM node count is not a perfect cube");
 
-        vtkSmartPointer<vtkHexahedron> hex = vtkSmartPointer<vtkHexahedron>::New();
+        std::vector<int> vtkToOurs = buildHexSemToVtkMapping(NODES);
 
-        std::vector<int> corner_indices = {
-            0,                                    
-            NODES - 1,                            
-            NODES * NODES - 1,                    
-            NODES * (NODES - 1),                  
-            NODES * NODES * (NODES - 1),          
-            NODES * NODES * (NODES - 1) + NODES - 1, 
-            NODES * NODES * NODES - 1,            
-            NODES * NODES * (NODES - 1) + NODES * (NODES - 1) 
-        };
-
-        for (int i = 0; i < 8; ++i) {
-            hex->GetPointIds()->SetId(i, nodeIds[corner_indices[i]] - 1);
+        vtkSmartPointer<vtkLagrangeHexahedron> hex = vtkSmartPointer<vtkLagrangeHexahedron>::New();
+        hex->SetUniformOrderFromNumPoints(nPts);
+        hex->GetPointIds()->SetNumberOfIds(nPts);
+        for (int vtkIdx = 0; vtkIdx < nPts; ++vtkIdx) {
+            int ourIdx = vtkToOurs[vtkIdx];
+            hex->GetPointIds()->SetId(vtkIdx, nodeIds[ourIdx] - 1);
         }
 
         return hex;

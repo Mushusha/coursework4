@@ -278,6 +278,8 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 
 			for (int k = 1; k < NODES; ++k) {
 				double t = (gr_x[k] + 1.0) / 2.0;
+
+				const double layer_scale = 1.0;
 				for (size_t n = 0; n < boundary_glob_nodes.size(); ++n) {
 					int boundary_node_id = boundary_glob_nodes[n];
 					auto key = std::make_pair(boundary_node_id, k);
@@ -296,7 +298,7 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 						double x_boundary = boundary_node->getCoord(j);
 						double x_pole = inf.point[j];
 						double x_inf = 2.0 * x_boundary - x_pole;
-						coords[j] = x_boundary + (x_inf - x_boundary) * t;
+						coords[j] = x_boundary + layer_scale * (x_inf - x_boundary) * t;
 					}
 
 					int max_node_id = 0;
@@ -317,9 +319,10 @@ void Data::create_infelements(std::shared_ptr <const Parser> parser) {
 			int num_nodes_per_layer = static_cast<int>(boundary_glob_nodes.size());
 
 			if (parent_type == HEXSEM) {
-				for (int layer = 0; layer < NODES; ++layer)
-					for (int face_idx = 0; face_idx < NODES * NODES; ++face_idx)
-						inf_elem_nodes.push_back(inf_layer_nodes[layer][face_idx]);
+				for (int k = 0; k < NODES; ++k)
+					for (int j = 0; j < NODES; ++j)
+						for (int i = 0; i < NODES; ++i)
+							inf_elem_nodes.push_back(inf_layer_nodes[i][j + k * NODES]);
 			} else {
 				for (int j = 0; j < num_nodes_per_layer; ++j)
 					for (int i = 0; i < NODES; ++i)
